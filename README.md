@@ -55,6 +55,11 @@ categories: [Gastronomía]
 Any DeepL error fails the pipeline visibly (red X, one-click retry) —
 no half-translated sets ever ship.
 
+## Server setup
+
+Full command-by-command walkthrough: **[docs/server-setup.md](docs/server-setup.md)**.
+The Caddyfile and Docker Compose files it uses live in [infra/](infra/).
+
 ## Local development
 
 ```sh

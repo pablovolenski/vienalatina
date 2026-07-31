@@ -1,0 +1,35 @@
+# Woodpecker CI — server + one agent on the same VPS.
+# Copy this directory to /srv/woodpecker/, create .env from .env.example,
+# then: docker compose up -d
+# Web UI is bound to localhost only; Caddy proxies ci.vienalatina.com to it.
+
+services:
+  server:
+    image: woodpeckerci/woodpecker-server:v2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - WOODPECKER_HOST=https://ci.vienalatina.com
+      - WOODPECKER_OPEN=false
+      - WOODPECKER_ADMIN=pablo               # your Gitea username
+      - WOODPECKER_GITEA=true
+      - WOODPECKER_GITEA_URL=https://git.vienalatina.com
+      - WOODPECKER_GITEA_CLIENT=${WOODPECKER_GITEA_CLIENT}
+      - WOODPECKER_GITEA_SECRET=${WOODPECKER_GITEA_SECRET}
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+    volumes:
+      - ./data:/var/lib/woodpecker
+
+  agent:
+    image: woodpeckerci/woodpecker-agent:v2
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      - WOODPECKER_SERVER=server:9000
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+      - WOODPECKER_BACKEND=docker
+      - WOODPECKER_MAX_WORKFLOWS=2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

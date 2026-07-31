@@ -1,0 +1,63 @@
+# /etc/caddy/Caddyfile — copy this file there, then: sudo systemctl reload caddy
+#
+# Caddy fetches and renews Let's Encrypt certificates automatically the first
+# time a domain's DNS points at this server. git.* and ci.* work immediately;
+# the vienalatina.com block stays commented until cutover day (Sunday evening),
+# because Caddy can only get its certificate once the A record points here.
+
+git.vienalatina.com {
+	reverse_proxy 127.0.0.1:3000
+}
+
+ci.vienalatina.com {
+	reverse_proxy 127.0.0.1:8000
+}
+
+# ---------------------------------------------------------------------------
+# UNCOMMENT EVERYTHING BELOW ON CUTOVER DAY (after flipping the A record)
+# ---------------------------------------------------------------------------
+
+# www.vienalatina.com {
+# 	redir https://vienalatina.com{uri} 301
+# }
+#
+# vienalatina.com {
+# 	root * /var/www/vienalatina.com
+# 	encode zstd gzip
+# 	file_server
+#
+# 	# llms.txt is markdown (matches the old WP behaviour)
+# 	header /llms.txt Content-Type "text/markdown; charset=utf-8"
+#
+# 	# --- 301s for old WordPress URL patterns -----------------------------
+#
+# 	# /?p=123 style permalinks → home (add specific mappings as GSC reports them)
+# 	@wp_query_permalink {
+# 		path /
+# 		query p=*
+# 	}
+# 	redir @wp_query_permalink / 301
+#
+# 	# WP category base was /categoria/… (Spanish slugs); Hugo uses /categories/…
+# 	@old_category path_regexp oldcat ^/categoria/(.*)$
+# 	redir @old_category /categories/{re.oldcat.1} 301
+#
+# 	# WP author archives have no Hugo equivalent → home
+# 	@old_author path /autor/*
+# 	redir @old_author / 301
+#
+# 	# Old WP media library URLs → migrated uploads folder
+# 	@old_uploads path_regexp oldup ^/wp-content/uploads/(?:\d{4}/\d{2}/)?(.*)$
+# 	redir @old_uploads /uploads/{re.oldup.1} 301
+#
+# 	# Anything else that starts with /wp- doesn't exist anymore
+# 	@wp_leftovers path /wp-admin/* /wp-login.php /wp-json/* /xmlrpc.php
+# 	redir @wp_leftovers / 301
+#
+# 	# Custom 404 falls back to Hugo's 404 page
+# 	handle_errors {
+# 		@404 expression {err.status_code} == 404
+# 		rewrite @404 /404.html
+# 		file_server
+# 	}
+# }

@@ -1,0 +1,22 @@
+# Gitea — self-hosted git + OAuth provider for Decap and Woodpecker.
+# Copy this directory to /srv/gitea/ on the server, then: docker compose up -d
+# Web UI is bound to localhost only; Caddy proxies git.vienalatina.com to it.
+
+services:
+  gitea:
+    image: gitea/gitea:1.22
+    restart: unless-stopped
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__server__DOMAIN=git.vienalatina.com
+      - GITEA__server__ROOT_URL=https://git.vienalatina.com/
+      - GITEA__server__SSH_DOMAIN=git.vienalatina.com
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__webhook__ALLOWED_HOST_LIST=ci.vienalatina.com
+    volumes:
+      - ./data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "127.0.0.1:3000:3000"
