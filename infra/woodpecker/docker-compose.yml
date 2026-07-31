@@ -5,7 +5,7 @@
 
 services:
   server:
-    image: woodpeckerci/woodpecker-server:v2
+    image: woodpeckerci/woodpecker-server:v3
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
@@ -22,7 +22,7 @@ services:
       - ./data:/var/lib/woodpecker
 
   agent:
-    image: woodpeckerci/woodpecker-agent:v2
+    image: woodpeckerci/woodpecker-agent:v3
     restart: unless-stopped
     depends_on:
       - server
