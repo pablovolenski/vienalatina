@@ -163,6 +163,7 @@ cd /srv/woodpecker
 sudo cp .env.example .env
 openssl rand -hex 32        # copy the output
 sudo nano .env              # paste Woodpecker OAuth client ID + secret + the random hex
+sudo mkdir -p data && sudo chown -R 1000:1000 data   # v3 images run as uid 1000
 sudo docker compose up -d
 ```
 

@@ -1,6 +1,7 @@
 # Woodpecker CI — server + one agent on the same VPS.
-# Copy this directory to /srv/woodpecker/, create .env from .env.example,
-# then: docker compose up -d
+# Copy this directory to /srv/woodpecker/, create .env from .env.example, then:
+#   sudo mkdir -p data && sudo chown -R 1000:1000 data   # v3 images run as uid 1000
+#   docker compose up -d
 # Web UI is bound to localhost only; Caddy proxies ci.vienalatina.com to it.
 
 services:
