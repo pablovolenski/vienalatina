@@ -1,0 +1,45 @@
+# Woodpecker CI: translate → build → deploy
+#
+# Triggered by the Gitea push webhook. The translate step replaces the old
+# synchronous WordPress save_post hook: publishing in Decap is one git
+# commit, translation happens here, asynchronously, and every DeepL output
+# lands as a reviewable bot commit.
+#
+# Secrets to configure in Woodpecker (repo settings → secrets):
+#   deepl_api_key    — DeepL free-tier key (500k chars/mo)
+#   gitea_push_token — Gitea token for the translations bot user
+#                      (translations@vienalatina.com) with repo write access
+#
+# The deploy step writes to the Caddy web root via a host mount, which
+# requires the repo to be marked "trusted" in Woodpecker.
+
+when:
+  - event: push
+    branch: main
+
+steps:
+  translate:
+    image: python:3.12-slim
+    environment:
+      DEEPL_API_KEY:
+        from_secret: deepl_api_key
+      GITEA_PUSH_TOKEN:
+        from_secret: gitea_push_token
+    commands:
+      - pip install --quiet requests pyyaml
+      - python scripts/translate.py
+
+  build:
+    image: hugomods/hugo:0.135.0
+    commands:
+      # Bundle Decap locally so the /admin page makes zero third-party requests.
+      - wget -q -O static/admin/decap-cms.js https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js
+      - hugo --minify
+
+  deploy:
+    image: alpine:3.20
+    volumes:
+      - /var/www/vienalatina.com:/deploy-target
+    commands:
+      - apk add --no-cache rsync
+      - rsync -a --delete public/ /deploy-target/

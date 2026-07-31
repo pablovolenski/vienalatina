@@ -1,0 +1,25 @@
+{{/* Ported from theme/header.php — static version: no login/account controls.
+     No Google Fonts: the font-family stack in main.css falls back to system
+     sans-serif, keeping the site free of third-party requests (GDPR). */}}
+<header class="site-bar">
+	<div class="site-bar__inner">
+		<a class="site-bar__brand" href="{{ .Site.Home.Permalink }}" aria-label="Inicio">
+			<span class="site-bar__brand-text">{{ .Site.Title }}</span>
+		</a>
+
+		<nav class="site-bar__nav" aria-label="Idioma">
+			{{ partial "lang-switcher.html" . }}
+		</nav>
+	</div>
+
+	<nav class="site-bar__pages" id="site-bar-pages" aria-label="Secciones">
+		<ul class="page-nav">
+			{{ $current := . }}
+			{{ range .Site.Menus.main }}
+			<li{{ if $current.IsMenuCurrent "main" . }} class="current-menu-item"{{ end }}>
+				<a href="{{ .URL }}">{{ .Name }}</a>
+			</li>
+			{{ end }}
+		</ul>
+	</nav>
+</header>

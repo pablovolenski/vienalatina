@@ -1,0 +1,4 @@
+name = "Viena Latina"
+license = "MIT"
+description = "Static port of the Plataforma WordPress theme for vienalatina.com — same CSS, three languages, zero third-party requests."
+min_version = "0.120.0"

@@ -1,0 +1,52 @@
+# Decap CMS configuration — Gitea backend (OAuth app registered in Gitea admin).
+backend:
+  name: gitea
+  repo: pablo/vienalatina          # owner/repo inside Gitea
+  branch: main
+  base_url: https://git.vienalatina.com
+  api_root: https://git.vienalatina.com/api/v1
+  app_id: REPLACE_WITH_GITEA_OAUTH_CLIENT_ID
+
+site_url: https://vienalatina.com
+display_url: https://vienalatina.com
+
+media_folder: static/uploads
+public_folder: /uploads
+
+# Pablo authors Spanish sources only; CI generates the .de.md / .pt-br.md siblings.
+collections:
+  - name: post
+    label: "Artículos"
+    label_singular: "Artículo"
+    folder: content/post
+    create: true
+    extension: md
+    format: yaml-frontmatter
+    slug: "{{slug}}.es"
+    filter: { field: lang, value: es }
+    fields:
+      - { name: title, label: "Título", widget: string }
+      - { name: date, label: "Fecha", widget: datetime }
+      - { name: lang, label: "Idioma", widget: hidden, default: es }
+      - { name: manual_translation, label: "Traducción manual (congelar)", widget: boolean, default: false, required: false }
+      - { name: categories, label: "Categorías", widget: select, multiple: true,
+          options: ["Turismo", "Cultura", "Gastronomía", "Comunidad", "Comercio"] }
+      - { name: description, label: "Resumen", widget: text, required: false }
+      - { name: image, label: "Imagen destacada", widget: image, required: false }
+      - { name: body, label: "Cuerpo", widget: markdown }
+
+  - name: page
+    label: "Páginas"
+    label_singular: "Página"
+    folder: content/page
+    create: true
+    extension: md
+    format: yaml-frontmatter
+    slug: "{{slug}}.es"
+    filter: { field: lang, value: es }
+    fields:
+      - { name: title, label: "Título", widget: string }
+      - { name: date, label: "Fecha", widget: datetime, required: false }
+      - { name: lang, label: "Idioma", widget: hidden, default: es }
+      - { name: manual_translation, label: "Traducción manual (congelar)", widget: boolean, default: false, required: false }
+      - { name: body, label: "Cuerpo", widget: markdown }

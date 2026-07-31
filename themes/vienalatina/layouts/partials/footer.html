@@ -1,0 +1,12 @@
+{{/* Ported from theme/footer.php */}}
+<footer class="site-foot">
+	{{ $pages := where .Site.RegularPages "Section" "page" }}
+	{{ if $pages }}
+	<nav class="site-foot__nav" aria-label="Páginas del sitio">
+		{{ range first 8 $pages }}
+		<a href="{{ .Permalink }}">{{ .Title }}</a>
+		{{ end }}
+	</nav>
+	{{ end }}
+	<p>{{ .Site.Title }} &copy; {{ now.Format "2006" }}</p>
+</footer>

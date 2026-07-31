@@ -1,0 +1,100 @@
+# Viena Latina — Hugo site configuration
+# Three languages: Spanish (default, at /), German (/de/), Brazilian Portuguese (/pt-br/).
+# Siblings pair by filename basename: mi-articulo.es.md ↔ mi-articulo.de.md ↔ mi-articulo.pt-br.md
+
+baseURL: "https://vienalatina.com/"
+title: "Viena Latina"
+theme: "vienalatina"
+
+defaultContentLanguage: "es"
+defaultContentLanguageInSubdir: false
+
+# Preserve WordPress slugs so external inbound links keep working.
+permalinks:
+  post: "/:slug/"
+
+taxonomies:
+  category: "categories"
+  tag: "tags"
+
+languages:
+  es:
+    languageCode: "es"
+    languageName: "Español"
+    weight: 1
+    params:
+      description: "Comunidad latinoamericana en Viena — turismo, cultura, gastronomía, comunidad y comercio."
+    menus:
+      main:
+        - name: "Inicio"
+          url: "/"
+          weight: 1
+        - name: "Acerca"
+          url: "/page/acerca/"
+          weight: 2
+        - name: "Contacto"
+          url: "/page/contacto/"
+          weight: 3
+  de:
+    languageCode: "de"
+    languageName: "Deutsch"
+    weight: 2
+    params:
+      description: "Lateinamerikanische Community in Wien — Tourismus, Kultur, Gastronomie, Gemeinschaft und Handel."
+    menus:
+      main:
+        - name: "Start"
+          url: "/de/"
+          weight: 1
+        - name: "Über uns"
+          url: "/de/page/acerca/"
+          weight: 2
+        - name: "Kontakt"
+          url: "/de/page/contacto/"
+          weight: 3
+  pt-br:
+    languageCode: "pt-BR"
+    languageName: "Português (Brasil)"
+    weight: 3
+    params:
+      description: "Comunidade latino-americana em Viena — turismo, cultura, gastronomia, comunidade e comércio."
+    menus:
+      main:
+        - name: "Início"
+          url: "/pt-br/"
+          weight: 1
+        - name: "Sobre"
+          url: "/pt-br/page/acerca/"
+          weight: 2
+        - name: "Contato"
+          url: "/pt-br/page/contacto/"
+          weight: 3
+
+params:
+  # og:locale values per language slug (ported from theme/inc/seo.php).
+  localeMap:
+    es: "es_ES"
+    de: "de_DE"
+    pt-br: "pt_BR"
+
+# llms.txt — custom plain-text output rendered from layouts/index.llms.txt
+# (ported from theme/inc/robots-and-llms.php).
+outputFormats:
+  llms:
+    mediaType: "text/plain"
+    baseName: "llms"
+    isPlainText: true
+
+outputs:
+  home: ["HTML", "RSS", "llms"]
+
+sitemap:
+  changefreq: "weekly"
+  priority: 0.5
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true   # WP-migrated content contains inline HTML
+
+enableRobotsTXT: false   # robots.txt is a static file in static/

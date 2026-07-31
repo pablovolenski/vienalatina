@@ -1,0 +1,40 @@
+{{/* Article template — ported from theme/single.php (minus likes/comments/login,
+     which have no place on a static site). */}}
+{{ define "main" }}
+<main class="feed feed--single">
+	<article class="article-single">
+
+		<header class="article-single__head">
+			<div>
+				<div class="article-card__meta">
+					{{ range first 1 (.GetTerms "categories") }}
+					<a class="article-card__kind" href="{{ .Permalink }}">{{ .LinkTitle }}</a>
+					{{ end }}
+					<time datetime="{{ .Date.Format "2006-01-02T15:04:05-07:00" }}">
+						{{ .Date.Format "2 Jan 2006" }}
+					</time>
+				</div>
+			</div>
+		</header>
+
+		<h1 class="article-single__title">{{ .Title }}</h1>
+
+		{{ with .Description }}
+		<p class="article-single__summary">{{ . }}</p>
+		{{ end }}
+
+		{{ with .Params.image }}
+		<img class="article-single__cover" src="{{ . | relURL }}" alt="">
+		{{ end }}
+
+		<div class="article-single__body">
+			{{ .Content }}
+		</div>
+
+		<a class="back-link" href="{{ .Site.Home.Permalink }}">
+			← Volver al inicio
+		</a>
+
+	</article>
+</main>
+{{ end }}

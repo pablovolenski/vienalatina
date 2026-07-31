@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.Language.LanguageCode }}">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ if not .IsHome }}{{ .Title }} — {{ end }}{{ .Site.Title }}</title>
+	{{ partial "seo-head.html" . }}
+	{{ $css := resources.Get "css/main.css" | minify | fingerprint }}
+	<link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+	<link rel="canonical" href="{{ .Permalink }}">
+	{{ range .AlternativeOutputFormats -}}
+	<link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink | safeURL }}">
+	{{ end -}}
+</head>
+<body>
+
+{{ partial "header.html" . }}
+
+<div class="page-shell">
+	{{ block "main" . }}{{ end }}
+	{{ partial "footer.html" . }}
+</div>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Hugo build output
+public/
+resources/
+.hugo_build.lock
+
+# Decap bundle is downloaded at build time (no third-party CDN at runtime)
+static/admin/decap-cms.js
+
+__pycache__/

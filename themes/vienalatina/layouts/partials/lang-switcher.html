@@ -1,0 +1,17 @@
+{{/* Ported from plataforma_render_lang_switcher() in theme/functions.php.
+     Three real <a href> links to sibling URLs — crawlable, no JS. */}}
+{{ if .IsTranslated }}
+{{ $labels := dict "es" "ES" "de" "DE" "pt-br" "PT" }}
+<div class="lang-switcher" aria-label="Idioma / Language">
+	{{ $current := . }}
+	{{ range $i, $t := .AllTranslations }}
+	{{ if $i }}<span class="lang-sep" aria-hidden="true">·</span>{{ end }}
+	{{ $slug := $t.Language.Lang }}
+	{{ $active := eq $slug $current.Language.Lang }}
+	<a class="lang-btn" href="{{ $t.Permalink }}" hreflang="{{ $slug }}"
+	   aria-current="{{ if $active }}true{{ else }}false{{ end }}"{{ if $active }} aria-pressed="true"{{ end }}>
+		{{- index $labels $slug | default (upper $slug) -}}
+	</a>
+	{{ end }}
+</div>
+{{ end }}
