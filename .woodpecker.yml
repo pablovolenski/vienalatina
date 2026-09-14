@@ -26,6 +26,9 @@ steps:
       GITEA_PUSH_TOKEN:
         from_secret: gitea_push_token
     commands:
+      # translate.py shells out to git (rev-list/diff/add/commit/push) — the
+      # slim image doesn't ship it.
+      - apt-get update -qq && apt-get install -qq -y --no-install-recommends git
       - pip install --quiet requests pyyaml
       - python scripts/translate.py
 
