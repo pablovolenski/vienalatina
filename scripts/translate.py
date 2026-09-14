@@ -1,65 +1,57 @@
 #!/usr/bin/env python3
-"""Async DeepL translation step for Woodpecker CI.
+"""Self-hosted translation step for Woodpecker CI.
 
-Replaces the synchronous `save_post` hook from the WordPress plugin
-(plataforma_deepl_translate in plugin/plataforma-social/plataforma-social.php).
+Replaces the DeepL API call this script used to make, and restores the
+multi-source behaviour of the original WordPress plugin: any of the three site
+languages may be the authored original, and the other two are generated from
+it. Translation runs on a model shipped inside the pipeline image, so there is
+no API key, no quota and no third-party request.
 
-For each *.es.md changed in the pushed commit range, calls DeepL with
-tag_handling=html (markup survives translation) plus a glossary of
-community-specific terms, and writes the *.de.md and *.pt-br.md siblings
-next to the source. Sibling files carrying `manual_translation: true` in
-their frontmatter are never overwritten. The siblings are committed back
-to the same branch as a bot commit, then the pipeline builds and deploys.
+Loop prevention, which was structural back when only Spanish could be a source:
+  * a generated sibling carries `translated_from`, and a file carrying it is
+    never itself treated as a source;
+  * the bot's own commits carry [skip-translate] and are skipped outright.
 
-Failure behaviour: any DeepL error exits non-zero, the pipeline goes red,
+`manual_translation: true` means "hands off", on both sides:
+  * on an authored source — do not generate siblings for this post at all;
+  * on a generated sibling — never overwrite it again.
+
+Failure behaviour: any translation error exits non-zero, the pipeline goes red,
 and nothing partial is committed — no half-translated sets.
 
 Environment:
-  DEEPL_API_KEY   required (Woodpecker secret)
-  DEEPL_API_URL   optional, defaults to the free-tier endpoint
-  CI_COMMIT_SHA / CI_PREV_COMMIT_SHA   provided by Woodpecker
+  MT_MODEL_DIR / MT_TOKENIZER / MT_COMPUTE_TYPE / MT_THREADS   see translation/
+  CI_COMMIT_SHA / CI_PREV_COMMIT_SHA / CI_COMMIT_MESSAGE       from Woodpecker
+  GITEA_PUSH_TOKEN                                             bot push token
 
-Dependencies: requests, pyyaml
+Dependencies: ctranslate2, transformers, sentencepiece, sentencex, pyyaml
 """
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
-import requests
 import yaml
 
+from translation.ctranslate_provider import CTranslate2Provider
+from translation.markdown import translate_markdown, translate_text
+from translation.provider import SITE_LANGS
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEEPL_URL = os.environ.get("DEEPL_API_URL", "https://api-free.deepl.com/v2/translate")
+CONTENT_DIR = REPO_ROOT / "content"
 
-# Language slug -> DeepL target code (ported from the plugin's $lang_map).
-TARGETS = {
-    "de": "DE",
-    "pt-br": "PT-BR",
-}
-SOURCE_SLUG = "es"
-DEEPL_SOURCE = "ES"
-
-# Fixed community-specific terms DeepL must not "translate".
-# Sent as ignored tags via tag_handling=html: each term is wrapped in
-# <keep>…</keep> before the call and unwrapped after, which pins proper
-# nouns without needing a server-side DeepL glossary resource.
-PROTECTED_TERMS = [
-    "Viena Latina",
-    "Grätzl",
-    "empanadas de viento",
-    "Naschmarkt",
-]
-
-# Frontmatter keys whose string values get translated alongside the body.
+# Frontmatter strings translated alongside the body. Note `categories` is
+# deliberately absent: the taxonomy terms stay Spanish in every language, or
+# Hugo would fork the taxonomy per language.
 TRANSLATED_KEYS = ("title", "description")
 
 BOT_NAME = "vienalatina-translations"
 BOT_EMAIL = "translations@vienalatina.com"
+SKIP_MARKER = "[skip-translate]"
 
 
 def run(*args: str, check: bool = True) -> str:
@@ -67,33 +59,15 @@ def run(*args: str, check: bool = True) -> str:
     return result.stdout.strip()
 
 
-def changed_source_files() -> list[Path]:
-    """Spanish sources touched by the pushed commits.
-
-    Filtering to *.es.md is what makes bot commits (which only add .de.md /
-    .pt-br.md) a no-op round — the re-fire loop the WP hook had to guard
-    against with meta flags cannot happen here.
-    """
-    head = os.environ.get("CI_COMMIT_SHA", "HEAD")
-    prev = os.environ.get("CI_PREV_COMMIT_SHA", "")
-    if prev and not set(prev) <= {"0"}:
-        diff_range = [prev, head]
-    else:
-        diff_range = ["HEAD~1", "HEAD"] if run("git", "rev-list", "--count", "HEAD") != "1" else None
-
-    if diff_range:
-        out = run("git", "diff", "--name-only", "--diff-filter=AM", *diff_range)
-    else:  # very first commit in the repo: translate everything
-        out = run("git", "ls-files")
-
-    files = []
-    for line in out.splitlines():
-        p = Path(line.strip())
-        if p.suffix == ".md" and p.name.endswith(f".{SOURCE_SLUG}.md") and p.parts[:1] == ("content",):
-            full = REPO_ROOT / p
-            if full.exists():
-                files.append(full)
-    return files
+def split_lang(path: Path) -> tuple[str, str] | None:
+    """('mi-articulo', 'es') for mi-articulo.es.md, else None."""
+    if path.suffix != ".md":
+        return None
+    stem = path.name[: -len(".md")]
+    for lang in SITE_LANGS:
+        if stem.endswith(f".{lang}"):
+            return stem[: -(len(lang) + 1)], lang
+    return None
 
 
 def split_frontmatter(text: str) -> tuple[dict, str]:
@@ -108,93 +82,109 @@ def join_frontmatter(fm: dict, body: str) -> str:
     return f"---\n{front}---\n\n{body.lstrip()}"
 
 
-def protect(text: str) -> str:
-    for term in PROTECTED_TERMS:
-        text = re.sub(re.escape(term), lambda m: f"<keep>{m.group(0)}</keep>", text, flags=re.IGNORECASE)
-    return text
-
-
-def unprotect(text: str) -> str:
-    return re.sub(r"</?keep>", "", text)
-
-
-def deepl_translate(texts: list[str], target: str, html: bool) -> list[str]:
-    """Direct port of plataforma_deepl_translate(): same endpoint, same
-    tag_handling=html behaviour, but errors abort the pipeline instead of
-    silently shipping a half-translated post."""
-    texts = [t for t in texts if isinstance(t, str) and t.strip()]
-    if not texts:
-        return []
-
-    key = os.environ.get("DEEPL_API_KEY", "")
-    if not key:
-        sys.exit("DEEPL_API_KEY is not set — configure the Woodpecker secret.")
-
-    data: list[tuple[str, str]] = [
-        ("target_lang", target),
-        ("source_lang", DEEPL_SOURCE),
-        ("tag_handling", "html"),
-        ("ignore_tags", "keep"),
-    ]
-    if not html:
-        # Titles/descriptions are plain strings; still use tag handling so
-        # <keep> protection works, DeepL just has no other tags to preserve.
-        pass
-    for t in texts:
-        data.append(("text", protect(t)))
-
-    resp = requests.post(
-        DEEPL_URL,
-        headers={"Authorization": f"DeepL-Auth-Key {key}"},
-        data=data,
-        timeout=60,
-    )
-    if resp.status_code != 200:
-        sys.exit(f"DeepL HTTP {resp.status_code}: {resp.text[:300]}")
-
-    return [unprotect(item["text"]) for item in resp.json().get("translations", [])]
-
-
-def sibling_path(source: Path, slug: str) -> Path:
-    return source.with_name(source.name.replace(f".{SOURCE_SLUG}.md", f".{slug}.md"))
-
-
-def is_frozen(path: Path) -> bool:
+def read_frontmatter(path: Path) -> dict:
     if not path.exists():
-        return False
+        return {}
     fm, _ = split_frontmatter(path.read_text(encoding="utf-8"))
+    return fm
+
+
+def is_generated(fm: dict) -> bool:
+    return bool(fm.get("translated_from"))
+
+
+def is_frozen(fm: dict) -> bool:
     return bool(fm.get("manual_translation"))
 
 
-def translate_file(source: Path) -> list[Path]:
-    raw = source.read_text(encoding="utf-8")
-    fm, body = split_frontmatter(raw)
-    written = []
+def changed_markdown() -> list[Path]:
+    """Content files touched by the pushed commits."""
+    head = os.environ.get("CI_COMMIT_SHA", "HEAD")
+    prev = os.environ.get("CI_PREV_COMMIT_SHA", "")
+    if prev and not set(prev) <= {"0"}:
+        out = run("git", "diff", "--name-only", "--diff-filter=AM", prev, head)
+    elif run("git", "rev-list", "--count", "HEAD") != "1":
+        out = run("git", "diff", "--name-only", "--diff-filter=AM", "HEAD~1", "HEAD")
+    else:  # first commit in the repo
+        out = run("git", "ls-files")
 
-    for slug, deepl_target in TARGETS.items():
-        target_file = sibling_path(source, slug)
-        if is_frozen(target_file):
-            print(f"  {target_file.relative_to(REPO_ROOT)}: manual_translation=true — skipped")
+    paths = []
+    for line in out.splitlines():
+        rel = Path(line.strip())
+        if rel.parts[:1] == ("content",) and (REPO_ROOT / rel).exists():
+            paths.append(REPO_ROOT / rel)
+    return paths
+
+
+def authored_sources(paths: list[Path]) -> list[tuple[Path, str, str]]:
+    """(path, basename, lang) for files that may act as a translation source."""
+    sources = []
+    for path in paths:
+        parsed = split_lang(path)
+        if not parsed:
+            continue
+        basename, lang = parsed
+        fm = read_frontmatter(path)
+        if is_generated(fm):
+            continue  # machine output is never a source
+        if is_frozen(fm):
+            print(f"{path.relative_to(REPO_ROOT)}: manual_translation=true — not translated")
+            continue
+        sources.append((path, basename, lang))
+    return sources
+
+
+def missing_siblings() -> list[Path]:
+    """Every authored source missing at least one sibling."""
+    incomplete = []
+    for path in sorted(CONTENT_DIR.rglob("*.md")):
+        parsed = split_lang(path)
+        if not parsed:
+            continue
+        basename, lang = parsed
+        if is_generated(read_frontmatter(path)):
+            continue
+        for target in SITE_LANGS:
+            if target != lang and not path.with_name(f"{basename}.{target}.md").exists():
+                incomplete.append(path)
+                break
+    return incomplete
+
+
+def translate_file(source: Path, basename: str, src_lang: str, provider) -> list[Path]:
+    fm, body = split_frontmatter(source.read_text(encoding="utf-8"))
+    written: list[Path] = []
+
+    for tgt in SITE_LANGS:
+        if tgt == src_lang:
+            continue
+        target = source.with_name(f"{basename}.{tgt}.md")
+        target_fm = read_frontmatter(target)
+        if is_frozen(target_fm):
+            print(f"  {target.relative_to(REPO_ROOT)}: manual_translation=true — skipped")
             continue
 
-        strings = [str(fm[k]) for k in TRANSLATED_KEYS if fm.get(k)]
-        translated_strings = deepl_translate(strings, deepl_target, html=False)
-        translated_body = deepl_translate([body], deepl_target, html=True) if body.strip() else [""]
-
         new_fm = dict(fm)
-        it = iter(translated_strings)
-        for k in TRANSLATED_KEYS:
-            if fm.get(k):
-                new_fm[k] = next(it)
-        new_fm["lang"] = slug
+        for key in TRANSLATED_KEYS:
+            if fm.get(key):
+                new_fm[key] = translate_text(str(fm[key]), src_lang, tgt, provider)
+        new_fm["lang"] = tgt
+        new_fm["translated_from"] = src_lang
         new_fm["manual_translation"] = False
-        # Pin the URL to the shared basename so it never drifts when a title
-        # is retranslated (plan: /de/mi-articulo/ pairs with /mi-articulo/).
-        new_fm.setdefault("slug", source.name.removesuffix(f".{SOURCE_SLUG}.md"))
 
-        target_file.write_text(join_frontmatter(new_fm, translated_body[0] if translated_body else ""), encoding="utf-8")
-        written.append(target_file)
-        print(f"  {target_file.relative_to(REPO_ROOT)}: written")
+        # Never inherit the source's slug: that would move a migrated sibling's
+        # URL onto the source's and break inbound links. Keep the slug the
+        # target already had; otherwise let Hugo fall back to the filename.
+        new_fm.pop("slug", None)
+        if target_fm.get("slug"):
+            new_fm["slug"] = target_fm["slug"]
+
+        target.write_text(
+            join_frontmatter(new_fm, translate_markdown(body, src_lang, tgt, provider)),
+            encoding="utf-8",
+        )
+        written.append(target)
+        print(f"  {target.relative_to(REPO_ROOT)}: written")
 
     return written
 
@@ -205,30 +195,49 @@ def commit_and_push(files: list[Path]) -> None:
     run("git", "config", "user.email", BOT_EMAIL)
     token = os.environ.get("GITEA_PUSH_TOKEN", "")
     repo = os.environ.get("CI_REPO", "pablo/vienalatina")
-    if token:  # Woodpecker's clone credentials are read-only; push needs its own token
-        run("git", "remote", "set-url", "origin", f"https://{BOT_NAME}:{token}@git.vienalatina.com/{repo}.git")
+    if token:  # clone credentials are read-only; pushing needs the bot token
+        run("git", "remote", "set-url", "origin",
+            f"https://{BOT_NAME}:{token}@git.vienalatina.com/{repo}.git")
     run("git", "add", *[str(f) for f in files])
     if not run("git", "status", "--porcelain"):
         print("Translations identical to committed siblings — nothing to push.")
         return
-    run("git", "commit", "-m", "translate: update DE and PT-BR siblings [skip-translate]")
+    run("git", "commit", "-m", f"translate: update generated siblings {SKIP_MARKER}")
     run("git", "push", "origin", f"HEAD:{branch}")
     print(f"Pushed sibling commit to {branch}.")
 
 
 def main() -> None:
-    sources = changed_source_files()
-    if not sources:
-        print("No changed *.es.md files — nothing to translate.")
+    parser = argparse.ArgumentParser(description="Generate translated content siblings.")
+    parser.add_argument("--backfill", action="store_true",
+                        help="translate every source missing siblings, not just changed files")
+    parser.add_argument("--no-push", action="store_true",
+                        help="write siblings but do not commit or push (local testing)")
+    args = parser.parse_args()
+
+    if SKIP_MARKER in os.environ.get("CI_COMMIT_MESSAGE", ""):
+        print(f"{SKIP_MARKER} commit — nothing to translate.")
         return
 
-    all_written: list[Path] = []
-    for source in sources:
-        print(f"Translating {source.relative_to(REPO_ROOT)}:")
-        all_written.extend(translate_file(source))
+    paths = missing_siblings() if args.backfill else changed_markdown()
+    sources = authored_sources(paths)
+    if not sources:
+        print("No authored content changed — nothing to translate.")
+        return
 
-    if all_written:
-        commit_and_push(all_written)
+    provider = CTranslate2Provider()
+    written: list[Path] = []
+    for source, basename, lang in sources:
+        print(f"Translating {source.relative_to(REPO_ROOT)} (from {lang}):")
+        written.extend(translate_file(source, basename, lang, provider))
+
+    if not written:
+        print("Every sibling is frozen — nothing written.")
+        return
+    if args.no_push:
+        print(f"--no-push: wrote {len(written)} files, leaving them uncommitted.")
+        return
+    commit_and_push(written)
 
 
 if __name__ == "__main__":

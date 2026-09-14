@@ -81,7 +81,8 @@ def to_markdown(html: str) -> str:
     return conv.handle(html).strip()
 
 
-def frontmatter(post: dict, lang: str, categories: dict[int, str]) -> str:
+def frontmatter(post: dict, lang: str, categories: dict[int, str],
+                derived_from: str | None = None) -> str:
     title = to_markdown(post["title"]["rendered"]).replace('"', '\\"')
     cats = [categories[c] for c in post.get("categories", []) if c in categories]
     lines = [
@@ -90,9 +91,15 @@ def frontmatter(post: dict, lang: str, categories: dict[int, str]) -> str:
         f"date: {post['date']}",
         f"slug: {post['slug']}",   # preserve the exact WP slug per language
         f"lang: {lang}",
-        "manual_translation: false",
-        f"categories: [{', '.join(cats)}]",
     ]
+    if derived_from:
+        # A Polylang sibling: derived, so translate.py never treats it as a
+        # source — and frozen, because these are *human* WordPress translations
+        # and regenerating them would replace them with weaker machine output.
+        lines.extend([f"translated_from: {derived_from}", "manual_translation: true"])
+    else:
+        lines.append("manual_translation: false")
+    lines.append(f"categories: [{', '.join(cats)}]")
     excerpt = to_markdown(post.get("excerpt", {}).get("rendered", ""))
     if excerpt:
         lines.append(f'description: "{excerpt[:300].replace(chr(34), chr(39))}"')
@@ -125,10 +132,16 @@ def main() -> None:
         # sibling's slug as the shared basename so Hugo pairs the set.
         translations = post.get("translations", {})
         es_id = translations.get("es", post["id"])
-        basename = by_id.get(es_id, post)["slug"]
+        origin = by_id.get(es_id, post)
+        basename = origin["slug"]
+
+        # Anything that isn't the origin of its Polylang group is a translation.
+        origin_lang = LANG_MAP.get(origin.get("lang", "es"))
+        derived_from = origin_lang if origin_lang and origin_lang != lang else None
 
         body_html = rewrite_images(post["content"]["rendered"], base_url)
-        md = frontmatter(post, lang, categories) + "\n\n" + to_markdown(body_html) + "\n"
+        md = (frontmatter(post, lang, categories, derived_from)
+              + "\n\n" + to_markdown(body_html) + "\n")
 
         out = POSTS_DIR / f"{basename}.{lang}.md"
         out.write_text(md, encoding="utf-8")

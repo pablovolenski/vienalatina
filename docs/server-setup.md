@@ -196,15 +196,23 @@ In Woodpecker (**https://ci.vienalatina.com**):
    (this auto-creates the push webhook in Gitea).
 2. Repo → Settings → *Project settings* → check **Trusted** (needed so the
    deploy step may mount `/var/www/vienalatina.com`).
-3. Repo → Settings → *Secrets* → add:
-   - `deepl_api_key` — your DeepL key (the same one from the WP plugin
-     settings page).
-   - `gitea_push_token` — the bot token from step 6.3.
+3. Repo → Settings → *Secrets* → add `gitea_push_token`, the bot token from
+   step 6.3. That is the only secret — translation runs locally and needs no key.
 
-The push in the step above has already triggered a first pipeline — it likely
-ran before the secrets existed, so open it and press the retry button. All
-three steps (translate → build → deploy) should go green, and
-`/var/www/vienalatina.com/` on the server now contains the built site:
+Build the translation image before the first run (~5 minutes; it downloads
+about 1GB of model):
+
+```sh
+cd ~/vienalatina
+docker build -t vienalatina/translate:1 docker/translate
+```
+
+The push in the step above has already triggered a first pipeline — it ran
+before the image and secret existed, so **push a new commit rather than using
+Restart**. Restart replays the old commit, and a restart's empty diff range
+makes the translate step find nothing to do. All three steps (translate →
+build → deploy) should go green, and `/var/www/vienalatina.com/` on the server
+now contains the built site:
 
 ```sh
 ls /var/www/vienalatina.com     # index.html, de/, pt-br/, robots.txt, llms.txt …
@@ -247,8 +255,14 @@ Saturday complete. 🎉
 ## Cutover day (Sunday evening)
 
 1. Run the content migration and push (see README, "One-shot content
-   migration"), spot-check the built site by IP or with
-   `curl -H "Host: vienalatina.com" http://127.0.0.1/...` on the server.
+   migration"). Migrated Polylang siblings arrive frozen
+   (`manual_translation: true`) because they are *human* translations — the
+   machine engine must never overwrite them. Then
+   `python scripts/translate.py --backfill` fills in any set that WordPress
+   had no translation for. Spot-check the built site with
+   `grep` on `/var/www/vienalatina.com/index.html`; the
+   `curl -H "Host: vienalatina.com" http://127.0.0.1/` trick only works after
+   step 3, since Caddy has no matching site block until then.
 2. At the registrar: lower the `vienalatina.com` A record TTL to 300, wait
    for the old TTL to expire, then change the A record to `<SERVER-IP>`
    (and `www` too, as CNAME to `vienalatina.com` or A to the same IP).
@@ -256,8 +270,10 @@ Saturday complete. 🎉
    `/etc/caddy/Caddyfile`, then `sudo systemctl reload caddy`. Caddy fetches
    the certificate as soon as DNS resolves to this server.
 4. Verify: the checklist in the migration plan (hreflang tags, robots.txt,
-   llms.txt, Lighthouse, red-pipeline DeepL failure test,
-   `manual_translation: true` freeze test).
+   llms.txt, Lighthouse, `manual_translation: true` freeze test, and the
+   loop-prevention test — after the bot pushes siblings, the pipeline it
+   triggers must report "nothing to translate" rather than translating the
+   siblings back).
 5. Keep the WP host untouched for 30 days as fallback; watch Google Search
    Console and add Caddy 301s for any 404s it reports.
 
