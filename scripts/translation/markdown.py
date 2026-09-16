@@ -51,8 +51,9 @@ class PlaceholderError(RuntimeError):
 
 
 class _Masker:
-    def __init__(self) -> None:
+    def __init__(self, protect_terms: bool = True) -> None:
         self.spans: list[str] = []
+        self.protect_terms = protect_terms
 
     def _take(self, match: re.Match) -> str:
         self.spans.append(match.group(0))
@@ -61,8 +62,9 @@ class _Masker:
     def mask(self, text: str) -> str:
         for pattern in _INLINE:
             text = pattern.sub(self._take, text)
-        for term in PROTECTED_TERMS:
-            text = re.sub(re.escape(term), self._take, text, flags=re.IGNORECASE)
+        if self.protect_terms:
+            for term in PROTECTED_TERMS:
+                text = re.sub(re.escape(term), self._take, text, flags=re.IGNORECASE)
         return text
 
     def restore(self, text: str) -> str:
@@ -85,15 +87,39 @@ def _sentences(text: str, lang: str) -> list[str]:
     return [s.strip() for s in segment(SITE_TO_MODEL[lang], text) if s.strip()]
 
 
-def translate_text(text: str, src: str, tgt: str, provider: Provider) -> str:
-    """Translate one prose string, protecting inline markup and fixed terms."""
-    if not text.strip():
-        return text
-    masker = _Masker()
+def _attempt(text: str, src: str, tgt: str, provider: Provider, protect_terms: bool) -> str:
+    masker = _Masker(protect_terms=protect_terms)
     pieces = _sentences(masker.mask(text), src)
     if not pieces:
         return text
     return masker.restore(" ".join(provider.translate(pieces, src, tgt)))
+
+
+def translate_text(text: str, src: str, tgt: str, provider: Provider) -> str:
+    """Translate one prose string, protecting inline markup and fixed terms.
+
+    Small models drop placeholders now and then. Rather than failing the whole
+    publish over one proper noun, degrade in steps — but never emit a stray
+    placeholder, and never silently corrupt markup.
+    """
+    if not text.strip():
+        return text
+    try:
+        return _attempt(text, src, tgt, provider, protect_terms=True)
+    except PlaceholderError as exc:
+        lost_term = exc  # `exc` is cleared when the except block ends
+
+    # Terminology is a nice-to-have; markup is not. Retry guarding only markup
+    # and accept that a protected term may come back translated.
+    try:
+        result = _attempt(text, src, tgt, provider, protect_terms=False)
+        print(f"  note: protected terms not preserved in one segment ({lost_term})")
+        return result
+    except PlaceholderError as lost_markup:
+        # Markup itself didn't survive. Shipping the source text is the only
+        # outcome that is neither corrupt nor silently wrong.
+        print(f"  warning: one segment left untranslated ({lost_markup})")
+        return text
 
 
 def _is_prose(line: str) -> bool:

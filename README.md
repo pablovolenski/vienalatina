@@ -65,8 +65,17 @@ Generated siblings additionally carry `translated_from: es`.
 Markup never reaches the model: code blocks and raw HTML pass through
 untouched, and link targets, inline code and protected community terms
 (`Grätzl`, `Naschmarkt`, …) are masked and verified to survive the round trip.
-A mask that doesn't come back fails the pipeline rather than shipping corrupted
-text — no half-translated sets ever ship.
+
+Small models drop those masks occasionally, so a failed round trip degrades in
+steps rather than failing the publish:
+
+1. mask markup **and** protected terms — the normal path;
+2. if a term is lost, retry guarding only markup, and log that the term may now
+   be translated;
+3. if markup itself is lost, leave that segment in the source language and warn.
+
+A stray `｟0｠` or a mangled URL therefore never reaches a reader, and one
+awkward proper noun never blocks a deploy.
 
 Backfill anything missing siblings (after the WP migration, or for pages that
 predate the pipeline):
