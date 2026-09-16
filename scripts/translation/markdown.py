@@ -5,9 +5,11 @@ model has no equivalent, so structure is protected here instead: non-prose
 blocks pass through untouched, and inline constructs are masked with opaque
 placeholders whose survival is verified after the round trip.
 
-Placeholders use OpenNMT's protected-sequence convention (U+FF5F/U+FF60).
-SentencePiece keeps these atomic; ``{{x}}``, ``<x>`` and ``%s`` get fragmented
-by BPE and dropped by the model.
+Placeholders are word-shaped (``Zq0Xv``) rather than punctuation. Measured on
+M2M100 418M: the OpenNMT ``｟0｠`` convention was dropped on every single
+occurrence, because SentencePiece fragments punctuation runs and the model then
+fails to copy them. A token that looks like an unknown proper noun gets carried
+through, since the model has nothing to translate it to.
 """
 
 from __future__ import annotations
@@ -16,7 +18,8 @@ import re
 
 from .provider import SITE_TO_MODEL, Provider
 
-OPEN, CLOSE = "｟", "｠"
+_MASK = "Zq{}Xv"
+_MASK_RE = re.compile(r"Zq\s*(\d+)\s*Xv", re.IGNORECASE)
 
 # Community vocabulary that must reach readers unchanged. Not inherited from
 # the WordPress plugin, which had no glossary at all — edit freely.
@@ -43,9 +46,6 @@ _INLINE = (
     re.compile(r"https?://\S+"),   # bare URLs
 )
 
-_PLACEHOLDER = re.compile(re.escape(OPEN) + r"\s*(\d+)\s*" + re.escape(CLOSE))
-
-
 class PlaceholderError(RuntimeError):
     """A masked span did not survive translation intact."""
 
@@ -57,7 +57,7 @@ class _Masker:
 
     def _take(self, match: re.Match) -> str:
         self.spans.append(match.group(0))
-        return f"{OPEN}{len(self.spans) - 1}{CLOSE}"
+        return _MASK.format(len(self.spans) - 1)
 
     def mask(self, text: str) -> str:
         for pattern in _INLINE:
@@ -68,10 +68,10 @@ class _Masker:
         return text
 
     def restore(self, text: str) -> str:
-        # Models pad and reorder placeholders; normalise spacing before matching.
-        text = _PLACEHOLDER.sub(lambda m: f"{OPEN}{m.group(1)}{CLOSE}", text)
+        # Models pad, re-case and reorder placeholders; normalise before matching.
+        text = _MASK_RE.sub(lambda m: _MASK.format(m.group(1)), text)
         for index, span in enumerate(self.spans):
-            token = f"{OPEN}{index}{CLOSE}"
+            token = _MASK.format(index)
             seen = text.count(token)
             if seen != 1:
                 raise PlaceholderError(
