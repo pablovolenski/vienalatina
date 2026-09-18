@@ -146,8 +146,15 @@ Then create the two OAuth apps and the bot user, all in the Gitea web UI:
    - Save the **Client ID** and **Client Secret** — needed in step 7.
 2. **Decap OAuth app:** same screen, second application
    - Name: `decap-cms`
-   - Redirect URI: `https://vienalatina.com/admin/`
+   - Redirect URI: `https://vienalatina.com/admin/` (exactly, trailing slash
+     included — Gitea matches it literally)
+   - **Untick "Confidential Client".** Decap runs in the browser and
+     authenticates with PKCE; a confidential app makes Gitea demand a client
+     secret that a browser cannot keep, and the login fails *after* you
+     authorize, which makes it look like a Decap bug.
    - Save the **Client ID** — it goes into `static/admin/config.yml` (step 9).
+     There is no secret to save, and the Client ID is not one either: it is
+     published in the site's JavaScript by design.
 3. **Translations bot:** Site Administration → Identity & Access →
    User Accounts → *Create User Account*
    - Username: `translations`, email: `translations@vienalatina.com`,
@@ -224,6 +231,21 @@ On your working copy: edit `static/admin/config.yml`, replace
 `REPLACE_WITH_GITEA_OAUTH_CLIENT_ID` with the Decap OAuth Client ID from
 step 6.2, commit, push to Gitea. (You can't log into `/admin` until the main
 domain is live — that's expected.)
+
+```sh
+cd ~/vienalatina
+sed -i 's/REPLACE_WITH_GITEA_OAUTH_CLIENT_ID/<client id>/' static/admin/config.yml
+grep app_id static/admin/config.yml
+git commit -am "Wire Decap to the Gitea OAuth app" && git push gitea main
+```
+
+This value is per-deployment: the placeholder is what belongs in the repo, so
+leave it in place in any copy of this platform that is not this server.
+
+If `/admin/` still shows *Client ID not registered* afterwards, the page is
+serving a cached `config.yml` — hard-reload it. If it fails *after* the Gitea
+authorize screen instead, the app was created as a confidential client; delete
+it and recreate it with that box unticked.
 
 ## 10. Test the translation loop end-to-end
 
