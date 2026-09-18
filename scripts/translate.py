@@ -37,9 +37,17 @@ from pathlib import Path
 
 import yaml
 
-from translation.ctranslate_provider import CTranslate2Provider
 from translation.markdown import translate_markdown, translate_text
 from translation.provider import SITE_LANGS
+
+
+def build_provider():
+    """MT_PROVIDER=m2m100 falls back to the single-model engine."""
+    if os.environ.get("MT_PROVIDER", "opus") == "m2m100":
+        from translation.ctranslate_provider import CTranslate2Provider
+        return CTranslate2Provider()
+    from translation.opus_provider import OpusMTProvider
+    return OpusMTProvider()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = REPO_ROOT / "content"
@@ -225,7 +233,7 @@ def main() -> None:
         print("No authored content changed — nothing to translate.")
         return
 
-    provider = CTranslate2Provider()
+    provider = build_provider()
     written: list[Path] = []
     for source, basename, lang in sources:
         print(f"Translating {source.relative_to(REPO_ROOT)} (from {lang}):")

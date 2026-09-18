@@ -5,10 +5,14 @@
 # translation happens here, asynchronously, and every generated sibling lands
 # as a reviewable bot commit.
 #
-# Translation is self-hosted — the model ships inside vienalatina/translate,
-# so there is no API key and no third-party request. Build that image on the
-# server before the first run:
-#   docker build -t vienalatina/translate:1 docker/translate
+# Translation is self-hosted — OPUS-MT runs on CPU inside the image, so there
+# is no API key and no third-party request. Before the first run, on the server:
+#   bash scripts/fetch-models.sh                        # -> /srv/mt-models
+#   docker build -t vienalatina/translate:2 docker/translate
+#
+# The models are mounted rather than baked in, so swapping them later does not
+# mean rebuilding the image. The repo must be marked "trusted" in Woodpecker
+# for this mount, which it already is for the deploy step.
 #
 # Secrets to configure in Woodpecker (repo settings → secrets):
 #   gitea_push_token — Gitea token for the translations bot user
@@ -23,8 +27,10 @@ when:
 
 steps:
   translate:
-    image: vienalatina/translate:1
+    image: vienalatina/translate:2
     pull: false          # built locally on the server, never fetched from a registry
+    volumes:
+      - /srv/mt-models:/opt/mt/models:ro
     environment:
       GITEA_PUSH_TOKEN:
         from_secret: gitea_push_token

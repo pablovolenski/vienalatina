@@ -1,20 +1,19 @@
 # Pipeline image for the translate step.
 #
-# Model and tokenizer are baked in, so a publish makes zero network calls and
-# needs no API key. torch is deliberately absent: it is only required to
-# *convert* a model, and the default PyPI wheel drags in ~2.5GB of CUDA
-# libraries this CPU-only box will never use.
+# Models are NOT baked in — they live on the host at /srv/mt-models (see
+# scripts/fetch-models.sh) and are mounted read-only by .woodpecker.yml. That
+# keeps this image small and lets a model change be a directory swap instead of
+# a 1GB image rebuild, which matters because model choice turned out to need
+# iteration.
 #
-# Build on the server (once, and again only when changing models):
-#   docker build -t vienalatina/translate:1 docker/translate
+# torch is deliberately absent: it is only needed to *convert* a model, and the
+# default PyPI wheel drags in ~2.5GB of CUDA libraries this CPU-only box will
+# never use. Conversion happens in fetch-models.sh, not here.
 #
-# The default model is a pre-converted CTranslate2 build, which avoids running
-# ct2-transformers-converter on a 4GB box — it gets OOM-killed there.
+# Build on the server:
+#   docker build -t vienalatina/translate:2 docker/translate
 
 FROM python:3.12-slim
-
-ARG MT_MODEL_REPO=michaelfeil/ct2fast-m2m100_418M
-ARG MT_TOKENIZER_REPO=facebook/m2m100_418M
 
 # translate.py shells out to git to diff the push and commit the siblings back.
 RUN apt-get update -qq \
@@ -26,17 +25,9 @@ RUN pip install --no-cache-dir \
       transformers \
       sentencepiece \
       sentencex \
-      pyyaml \
-      huggingface_hub
+      pyyaml
 
-RUN python -c "from huggingface_hub import snapshot_download; \
-snapshot_download('${MT_MODEL_REPO}', local_dir='/opt/mt/model')" \
- && python -c "import transformers; \
-transformers.AutoTokenizer.from_pretrained('${MT_TOKENIZER_REPO}') \
-  .save_pretrained('/opt/mt/tokenizer')"
-
-# The published artifact is float16; CTranslate2 quantises to int8 on load.
-ENV MT_MODEL_DIR=/opt/mt/model \
-    MT_TOKENIZER=/opt/mt/tokenizer \
+ENV MT_PROVIDER=opus \
+    MT_MODEL_DIR=/opt/mt/models \
     MT_COMPUTE_TYPE=int8 \
     MT_THREADS=2
