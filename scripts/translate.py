@@ -12,6 +12,11 @@ Loop prevention, which was structural back when only Spanish could be a source:
     never itself treated as a source;
   * the bot's own commits carry [skip-translate] and are skipped outright.
 
+Deletion is handled too, and has to be: removing a post in the CMS deletes one
+file, the original, and the siblings this script wrote would otherwise stay on
+the site as posts in a language with no original. Any sibling whose source has
+disappeared is removed, unless it is frozen.
+
 `manual_translation: true` means "hands off", on both sides:
   * on an authored source — do not generate siblings for this post at all;
   * on a generated sibling — never overwrite it again.
@@ -180,6 +185,41 @@ def missing_siblings() -> list[Path]:
     return incomplete
 
 
+def orphaned_siblings() -> list[Path]:
+    """Generated siblings whose source no longer exists.
+
+    Deleting a post in the CMS removes one file — the Spanish original. The
+    German and Portuguese siblings were written by this script, not by the
+    author, so nothing else deletes them and they stay on the site as posts in
+    a language that has no original. A rename leaves the same debris, since it
+    is a delete plus an add.
+
+    This scans the whole content tree rather than the push diff, so it also
+    clears siblings orphaned by earlier runs that predate this check.
+    """
+    orphans = []
+    for path in sorted(CONTENT_DIR.rglob("*.md")):
+        parsed = split_lang(path)
+        if not parsed:
+            continue
+        basename, lang = parsed
+        fm = read_frontmatter(path)
+        source_lang = fm.get("translated_from")
+        if not source_lang:
+            continue  # authored by a human; only its author deletes it
+        if path.with_name(f"{basename}.{source_lang}.md").exists():
+            continue
+        rel = path.relative_to(REPO_ROOT)
+        if is_frozen(fm):
+            # Someone edited this translation by hand. Deleting it would throw
+            # that work away on the strength of an inference, so say so instead.
+            print(f"  {rel}: source is gone but manual_translation=true — left in place; "
+                  f"delete it by hand if the post is meant to disappear")
+            continue
+        orphans.append(path)
+    return orphans
+
+
 def translate_file(source: Path, basename: str, src_lang: str, provider) -> list[Path]:
     fm, body = split_frontmatter(source.read_text(encoding="utf-8"))
     written: list[Path] = []
@@ -218,7 +258,7 @@ def translate_file(source: Path, basename: str, src_lang: str, provider) -> list
     return written
 
 
-def commit_and_push(files: list[Path]) -> None:
+def commit_and_push(files: list[Path], summary: str) -> None:
     branch = os.environ.get("CI_COMMIT_BRANCH", "main")
     run("git", "config", "user.name", BOT_NAME)
     run("git", "config", "user.email", BOT_EMAIL)
@@ -227,11 +267,13 @@ def commit_and_push(files: list[Path]) -> None:
     if token:  # clone credentials are read-only; pushing needs the bot token
         run("git", "remote", "set-url", "origin",
             f"https://{BOT_NAME}:{token}@git.vienalatina.com/{repo}.git")
-    run("git", "add", *[str(f) for f in files])
+    # --all so a path that no longer exists stages as a deletion rather than
+    # failing; reaped orphans arrive here alongside freshly written siblings.
+    run("git", "add", "--all", "--", *[str(f) for f in files])
     if not run("git", "status", "--porcelain"):
         print("Translations identical to committed siblings — nothing to push.")
         return
-    run("git", "commit", "-m", f"translate: update generated siblings {SKIP_MARKER}")
+    run("git", "commit", "-m", f"translate: {summary} {SKIP_MARKER}")
     run("git", "push", "origin", f"HEAD:{branch}")
     print(f"Pushed sibling commit to {branch}.")
 
@@ -250,23 +292,39 @@ def main() -> None:
 
     paths = missing_siblings() if args.backfill else changed_markdown()
     sources = authored_sources(paths)
-    if not sources:
-        print("No authored content changed — nothing to translate.")
-        return
 
-    provider = build_provider()
     written: list[Path] = []
-    for source, basename, lang in sources:
-        print(f"Translating {source.relative_to(REPO_ROOT)} (from {lang}):")
-        written.extend(translate_file(source, basename, lang, provider))
+    if sources:
+        provider = build_provider()
+        for source, basename, lang in sources:
+            print(f"Translating {source.relative_to(REPO_ROOT)} (from {lang}):")
+            written.extend(translate_file(source, basename, lang, provider))
+    else:
+        print("No authored content changed — nothing to translate.")
 
-    if not written:
-        print("Every sibling is frozen — nothing written.")
+    # Runs whether or not anything was translated: a push that only deletes
+    # posts reaches this point with no sources at all, and that is exactly the
+    # case where siblings are left stranded.
+    removed = []
+    for orphan in orphaned_siblings():
+        orphan.unlink()
+        removed.append(orphan)
+        print(f"  {orphan.relative_to(REPO_ROOT)}: source deleted — removed")
+
+    touched = written + removed
+    if not touched:
+        print("Nothing to commit.")
         return
     if args.no_push:
-        print(f"--no-push: wrote {len(written)} files, leaving them uncommitted.")
+        print(f"--no-push: wrote {len(written)} and removed {len(removed)} files, "
+              f"leaving them uncommitted.")
         return
-    commit_and_push(written)
+    parts = []
+    if written:
+        parts.append(f"update {len(written)} generated siblings")
+    if removed:
+        parts.append(f"remove {len(removed)} orphaned by a deleted source")
+    commit_and_push(touched, " and ".join(parts))
 
 
 if __name__ == "__main__":
