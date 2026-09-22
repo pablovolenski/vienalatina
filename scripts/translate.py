@@ -78,6 +78,14 @@ def split_lang(path: Path) -> tuple[str, str] | None:
     return None
 
 
+# Decap resolves a filename clash by appending a counter, turning
+# `hola-mundo.es.md` into `hola-mundo.es-1.md`. That name no longer ends in a
+# language, so Hugo stops pairing it with its siblings and split_lang() returns
+# None: the post publishes in Spanish and is never translated, with nothing
+# anywhere reporting it. Recognising the shape lets us fail loudly instead.
+CLASH_SUFFIX = re.compile(r"\.(?:%s)-\d+$" % "|".join(re.escape(l) for l in SITE_LANGS))
+
+
 def split_frontmatter(text: str) -> tuple[dict, str]:
     match = re.match(r"\A---\n(.*?)\n---\n?(.*)\Z", text, re.DOTALL)
     if not match:
@@ -130,6 +138,14 @@ def authored_sources(paths: list[Path]) -> list[tuple[Path, str, str]]:
     for path in paths:
         parsed = split_lang(path)
         if not parsed:
+            rel = path.relative_to(REPO_ROOT)
+            if CLASH_SUFFIX.search(path.name[: -len(".md")] if path.suffix == ".md" else ""):
+                raise SystemExit(
+                    f"{rel}: filename ends in a clash counter, so it is neither a "
+                    f"translation source nor a sibling — it would publish untranslated.\n"
+                    f"Rename it to <something-unique>.<lang>.md (the CMS produced this "
+                    f"because another post already claimed the name)."
+                )
             continue
         basename, lang = parsed
         fm = read_frontmatter(path)

@@ -42,7 +42,13 @@ steps:
     commands:
       # Bundle Decap locally so the /admin page makes zero third-party requests.
       - wget -q -O static/admin/decap-cms.js https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js
-      - hugo --minify
+      # --printPathWarnings makes Hugo report two pages resolving to one output
+      # path; --panicOnWarning turns that report into a failed build. Without
+      # both, Hugo writes both documents into the same index.html and the site
+      # ships a page that renders as the article followed by a second copy of
+      # the whole site — with nothing in the CMS, the pipeline or the logs
+      # saying a word about it. Better a red build than a corrupted page.
+      - hugo --minify --printPathWarnings --panicOnWarning
 
   deploy:
     image: alpine:3.20

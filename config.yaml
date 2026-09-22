@@ -9,9 +9,14 @@ theme: "vienalatina"
 defaultContentLanguage: "es"
 defaultContentLanguageInSubdir: false
 
-# Preserve WordPress slugs so external inbound links keep working.
+# Date-scoped so two posts can share a title without fighting over one URL.
+# `:slug` falls back to the title when front matter sets none, so a bare
+# "/:slug/" mapped every post called "Hola mundo" onto /hola-mundo/; Hugo wrote
+# both documents into that one index.html and the page rendered as two stacked
+# copies of the site, with no error anywhere. Community blogs repeat titles
+# constantly ("Resumen del mes"), so the year and month carry the uniqueness.
 permalinks:
-  post: "/:slug/"
+  post: "/:year/:month/:slug/"
 
 taxonomies:
   category: "categories"

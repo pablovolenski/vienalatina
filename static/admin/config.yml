@@ -22,7 +22,12 @@ collections:
     create: true
     extension: md
     format: yaml-frontmatter
-    slug: "{{slug}}.es"
+    # Date-prefixed so a repeated title does not collide on the filename. When
+    # it does collide, Decap appends "-1" and writes `hola-mundo.es-1.md` — a
+    # name whose suffix is no longer `.es`, so Hugo stops seeing a Spanish
+    # sibling and translate.py's split_lang() skips the file entirely: the post
+    # publishes but is never translated, with nothing reported anywhere.
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}.es"
     filter: { field: lang, value: es }
     fields:
       - { name: title, label: "Título", widget: string }
