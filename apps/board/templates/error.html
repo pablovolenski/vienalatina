@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ code }}{% endblock %}
+
+{% block main %}
+<article class="card card--center">
+	<h1>{{ code }}</h1>
+	<p class="muted">{{ message }}</p>
+	<a class="btn" href="{{ url_for('board.threads') }}">Volver a los mensajes</a>
+</article>
+{% endblock %}

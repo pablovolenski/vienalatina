@@ -7,3 +7,12 @@ resources/
 static/admin/decap-cms.js
 
 __pycache__/
+.pytest_cache/
+
+# Members area: secrets and live data. The .env holds the OAuth client secret
+# and, where configured, a Gitea site-admin token; board.db holds every
+# member's name, address and writing.
+infra/board/.env
+*.db
+*.db-wal
+*.db-shm

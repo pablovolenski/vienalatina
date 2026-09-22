@@ -1,23 +1,27 @@
 # Viena Latina
 
-Static, self-hosted, trilingual blog for the Latin American community in
-Vienna — Hugo + Decap CMS + Gitea + Woodpecker CI on a single Hetzner CX22
-(Nuremberg, DE). Replaces the previous WordPress + Polylang + synchronous
-DeepL stack.
+Self-hosted, trilingual site for the Latin American community in Vienna —
+Hugo + Decap CMS + Gitea + Woodpecker CI on a single Hetzner CX22 (Falkenstein,
+DE). Replaces the previous WordPress + Polylang + synchronous DeepL stack.
 
-Translation is self-hosted too: M2M100 418M (MIT) runs on CPU via CTranslate2
-inside the pipeline image. No API key, no quota, and no visitor or content data
-leaving the server.
+Translation is self-hosted too: OPUS-MT (CC-BY-4.0) runs on CPU via CTranslate2
+in the pipeline image, with the models mounted from the host. No API key, no
+quota, and no visitor or content data leaving the server.
 
 ```
 Pablo ──► Decap CMS (/admin) ──commit──► Gitea ──webhook──► Woodpecker CI
-                                                              │
-                                  translate (M2M100, async) ──┤
-                                  build (hugo)                ─┤
-                                  deploy (rsync)              ─┘
-                                                              ▼
-                                            Caddy 2 serves /var/www/vienalatina.com
+                                           ▲                   │
+                                           │   translate ──────┤
+                                        OAuth2   build (hugo) ─┤
+                                           │   deploy (rsync) ─┘
+                                           │                   ▼
+   Members ──► /comunidad/ ────────────────┘   Caddy 2 serves /var/www/vienalatina.com
+               Flask + SQLite                  …and proxies /comunidad/ to Flask
 ```
+
+Everything except `/comunidad/` is a static file built from git. The members
+area is the one component that runs code to answer a request, and the one whose
+data is not reproducible from the repository — see **Members area** below.
 
 ## Languages
 
@@ -138,6 +142,41 @@ Gitea admin (redirect URI `https://vienalatina.com/admin/`) and put its
 client ID in `app_id`. The Decap JS bundle is downloaded at build time into
 `static/admin/decap-cms.js` (gitignored) — zero third-party requests at
 runtime.
+
+## Members area
+
+`apps/board/` — a small Flask app at `/comunidad/`, behind Caddy, holding roles
+and an internal message board. Signed-in members only.
+
+```
+apps/board/
+  app.py        factory, config, the CSRF and noindex hooks
+  auth.py       Gitea OAuth2 (confidential client) and the membership gate
+  members.py    roles, provisioning, ownership transfer, GDPR erasure/export
+  board.py      threads and comments
+  render.py     markdown with raw HTML disabled
+  schema.sql    three tables and the one-owner index
+  tests/        pytest, 41 checks — `python3 -m pytest apps/board/tests`
+```
+
+Three things about it are load-bearing and easy to undo by accident:
+
+- **A Gitea account is not a membership.** Login succeeds only for an active row
+  in `members`. Drop that check and every account on the instance gets in,
+  starting with the translations bot.
+- **One owner, enforced by a partial unique index**, not by application code.
+  The owner cannot be suspended or demoted by anyone; stepping down means
+  transferring ownership to an admin.
+- **`html=False` in `render.py`** is the entire XSS defence, and it works
+  because markdown-it then emits only its own tags. Turning it on means owning a
+  sanitiser allowlist forever.
+
+Admins can delete anyone's post; **nobody can edit anyone else's**, admins
+included. Removing a post is visible to its author, quietly rewriting it is not.
+
+Its SQLite database is the only state on the server that git does not hold.
+`scripts/backup-board.sh` takes a consistent snapshot nightly — see
+`docs/server-setup.md` §11.
 
 ## GEO/SEO surfaces
 

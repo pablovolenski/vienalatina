@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Editar respuesta{% endblock %}
+
+{% block main %}
+<form class="card" method="post" action="{{ url_for('board.edit_comment', comment_id=comment.id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<h1>Editar respuesta</h1>
+
+	<label for="body">Mensaje</label>
+	<textarea id="body" name="body" rows="10" required>{{ comment.body_md }}</textarea>
+
+	<div class="actions">
+		<button class="btn" type="submit">Guardar</button>
+		<a class="linkish" href="{{ url_for('board.thread', thread_id=comment.thread_id) }}">Cancelar</a>
+	</div>
+</form>
+{% endblock %}

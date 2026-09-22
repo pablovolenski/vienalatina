@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar tema' if thread else 'Escribir' }}{% endblock %}
+
+{% block main %}
+<form class="card" method="post"
+      action="{{ url_for('board.edit_thread', thread_id=thread.id) if thread else url_for('board.new_thread') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<h1>{{ 'Editar tema' if thread else 'Nuevo tema' }}</h1>
+
+	<label for="title">Título</label>
+	<input id="title" name="title" maxlength="140" required
+	       value="{{ thread.title if thread else '' }}">
+
+	<label for="body">Mensaje</label>
+	<textarea id="body" name="body" rows="14" required
+	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces.">{{ thread.body_md if thread else '' }}</textarea>
+
+	<div class="actions">
+		<button class="btn" type="submit">{{ 'Guardar' if thread else 'Publicar' }}</button>
+		<a class="linkish" href="{{ url_for('board.thread', thread_id=thread.id) if thread else url_for('board.threads') }}">Cancelar</a>
+	</div>
+</form>
+{% endblock %}

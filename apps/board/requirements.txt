@@ -1,0 +1,12 @@
+# Pinned rather than floating: this image is rebuilt rarely and by hand, and a
+# silent minor-version bump between two builds is exactly the kind of drift
+# that makes "it worked on the old container" impossible to investigate.
+#
+# All permissive, which matters because the platform is meant to be resold:
+# Flask BSD-3, gunicorn MIT, markdown-it-py MIT, linkify-it-py MIT,
+# requests Apache-2.0, SQLite public domain.
+flask==3.1.3
+gunicorn==23.0.0
+markdown-it-py==4.2.0
+linkify-it-py==2.2.0
+requests==2.33.1

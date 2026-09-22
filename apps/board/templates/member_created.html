@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Miembro dado de alta{% endblock %}
+
+{% block main %}
+<article class="card">
+	<h1>{{ login }} ya es {{ role_label|lower }}</h1>
+
+	{% if password %}
+	<p>Esta contraseña se muestra <strong>una sola vez</strong>. Cópiala ahora y
+	entrégasela en persona o por un canal privado.</p>
+
+	<p class="password mono">{{ password }}</p>
+
+	<p class="muted small">
+		No se guarda en ningún sitio: el servidor sólo conserva el hash, igual que
+		con cualquier contraseña. Si se pierde, hay que restablecerla desde Gitea.
+		La persona tendrá que cambiarla la primera vez que entre.
+	</p>
+	{% else %}
+	<p>No se creó ninguna cuenta nueva: ya existía. Puede entrar con la que tenía.</p>
+	{% endif %}
+
+	<div class="actions">
+		<a class="btn" href="{{ url_for('members.index') }}">Volver a miembros</a>
+	</div>
+</article>
+{% endblock %}

@@ -307,3 +307,130 @@ sudo restic -r sftp:uXXXXXX@uXXXXXX.your-storagebox.de:backups init
 # then a root cron entry, e.g.:
 # 0 3 * * * restic -r sftp:... backup /srv /var/www --password-file /root/.restic-pw
 ```
+
+## 11. Members area (`/comunidad/`)
+
+The private area: roles and an internal board. It is the only part of the site
+that runs code to answer a request, and the only data on the server that is not
+already in git.
+
+### 11.1 Register the OAuth application
+
+Gitea → **Site Administration → Integrations → Applications** →
+*Create new OAuth2 application*:
+
+- Name: `vienalatina-board`
+- Redirect URI: `https://vienalatina.com/comunidad/auth/callback`
+- **Leave "Confidential Client" TICKED.**
+
+That last point is the opposite of the Decap application in step 6.2, and the
+difference is worth understanding rather than memorising. Decap runs in the
+visitor's browser, where any secret would be readable by the visitor, so it has
+to be a public client using PKCE. The board runs on the server, so it can hold
+a secret and should — a confidential client is the stronger of the two.
+
+Save the **Client ID** and the **Client Secret**.
+
+### 11.2 Optional: a token for creating accounts
+
+Without it, admins can add people who already have a Gitea login, and nothing
+else changes. With it, they can create the Gitea account from inside the members
+area and hand over a one-time password.
+
+Log in as a Gitea **site administrator** → Settings → Applications → *Generate
+New Token* → scope **admin (write)**.
+
+Understand what this token is before you create it: it can create and modify any
+account on the instance, including administrators. Anything that can read the
+board's environment — the compose file, `docker inspect`, a shell in the
+container — can use it. If you would rather not have that on the box, leave
+`GITEA_ADMIN_TOKEN` empty and create accounts in Gitea by hand.
+
+### 11.3 Build and run
+
+```sh
+cd ~/vienalatina
+docker build -t vienalatina/board:1 -f docker/board/Dockerfile .
+
+sudo mkdir -p /srv/board/data
+sudo cp -r infra/board/. /srv/board/
+cd /srv/board
+sudo cp .env.example .env
+openssl rand -hex 32          # paste as BOARD_SECRET_KEY
+sudo nano .env                # client id, secret, BOARD_OWNER, optional admin token
+sudo chown -R 1000:1000 /srv/board/data
+sudo docker compose up -d
+```
+
+`BOARD_OWNER` is applied once, to an empty database, and ignored from then on.
+It cannot be used to take ownership later: that is deliberate, because otherwise
+editing a file on disk would be a quieter route to the top than asking for it.
+Ownership moves only through *Transferir titularidad* inside the app.
+
+### 11.4 Route it through Caddy
+
+Add to the `vienalatina.com` block in `/etc/caddy/Caddyfile` (already present in
+`infra/caddy/Caddyfile`):
+
+```
+@board path /comunidad /comunidad/*
+reverse_proxy @board 127.0.0.1:8080
+```
+
+Then `sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy`.
+
+Both paths are matched on purpose: Flask redirects `/comunidad` to
+`/comunidad/`, and matching only the trailing-slash form lets the bare path fall
+through to the static site and 404.
+
+### 11.5 Back it up — this part is not optional
+
+Everything else on this server is reproducible from the repository. The board's
+threads, comments and membership exist in exactly one place.
+
+```sh
+sudo apt install -y sqlite3
+crontab -e
+# 15 4 * * *  /home/pablo/vienalatina/scripts/backup-board.sh >> /home/pablo/board-backup.log 2>&1
+```
+
+The script uses SQLite's `.backup` rather than copying the file, because the
+database is live and in WAL mode — a plain `cp` can capture it missing its most
+recent commits. Test a restore before you rely on it: stop the container, gunzip
+a backup over `/srv/board/data/board.db`, start it again.
+
+### 11.6 Who can do what
+
+| | Owner | Admin | User |
+|---|---|---|---|
+| Post, comment, edit own | ✓ | ✓ | ✓ |
+| Delete any post | ✓ | ✓ | — |
+| Edit someone else's post | — | — | — |
+| Pin and close threads | ✓ | ✓ | — |
+| Create users | ✓ | ✓ | — |
+| Create admins | ✓ | — | — |
+| Suspend a user | ✓ | ✓ | — |
+| Suspend an admin | ✓ | — | — |
+| Transfer ownership | ✓ | — | — |
+
+Nobody edits anyone else's words, administrators included. Taking a post down is
+visible to the person who wrote it; rewriting it is not, and an admin who could
+do that could leave a sentence attributed to a member who never wrote it.
+
+There is exactly one owner, and the database enforces it with a unique index
+rather than trusting the application to remember. The owner cannot be suspended
+or demoted by anyone, themselves included — to step down, transfer ownership to
+an admin.
+
+### 11.7 Personal data
+
+Members' names, emails and writing are personal data under GDPR.
+
+- **Erasure:** the owner's *Eliminar* removes the member row entirely and
+  reassigns their threads and comments to a tombstone shown as "Miembro
+  eliminado", so conversations other people took part in stay readable.
+- **Access:** any member can download everything they have written from
+  *Descargar mis datos*.
+- **Retention:** soft-deleted posts stay in the database until removed by hand.
+  If you want a real retention limit, that is a `DELETE ... WHERE deleted_at <`
+  in this same cron slot — and a decision to take deliberately, not by default.

@@ -1,39 +1,66 @@
 # Viena Latina — robots.txt
 # Ported from theme/inc/robots-and-llms.php (PR #37): explicit allow for AI crawlers.
+#
+# The two Disallow lines are repeated in every group on purpose. A crawler obeys
+# exactly one group — the most specific one matching its name — and ignores the
+# rest, so a Disallow that appears only under `User-agent: *` does not apply to
+# GPTBot or ClaudeBot at all. Listing an agent to allow it would otherwise
+# quietly hand it the private areas as well.
 
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /comunidad/
 
-# AI crawlers — explicit allow
+# AI crawlers — explicit allow for the public site, never the private areas
 User-agent: GPTBot
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: CCBot
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: Amazonbot
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: Bytespider
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 User-agent: meta-externalagent
 Allow: /
+Disallow: /admin/
+Disallow: /comunidad/
 
 Sitemap: https://vienalatina.com/sitemap.xml

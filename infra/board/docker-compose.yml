@@ -1,0 +1,41 @@
+# Members area — Flask + SQLite behind Caddy.
+#
+# Copy this directory to /srv/board/ on the server, fill in .env, then:
+#   mkdir -p /srv/board/data && sudo chown 1000:1000 /srv/board/data
+#   docker compose up -d
+#
+# Bound to localhost like Gitea and Woodpecker: the only way in from outside is
+# through Caddy, which terminates TLS and forwards /comunidad/.
+
+services:
+  board:
+    image: vienalatina/board:1
+    restart: unless-stopped
+    environment:
+      # Session signing key. Generate once with `openssl rand -hex 32`.
+      # Changing it signs everyone out; losing it means nothing worse.
+      - BOARD_SECRET_KEY=${BOARD_SECRET_KEY}
+
+      # Gitea OAuth2 application — a CONFIDENTIAL client, unlike the Decap one.
+      - GITEA_URL=https://git.vienalatina.com
+      - BOARD_OAUTH_CLIENT_ID=${BOARD_OAUTH_CLIENT_ID}
+      - BOARD_OAUTH_CLIENT_SECRET=${BOARD_OAUTH_CLIENT_SECRET}
+      - BOARD_BASE_URL=https://vienalatina.com
+
+      # The Gitea username that becomes the one owner, applied once on an empty
+      # database. Changing it later does nothing: ownership moves from inside
+      # the app, so nobody can take it by editing this file.
+      - BOARD_OWNER=${BOARD_OWNER}
+
+      # Site-admin token, used only to create Gitea accounts for new members.
+      # This is the most privileged secret on the box after Gitea's own
+      # database: anything that can read this environment can create accounts.
+      # Leave it empty to run without account creation — admins then add people
+      # who already have a Gitea login, and everything else still works.
+      - GITEA_ADMIN_TOKEN=${GITEA_ADMIN_TOKEN:-}
+
+      - BOARD_DB=/data/board.db
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8080:8080"

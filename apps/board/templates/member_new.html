@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Dar de alta{% endblock %}
+
+{% block main %}
+<form class="card" method="post" action="{{ url_for('members.new') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<h1>Dar de alta a alguien</h1>
+
+	<label for="login">Usuario</label>
+	<input id="login" name="login" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*"
+	       placeholder="maria.lopez">
+	<p class="muted small">Letras, números, punto, guion y guion bajo.</p>
+
+	<label for="display_name">Nombre</label>
+	<input id="display_name" name="display_name" placeholder="María López">
+
+	<label for="email">Correo</label>
+	<input id="email" name="email" type="email" placeholder="maria@ejemplo.com">
+
+	<label class="check">
+		<input type="checkbox" name="create_account" checked>
+		Crear también su cuenta (desmarca si ya tiene una)
+	</label>
+
+	{% if can_make_admin %}
+	<label for="role">Rol</label>
+	<select id="role" name="role">
+		<option value="user">Usuario</option>
+		<option value="admin">Administrador</option>
+	</select>
+	{% else %}
+	<input type="hidden" name="role" value="user">
+	<p class="muted small">Los administradores sólo pueden dar de alta usuarios.</p>
+	{% endif %}
+
+	<div class="actions">
+		<button class="btn" type="submit">Dar de alta</button>
+		<a class="linkish" href="{{ url_for('members.index') }}">Cancelar</a>
+	</div>
+</form>
+{% endblock %}

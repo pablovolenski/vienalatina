@@ -1,0 +1,58 @@
+{# Chrome deliberately mirrors the public site's header and footer, so moving
+   between vienalatina.com and the members area does not feel like leaving. #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex, nofollow">
+	<title>{% block title %}Comunidad{% endblock %} — Viena Latina</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='board.css') }}">
+	<script src="{{ url_for('static', filename='board.js') }}" defer></script>
+</head>
+<body>
+
+<header class="site-bar">
+	<div class="site-bar__inner">
+		<a class="site-bar__brand" href="/"><span class="site-bar__brand-text">Viena Latina</span></a>
+		{% if g.member %}
+		<div class="site-bar__account">
+			<span class="who">{{ g.member.display_name }}</span>
+			<form method="post" action="{{ url_for('auth.logout') }}">
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+				<button class="linkish" type="submit">Salir</button>
+			</form>
+		</div>
+		{% endif %}
+	</div>
+
+	{% if g.member %}
+	<nav class="site-bar__pages" aria-label="Secciones">
+		<ul class="page-nav">
+			<li><a href="{{ url_for('board.threads') }}">Mensajes</a></li>
+			<li><a href="{{ url_for('members.index') }}">Miembros</a></li>
+		</ul>
+	</nav>
+	{% endif %}
+</header>
+
+<div class="page-shell">
+	<main class="feed">
+		{% with messages = get_flashed_messages(with_categories=true) %}
+			{% for category, message in messages %}
+			<p class="flash flash--{{ category }}">{{ message }}</p>
+			{% endfor %}
+		{% endwith %}
+
+		{% block main %}{% endblock %}
+	</main>
+
+	<footer class="site-foot">
+		<a href="/">Ir al sitio público</a>
+		{% if g.member %} · <a href="{{ url_for('members.export') }}">Descargar mis datos</a>{% endif %}
+		<div class="site-foot__legal">Viena Latina © {{ current_year }} · Área privada</div>
+	</footer>
+</div>
+
+</body>
+</html>

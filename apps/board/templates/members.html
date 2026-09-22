@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Miembros{% endblock %}
+
+{% set me = g.member %}
+{% set is_owner = me.role == 'owner' %}
+{% set is_admin = me.role in ('owner', 'admin') %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Miembros</h1>
+	{% if is_admin %}
+	<a class="btn" href="{{ url_for('members.new') }}">Dar de alta</a>
+	{% endif %}
+</div>
+
+<table class="table">
+	<thead>
+		<tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th>{% if is_admin %}<th></th>{% endif %}</tr>
+	</thead>
+	<tbody>
+	{% for m in members %}
+		<tr class="{{ '' if m.active else 'row--off' }}">
+			<td>{{ m.display_name }}{% if m.id == me.id %} <span class="muted small">(tú)</span>{% endif %}</td>
+			<td class="mono">{{ m.gitea_login }}</td>
+			<td>{{ labels[m.role] }}</td>
+			<td>{{ 'Activo' if m.active else 'Suspendido' }}</td>
+			{% if is_admin %}
+			<td class="actions actions--row">
+				{# The owner is untouchable, so the row shows nothing rather than
+				   buttons that would only produce a 403. #}
+				{% if m.role != 'owner' %}
+					<form method="post" action="{{ url_for('members.set_active', member_id=m.id) }}">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<input type="hidden" name="active" value="{{ 0 if m.active else 1 }}">
+						<button class="linkish" type="submit">{{ 'Suspender' if m.active else 'Reactivar' }}</button>
+					</form>
+
+					{% if is_owner %}
+						<form method="post" action="{{ url_for('members.set_role', member_id=m.id) }}">
+							<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+							<input type="hidden" name="role" value="{{ 'user' if m.role == 'admin' else 'admin' }}">
+							<button class="linkish" type="submit">{{ 'Hacer usuario' if m.role == 'admin' else 'Hacer administrador' }}</button>
+						</form>
+
+						{% if m.role == 'admin' and m.active %}
+						<form method="post" action="{{ url_for('members.transfer', member_id=m.id) }}"
+						      data-confirm="Vas a dejar de ser el responsable y {{ m.display_name }} pasará a serlo. ¿Seguro?">
+							<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+							<button class="linkish" type="submit">Transferir titularidad</button>
+						</form>
+						{% endif %}
+
+						<form method="post" action="{{ url_for('members.erase', member_id=m.id) }}"
+						      data-confirm="Se borrarán sus datos personales. Sus mensajes quedarán como «Miembro eliminado». ¿Seguro?">
+							<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+							<button class="linkish linkish--danger" type="submit">Eliminar</button>
+						</form>
+					{% endif %}
+				{% endif %}
+			</td>
+			{% endif %}
+		</tr>
+	{% endfor %}
+	</tbody>
+</table>
+
+<p class="muted small">
+	Hay un solo responsable. El responsable da de alta administradores; los
+	administradores dan de alta usuarios. Nadie puede suspender ni degradar al
+	responsable: para dejar el cargo hay que transferirlo a un administrador.
+</p>
+{% endblock %}

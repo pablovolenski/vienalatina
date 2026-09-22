@@ -26,6 +26,17 @@ vienalatina.com {
 	encode zstd gzip
 	file_server
 
+	# Members area — the only part of this site that runs code. Both paths are
+	# matched: Flask redirects /comunidad to /comunidad/, and a matcher of
+	# /comunidad/* alone would let the bare path fall through to file_server
+	# and 404 before the app ever sees it.
+	#
+	# No `handle` wrapper is needed. Caddy runs reverse_proxy ahead of
+	# file_server in its directive order, and reverse_proxy is terminal, so a
+	# matched request never reaches the static tree.
+	@board path /comunidad /comunidad/*
+	reverse_proxy @board 127.0.0.1:8080
+
 	# llms.txt is markdown (matches the old WP behaviour)
 	header /llms.txt Content-Type "text/markdown; charset=utf-8"
 
