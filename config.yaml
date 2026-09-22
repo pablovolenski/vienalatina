@@ -14,9 +14,12 @@ defaultContentLanguageInSubdir: false
 # "/:slug/" mapped every post called "Hola mundo" onto /hola-mundo/; Hugo wrote
 # both documents into that one index.html and the page rendered as two stacked
 # copies of the site, with no error anywhere. Community blogs repeat titles
-# constantly ("Resumen del mes"), so the year and month carry the uniqueness.
+# constantly ("Resumen del mes"), so the date carries the uniqueness. The day is
+# part of it because the two posts that exposed this were eleven days apart in
+# the same month; only same-title-same-day now collides, and the build guard in
+# .woodpecker.yml fails that loudly instead of shipping it.
 permalinks:
-  post: "/:year/:month/:slug/"
+  post: "/:year/:month/:day/:slug/"
 
 taxonomies:
   category: "categories"
