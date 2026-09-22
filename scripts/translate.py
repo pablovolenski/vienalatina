@@ -117,10 +117,15 @@ def changed_markdown() -> list[Path]:
     """Content files touched by the pushed commits."""
     head = os.environ.get("CI_COMMIT_SHA", "HEAD")
     prev = os.environ.get("CI_PREV_COMMIT_SHA", "")
+    # --no-renames matters: git reports a renamed file as R, which --diff-filter=AM
+    # drops, so renaming a post made it invisible here and it silently kept the
+    # siblings of its old name — or, for a post that never had any, got none.
+    # Without rename detection the same change arrives as D + A, and the A is a
+    # translation source like any other.
     if prev and not set(prev) <= {"0"}:
-        out = run("git", "diff", "--name-only", "--diff-filter=AM", prev, head)
+        out = run("git", "diff", "--name-only", "--no-renames", "--diff-filter=AM", prev, head)
     elif run("git", "rev-list", "--count", "HEAD") != "1":
-        out = run("git", "diff", "--name-only", "--diff-filter=AM", "HEAD~1", "HEAD")
+        out = run("git", "diff", "--name-only", "--no-renames", "--diff-filter=AM", "HEAD~1", "HEAD")
     else:  # first commit in the repo
         out = run("git", "ls-files")
 
