@@ -1,0 +1,32 @@
+{# Shown instead of bouncing back to the login page, because bouncing back would
+   hide the fact that one click gets you straight in again. #}
+{% extends "base.html" %}
+{% block title %}Sesión cerrada{% endblock %}
+
+{% block main %}
+<article class="card card--center">
+	<h1>Saliste del área de la comunidad</h1>
+
+	<p class="muted">
+		Tu sesión aquí está cerrada. Pero este navegador <strong>sigue conectado a
+		Gitea</strong>, que es donde se guardan las cuentas — así que quien use
+		este ordenador después podría volver a entrar sin contraseña.
+	</p>
+
+	<p>
+		<a class="btn" href="{{ gitea_url }}/user/logout">Cerrar sesión también en Gitea</a>
+	</p>
+
+	<p class="muted small">
+		Si esa página no te desconecta, abre el menú de tu perfil en
+		<a href="{{ gitea_url }}">Gitea</a> y elige <em>Sign Out</em>.
+		Cerrar el navegador también sirve.
+	</p>
+
+	<p class="muted small">
+		En tu propio ordenador no hace falta: puedes volver a entrar cuando quieras.
+	</p>
+
+	<p><a class="linkish" href="{{ url_for('auth.login') }}">Volver a entrar</a></p>
+</article>
+{% endblock %}

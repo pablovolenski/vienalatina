@@ -106,3 +106,41 @@ def test_login_redirect_cannot_be_pointed_offsite(client, monkeypatch, make_memb
 def test_responses_say_do_not_index(client):
     response = client.get("/comunidad/login")
     assert response.headers["X-Robots-Tag"] == "noindex, nofollow"
+
+
+def test_logout_says_the_gitea_session_is_still_open(client, db, make_member, sign_in, post):
+    """Redirecting to the login page would hide the problem: one click on
+    "Entrar con Gitea" signs you straight back in, because Gitea's session and
+    its record of the authorisation both survive."""
+    member_id = make_member("maria")
+    db.execute(
+        "INSERT INTO gitea_tokens (member_id, access_token) VALUES (?, 'tok')",
+        (member_id,),
+    )
+    sign_in(member_id)
+
+    response = post("/comunidad/logout")
+    page = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "sigue conectado" in page          # the warning, not a redirect
+    assert "/user/logout" in page
+
+    with client.session_transaction() as session:
+        assert "member_id" not in session
+    assert db.execute("SELECT 1 FROM gitea_tokens WHERE member_id = ?",
+                      (member_id,)).fetchone() is None
+
+
+def test_logout_leaves_nothing_the_server_can_act_with(client, db, make_member, sign_in, post):
+    """The token is what lets this server commit as the member. Clearing the
+    cookie without dropping it would end the browser's access but not ours."""
+    member_id = make_member("maria")
+    db.execute(
+        "INSERT INTO gitea_tokens (member_id, access_token) VALUES (?, 'tok')",
+        (member_id,),
+    )
+    sign_in(member_id)
+    post("/comunidad/logout")
+
+    assert db.execute("SELECT COUNT(*) AS n FROM gitea_tokens").fetchone()["n"] == 0

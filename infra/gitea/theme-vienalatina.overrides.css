@@ -1,0 +1,98 @@
+/* Viena Latina colours for Gitea.
+ *
+ * Deltas only. scripts/gitea-theme.sh concatenates Gitea's own light theme —
+ * read out of the running container, so it matches the installed version — and
+ * then this file. Shipping the full theme instead would mean a copy of
+ * somebody else's stylesheet going stale in our repository, and an upgrade
+ * turning into a merge.
+ *
+ * Why this exists: members sign in to /comunidad/ through Gitea, so Gitea's
+ * sign-in form and authorize dialog are part of the journey whether or not
+ * anyone ever browses a repository. Unthemed, they are two dark screens in the
+ * middle of a cream-coloured site, and the platform stops feeling like one
+ * thing.
+ *
+ * The values come from themes/vienalatina/assets/css/main.css. If the brand
+ * colours change there, change them here too — Hugo fingerprints its CSS and
+ * Gitea serves this as a static file, so there is no way to share one source.
+ *
+ * Safe failure mode: anything Gitea renames is simply a declaration nobody
+ * reads, and that part keeps the light theme's value. The result of getting a
+ * variable name wrong is a corner that stays grey, not a broken page.
+ */
+
+:root {
+  /* Brand — #c0391c, with the darker and lighter steps Gitea expects for
+     hover, active and focus states. */
+  --color-primary: #c0391c;
+  --color-primary-contrast: #ffffff;
+  --color-primary-dark-1: #ad331a;
+  --color-primary-dark-2: #9a2a0f;
+  --color-primary-dark-3: #86240d;
+  --color-primary-dark-4: #731f0b;
+  --color-primary-dark-5: #5f1a09;
+  --color-primary-dark-6: #4c1507;
+  --color-primary-dark-7: #380f05;
+  --color-primary-light-1: #cd5137;
+  --color-primary-light-2: #d66a53;
+  --color-primary-light-3: #de836f;
+  --color-primary-light-4: #e69c8b;
+  --color-primary-light-5: #eeb5a7;
+  --color-primary-light-6: #f6cec3;
+  --color-primary-light-7: #fbe2db;
+  --color-primary-alpha-10: #c0391c1a;
+  --color-primary-alpha-20: #c0391c33;
+  --color-primary-alpha-30: #c0391c4d;
+  --color-primary-alpha-40: #c0391c66;
+  --color-primary-alpha-50: #c0391c80;
+  --color-primary-alpha-60: #c0391c99;
+  --color-primary-alpha-70: #c0391cb3;
+  --color-primary-alpha-80: #c0391ccc;
+  --color-primary-alpha-90: #c0391ce6;
+  --color-primary-hover: #ad331a;
+  --color-primary-active: #9a2a0f;
+
+  /* Page and panels — the site's cream background and white cards. */
+  --color-body: #f8f3ef;
+  --color-box-body: #ffffff;
+  --color-box-body-highlight: #fdf1ed;
+  --color-box-header: #f2ebe6;
+  --color-secondary-bg: #f2ebe6;
+  --color-menu: #ffffff;
+  --color-card: #ffffff;
+  --color-markup-code-block: #f2ebe6;
+
+  /* Type — the same near-black and muted brown the site uses. */
+  --color-text: #1a0d09;
+  --color-text-dark: #1a0d09;
+  --color-text-light: #5c3d37;
+  --color-text-light-1: #6b4a43;
+  --color-text-light-2: #7d5a52;
+  --color-text-light-3: #9a7870;
+
+  /* Borders — warm rather than the default neutral grey, which is most of
+     what makes an unthemed Gitea read as "a different website". */
+  --color-secondary: #e0cec8;
+  --color-secondary-dark-1: #d3bdb6;
+  --color-secondary-light-1: #ebdcd7;
+  --color-light-border: #e0cec8;
+  --color-input-border: #c2a89f;
+  --color-input-background: #ffffff;
+  --color-input-text: #1a0d09;
+
+  /* The top bar, which is the first thing anyone sees. */
+  --color-nav-bg: #ffffff;
+  --color-nav-hover-bg: #fdf1ed;
+  --color-nav-text: #1a0d09;
+  --color-header-wrapper: #ffffff;
+  --color-footer: #f8f3ef;
+
+  --color-accent: #c0391c;
+  --color-small-accent: #fbe2db;
+}
+
+/* The wordmark is wide, unlike Gitea's square cup, so it needs room. */
+.logo {
+  height: 26px !important;
+  width: auto !important;
+}

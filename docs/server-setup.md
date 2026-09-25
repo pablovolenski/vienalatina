@@ -501,3 +501,76 @@ Not urgent — leaving it costs a folder and one `wget` in the pipeline:
 1. `rm -rf static/admin/`
 2. Delete the `wget … decap-cms.js` line from `.woodpecker.yml`
 3. Delete the `decap-cms` OAuth application in Gitea
+
+## 12. Make Gitea look like the site
+
+Members sign in to `/comunidad/` through Gitea, so Gitea's sign-in form and its
+authorize dialog are part of the journey for everyone — not just for you, and
+not just for people who open a repository. Unthemed they are two dark screens in
+the middle of a cream-coloured site.
+
+How often anyone sees them is worth knowing before judging the result: the
+**authorize dialog appears once per person, ever** — Gitea remembers the grant —
+and the **sign-in form only when their Gitea session has lapsed**, which
+"Remember This Device" pushes out to weeks. This is a first-impression fix.
+
+Unlike Decap, Gitea supports this properly: a theme is a CSS file in a directory
+it already reads.
+
+```sh
+cd ~/vienalatina
+git pull --no-rebase --no-edit gitea main
+bash scripts/gitea-theme.sh
+```
+
+Then add the line the script prints to `/srv/gitea/docker-compose.yml` (it is
+already in `infra/gitea/docker-compose.yml`):
+
+```
+- GITEA__ui__DEFAULT_THEME=vienalatina
+```
+
+```sh
+cd /srv/gitea && sudo docker compose up -d
+```
+
+Check it in a private window at **https://git.vienalatina.com/user/login** —
+cream background, the Viena Latina wordmark, `#c0391c` buttons. Then browse a
+repository and open a commit: a theme that only looks right on the login page is
+half done.
+
+### Re-run it after every Gitea upgrade
+
+The theme is Gitea's own light theme with our colours appended, and the base is
+read out of the running container so it matches the installed version. A new
+Gitea release can introduce variables our overrides do not mention, and a base
+frozen in the repository would drift out of date in ways nobody notices until a
+page looks wrong.
+
+```sh
+bash scripts/gitea-theme.sh
+cd /srv/gitea && sudo docker compose restart gitea
+```
+
+Nothing breaks if you forget — an unknown variable is a declaration nobody
+reads, so the worst case is a corner that stays grey.
+
+### Signing out is two steps, and the app says so
+
+Clicking **Salir** in the members area closes that session and deletes the
+stored Gitea token. It cannot close the **Gitea** session in the same browser,
+and Gitea remembers that the app was authorised — so without saying anything,
+the next click on *Entrar con Gitea* would sign the person straight back in with
+no password. On a laptop shared around the association, that is a button that
+lies.
+
+Gitea cannot be signed out from another site: its logout has been POST-only
+since 1.11.2, so a link cannot trigger it and a cross-site POST would need
+Gitea's CSRF token. The `prompt=login` parameter that would force
+re-authentication is undocumented in every released version of Gitea's OAuth2
+provider, and a security control should not rest on that.
+
+So the logout page says plainly what is and is not closed, and offers the link
+that finishes the job. On a shared computer, use it — or close the browser,
+which also works. The members-area cookie is already a browser-session cookie,
+so it does not survive that either way.

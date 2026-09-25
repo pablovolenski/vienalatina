@@ -1,0 +1,24 @@
+<!-- Viena Latina wordmark, for Gitea's header and favicon.
+
+     The site has no logo image: its brand is the words "Viena Latina" set in
+     Montserrat 700 at #c0391c
+     (themes/vienalatina/layouts/partials/header.html).
+
+     Set as live text with the same font stack as main.css, rather than traced
+     into paths. That looks like a shortcut and is actually the faithful
+     choice: the site loads no webfont at all — deliberately, so no request
+     leaves the server (GDPR) — so visitors already see this wordmark in
+     whatever sans-serif their machine substitutes. Paths would render a
+     Montserrat that most people never see on the site itself.
+
+     Stacked on two lines because this is also the favicon, where a wide
+     wordmark shrinks to an unreadable smear. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 64" role="img"
+     aria-label="Viena Latina" width="160" height="64">
+  <title>Viena Latina</title>
+  <g fill="#c0391c" font-family="Montserrat, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+     font-weight="700" font-size="27" letter-spacing="-0.4">
+    <text x="4" y="27">Viena</text>
+    <text x="4" y="56">Latina</text>
+  </g>
+</svg>

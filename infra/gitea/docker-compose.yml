@@ -23,6 +23,13 @@ services:
       - GITEA__cors__ALLOW_DOMAIN=https://vienalatina.com
       - GITEA__cors__METHODS=GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS
       - GITEA__cors__HEADERS=Content-Type,User-Agent,Authorization
+
+      # Members reach /comunidad/ through Gitea's sign-in and authorize
+      # screens, so those are part of the site's journey even for people
+      # who never open a repository. DEFAULT_THEME is what anonymous
+      # visitors get, which is exactly those two pages.
+      # Install the theme first: bash scripts/gitea-theme.sh
+      - GITEA__ui__DEFAULT_THEME=vienalatina
     volumes:
       - ./data:/data
       - /etc/timezone:/etc/timezone:ro

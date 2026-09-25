@@ -136,5 +136,20 @@ def logout():
     if g.member is not None:
         tokens.forget(g.member["id"])
     session.clear()
-    flash("Sesión cerrada.", "ok")
-    return redirect(url_for("auth.login"))
+
+    # Deliberately NOT a redirect back to the login page.
+    #
+    # Clearing this session does not touch the Gitea session in the same
+    # browser, and Gitea remembers that this app was authorised. So the next
+    # click on "Entrar con Gitea" gets a code back immediately and signs the
+    # person straight back in without a password — which on a laptop shared
+    # around an association means "Salir" was telling them something untrue.
+    #
+    # Gitea cannot be signed out from here: its logout has been POST-only since
+    # 1.11.2, and a cross-site POST would need Gitea's CSRF token. `prompt=login`
+    # would be the other way round it, and is undocumented in every released
+    # version of Gitea's OAuth2 provider — not something to rest this on.
+    #
+    # So the honest thing is to say so and point at the one place that can
+    # finish the job.
+    return render_template("logged_out.html", gitea_url=current_app.config["GITEA_URL"].rstrip("/"))
