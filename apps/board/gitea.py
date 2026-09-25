@@ -157,6 +157,47 @@ def admin_create_user(login: str, email: str, full_name: str, password: str) -> 
     raise GiteaError(f"Gitea rechazó la creación del usuario ({response.status_code}).")
 
 
+def admin_set_password(login: str, password: str) -> None:
+    """Set a member's password on their behalf, after they chose it here.
+
+    This is what lets the whole invitation and reset flow stay inside
+    /comunidad/ instead of handing people to Gitea, whose own recovery page is
+    dead without a mailer anyway.
+
+    `login_name` and `source_id` are sent although nothing about them changes:
+    Gitea's EditUserOption has historically treated them as required, and
+    omitting them has been reported to move a local account onto a different
+    authentication source. For a local user they are the username and 0, so
+    sending them is a no-op that avoids the question.
+    """
+    token = current_app.config.get("ADMIN_TOKEN")
+    if not token:
+        raise GiteaError(
+            "Falta GITEA_ADMIN_TOKEN: el servidor no puede cambiar contraseñas."
+        )
+    response = requests.patch(
+        _api(f"/admin/users/{quote(login, safe='')}"),
+        headers={"Authorization": f"token {token}"},
+        json={
+            "password": password,
+            "must_change_password": False,
+            "login_name": login,
+            "source_id": 0,
+        },
+        timeout=TIMEOUT,
+    )
+    if response.status_code in (200, 201):
+        return
+    if response.status_code == 422:
+        # Gitea enforces its own minimum length and complexity, and its message
+        # is in the admin's language rather than the member's, so it is not
+        # passed through.
+        raise GiteaError("Gitea rechazó esa contraseña. Prueba con una más larga.")
+    if response.status_code in (401, 403):
+        raise GiteaError("El token de administración de Gitea no es válido.")
+    raise GiteaError(f"Gitea rechazó el cambio de contraseña ({response.status_code}).")
+
+
 # --- content (the member's own token) ------------------------------------
 
 def _contents_url(path: str) -> str:

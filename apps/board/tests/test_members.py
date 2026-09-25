@@ -101,18 +101,26 @@ def test_an_admin_cannot_demote_another_admin(client, post, make_member, sign_in
     assert response.status_code == 403
 
 
-def test_creating_a_user_shows_the_password_once(client, monkeypatch, post, owner_id, sign_in):
+def test_the_password_is_never_shown_to_the_admin(
+        client, monkeypatch, post, owner_id, sign_in):
+    """It used to be, printed once for the admin to pass on. Now the member is
+    emailed a link and chooses their own, so the generated password exists only
+    to keep the Gitea account from being reachable before they do — and nobody,
+    the admin included, ever learns it."""
     created = {}
     monkeypatch.setattr(gitea, "admin_create_user",
                         lambda login, email, name, password: created.update(
                             login=login, password=password))
+    monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
     sign_in(owner_id)
+
     response = post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "María", "email": "m@example.com",
         "role": "user", "create_account": "on",
     })
+
     assert created["login"] == "maria"
-    assert created["password"].encode() in response.data
+    assert created["password"].encode() not in response.data
 
 
 def test_a_rejected_gitea_call_creates_no_member(client, monkeypatch, db, post, owner_id, sign_in):

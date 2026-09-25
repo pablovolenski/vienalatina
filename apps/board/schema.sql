@@ -89,3 +89,26 @@ CREATE TABLE IF NOT EXISTS content_cache (
   generated   INTEGER NOT NULL DEFAULT 0 CHECK (generated IN (0, 1)),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- One-time links: invitations to set a first password, and password resets.
+--
+-- A token here is enough to take over an account, so only its SHA-256 lives in
+-- this table. A database backup that leaks is then a list of useless hashes
+-- rather than a set of live keys.
+--
+-- SHA-256 rather than a password hash on purpose: these are 32 random bytes
+-- from secrets.token_urlsafe, not something a person chose. There is no
+-- dictionary to run against them, so the slow hashing that protects weak
+-- passwords buys nothing and costs a round trip on every click.
+CREATE TABLE IF NOT EXISTS invites (
+  id          INTEGER PRIMARY KEY,
+  member_id   INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  token_hash  TEXT    NOT NULL UNIQUE,
+  purpose     TEXT    NOT NULL CHECK (purpose IN ('invite', 'reset')),
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  expires_at  TEXT    NOT NULL,
+  used_at     TEXT
+);
+
+CREATE INDEX IF NOT EXISTS invites_open
+  ON invites(member_id, purpose) WHERE used_at IS NULL;

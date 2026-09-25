@@ -55,6 +55,15 @@ def create_app(overrides: dict | None = None) -> Flask:
         # publishing from Decap as far as the pipeline is concerned.
         CONTENT_REPO=os.environ.get("CONTENT_REPO", "pablo/vienalatina"),
         CONTENT_BRANCH=os.environ.get("CONTENT_BRANCH", "main"),
+        # Outgoing mail. Without MAIL_HOST the app still runs, but nobody
+        # can be invited or recover a password, so the admin screens say so
+        # rather than failing at the moment somebody presses send.
+        MAIL_HOST=os.environ.get("MAIL_HOST", ""),
+        MAIL_PORT=os.environ.get("MAIL_PORT", "587"),
+        MAIL_SECURITY=os.environ.get("MAIL_SECURITY", "starttls"),
+        MAIL_USER=os.environ.get("MAIL_USER", ""),
+        MAIL_PASSWORD=os.environ.get("MAIL_PASSWORD", ""),
+        MAIL_FROM=os.environ.get("MAIL_FROM", "Viena Latina <hola@vienalatina.com>"),
         URL_PREFIX=URL_PREFIX,
         COOLDOWN_SECONDS=int(os.environ.get("BOARD_COOLDOWN_SECONDS", "20")),
         SESSION_COOKIE_HTTPONLY=True,

@@ -579,3 +579,85 @@ So the logout page says plainly what is and is not closed, and offers the link
 that finishes the job. On a shared computer, use it — or close the browser,
 which also works. The members-area cookie is already a browser-session cookie,
 so it does not survive that either way.
+
+## 13. Email: invitations and passwords
+
+Until this is configured, an admin can add members but **nobody else can get
+in**. The password was shown once to the admin, and Gitea's *Forgot password*
+answers "Account recovery is disabled because no email is set up". That was the
+state the members area shipped in; this section is what fixes it.
+
+### 13.1 What happens now
+
+An admin enters a username and an email. The server creates the Gitea account
+with a random password **nobody ever sees, the admin included**, and emails the
+member a link. The link opens a Viena Latina page where they choose their own
+password, and only then can the account be used.
+
+The same mechanism powers *¿Olvidaste tu contraseña?* on the sign-in page, which
+replaces Gitea's dead recovery page. Nobody leaves the site for either.
+
+### 13.2 SMTP settings
+
+These are the details of the `hola@vienalatina.com` mailbox. If that mailbox is
+part of the old Hetzner shared hosting, they are in the Konsole panel under the
+email account.
+
+```sh
+sudo nano /srv/board/.env
+```
+
+```
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_SECURITY=starttls
+MAIL_USER=hola@vienalatina.com
+MAIL_PASSWORD=
+MAIL_FROM=Viena Latina <hola@vienalatina.com>
+```
+
+**Port and security go together.** 465 means `MAIL_SECURITY=ssl`; 587 means
+`starttls`. Mismatching the pair is the usual reason a mailbox that works
+perfectly in a mail client fails here, and the error it produces is a timeout
+rather than anything that names the cause.
+
+```sh
+cd /srv/board && sudo docker compose up -d --force-recreate
+```
+
+Test it by adding a member with an address you can read. If the mail cannot be
+sent, the screen says so and shows you the invitation link to pass on by hand —
+the account is created either way, so a mail problem delays somebody rather
+than stranding them.
+
+### 13.3 What the links are, and why they expire
+
+A link is enough to set the password on that account, so it is treated as a
+credential:
+
+- **single use** — following it and choosing a password spends it
+- **invitations last 7 days, resets 1 hour**
+- **only a hash is stored**, so a leaked database backup is a list of useless
+  hashes rather than a set of live keys
+- asking for a new link **invalidates the previous one**, so an older email
+  sitting in an inbox stops working
+- recovery answers identically for an address that belongs to a member and one
+  that does not, and stops after three attempts in fifteen minutes
+
+If a member says a link does not work, the fix is always to send another. There
+is deliberately no way to find out *why* one failed from the page itself: that
+distinction would tell whoever holds a stale link something about the account
+behind it.
+
+### 13.4 The sign-in page loses two tabs
+
+`GITEA__openid__ENABLE_OPENID_SIGNIN=false` and
+`GITEA__service__SHOW_REGISTRATION_BUTTON=false` in
+`/srv/gitea/docker-compose.yml`. OpenID is sign-in with an external identity
+URL, which nobody here will use, and the register button contradicts
+`DISABLE_REGISTRATION` — it invited people to try something the server then
+refused.
+
+```sh
+cd /srv/gitea && sudo docker compose up -d
+```

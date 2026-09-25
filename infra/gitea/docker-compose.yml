@@ -30,6 +30,15 @@ services:
       # visitors get, which is exactly those two pages.
       # Install the theme first: bash scripts/gitea-theme.sh
       - GITEA__ui__DEFAULT_THEME=vienalatina
+
+      # Two tabs on the sign-in page that should not be offered here.
+      # OpenID is sign-in with an external identity URL, which nobody in
+      # this association will ever use; the register button contradicts
+      # DISABLE_REGISTRATION above, which is worse than useless — it invites
+      # people to try something the server then refuses.
+      - GITEA__openid__ENABLE_OPENID_SIGNIN=false
+      - GITEA__openid__ENABLE_OPENID_SIGNUP=false
+      - GITEA__service__SHOW_REGISTRATION_BUTTON=false
     volumes:
       - ./data:/data
       - /etc/timezone:/etc/timezone:ro

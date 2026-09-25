@@ -5,19 +5,33 @@
 <article class="card">
 	<h1>{{ login }} ya es {{ role_label|lower }}</h1>
 
-	{% if password %}
-	<p>Esta contraseña se muestra <strong>una sola vez</strong>. Cópiala ahora y
-	entrégasela en persona o por un canal privado.</p>
-
-	<p class="password mono">{{ password }}</p>
-
-	<p class="muted small">
-		No se guarda en ningún sitio: el servidor sólo conserva el hash, igual que
-		con cualquier contraseña. Si se pierde, hay que restablecerla desde Gitea.
-		La persona tendrá que cambiarla la primera vez que entre.
-	</p>
-	{% else %}
+	{% if not created %}
 	<p>No se creó ninguna cuenta nueva: ya existía. Puede entrar con la que tenía.</p>
+
+	{% elif invite_link %}
+	{# The account exists but the invitation never left the building. Showing the
+	   link is the difference between a delayed invitation and a person who
+	   simply never gets in. #}
+	<p class="flash flash--error">
+		No se pudo enviar el correo. Pásale este enlace por un canal privado —
+		sirve una sola vez y caduca en 7 días.
+	</p>
+	<p class="password mono">{{ invite_link }}</p>
+	<p class="muted small">
+		Revisa la configuración de correo del servidor para que la próxima
+		invitación salga sola.
+	</p>
+
+	{% else %}
+	<p>
+		Le enviamos un correo a <span class="mono">{{ email }}</span> con un enlace
+		para elegir su contraseña.
+	</p>
+	<p class="muted small">
+		El enlace caduca en 7 días y sirve una sola vez. Nadie conoce su contraseña
+		— ni tú ni el servidor — hasta que la elija. Si no llega, que mire en spam,
+		o pídele que use «¿olvidaste tu contraseña?».
+	</p>
 	{% endif %}
 
 	<div class="actions">

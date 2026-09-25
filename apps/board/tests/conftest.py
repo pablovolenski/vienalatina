@@ -83,6 +83,11 @@ def post(client):
     """POST with a valid CSRF token, so tests exercise authorisation rather
     than repeatedly rediscovering that the CSRF hook works."""
     def _post(url, data=None, **kwargs):
+        # A real anonymous visitor gets a CSRF token when the form renders, so
+        # signed-out pages (invitations, password recovery) need one here too —
+        # otherwise every such test fails on the hook rather than on its subject.
+        with client.session_transaction() as session:
+            session.setdefault("csrf", "token-for-tests")
         payload = dict(data or {})
         payload.setdefault("csrf_token", "token-for-tests")
         return client.post(url, data=payload, **kwargs)

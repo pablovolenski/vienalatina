@@ -21,7 +21,7 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import gitea
+from . import auth, gitea, invites, mail
 from .db import TOMBSTONE_LOGIN, get_db
 from .security import admin_required, login_required, owner_required
 
@@ -152,17 +152,20 @@ def new():
         flash("Ese usuario ya es miembro.", "error")
         return redirect(url_for("members.new"))
 
-    password = None
     if create_account:
-        password = gitea.generate_password()
+        # A random password nobody ever sees, not even the admin creating the
+        # account. It exists only so the Gitea account is not passwordless
+        # until the invitation is used — and because nobody knows it, the
+        # invitation is the only way in, which is the point.
         try:
-            gitea.admin_create_user(login, email, display_name or login, password)
+            gitea.admin_create_user(login, email, display_name or login,
+                                    gitea.generate_password())
         except gitea.GiteaError as exc:
             flash(str(exc), "error")
             return redirect(url_for("members.new"))
 
     try:
-        db.execute(
+        cursor = db.execute(
             """INSERT INTO members (gitea_login, display_name, email, role, created_by)
                VALUES (?, ?, ?, ?, ?)""",
             (login, display_name or login, email, role, g.member["id"]),
@@ -171,8 +174,20 @@ def new():
         flash("No se pudo dar de alta a ese miembro.", "error")
         return redirect(url_for("members.new"))
 
-    # Shown once and never stored: Gitea has the hash, we have nothing.
-    return render_template("member_created.html", login=login, password=password,
+    invite_link = None
+    if create_account:
+        link = auth.invite_url(invites.issue(cursor.lastrowid, "invite"))
+        try:
+            mail.send_invite(email, display_name or login, link)
+        except (mail.MailFailed, mail.MailNotConfigured):
+            # The account exists and the member cannot reach it. Showing the
+            # admin the link is the difference between a delayed invitation and
+            # a person who simply never gets in.
+            invite_link = link
+
+    return render_template("member_created.html", login=login,
+                           email=email, created=create_account,
+                           invite_link=invite_link,
                            role_label=ROLE_LABELS[role])
 
 

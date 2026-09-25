@@ -14,10 +14,14 @@ import secrets
 from flask import (Blueprint, current_app, flash, g, redirect, render_template,
                    request, session, url_for)
 
-from . import gitea, tokens
+from . import gitea, invites, mail, tokens
 from .db import get_db
 
 bp = Blueprint("auth", __name__)
+
+# Gitea enforces its own minimum as well; this one is stricter so the member is
+# told before the round trip rather than after it, in their own language.
+PASSWORD_MIN = 10
 
 
 def redirect_uri() -> str:
@@ -127,6 +131,82 @@ def callback():
     if not target.startswith(current_app.config["URL_PREFIX"] + "/"):
         target = url_for("board.threads")
     return redirect(target)
+
+
+def invite_url(token: str) -> str:
+    return current_app.config["BASE_URL"].rstrip("/") + url_for(
+        "auth.set_password", token=token
+    )
+
+
+@bp.route("/invitacion/<token>", methods=["GET", "POST"])
+def set_password(token: str):
+    """Where a member chooses their own password, from an invite or a reset.
+
+    One page for both, because they differ only in the wording and how long the
+    link lived. The token is the only credential: somebody arriving here is not
+    signed in and cannot be.
+    """
+    member = invites.lookup(token)
+    if member is None:
+        # Deliberately one message for every reason it might fail — expired,
+        # already used, never existed. Distinguishing them tells whoever holds
+        # a stale link something about the account it points at.
+        return render_template("set_password.html", member=None, token=token,
+                               minimum=PASSWORD_MIN), 400
+
+    if request.method == "GET":
+        return render_template("set_password.html", member=member, token=token,
+                               minimum=PASSWORD_MIN)
+
+    password = request.form.get("password", "")
+    confirm = request.form.get("confirm", "")
+    if password != confirm:
+        flash("Las dos contraseñas no coinciden.", "error")
+    elif len(password) < PASSWORD_MIN:
+        flash(f"La contraseña necesita al menos {PASSWORD_MIN} caracteres.", "error")
+    else:
+        try:
+            gitea.admin_set_password(member["gitea_login"], password)
+        except gitea.GiteaError as exc:
+            flash(str(exc), "error")
+        else:
+            # Only now: a token that set a password is spent, but one whose
+            # password Gitea rejected has to keep working or the member is
+            # locked out by a typo.
+            invites.consume(member["invite_id"])
+            flash("Contraseña guardada. Ya puedes entrar.", "ok")
+            return redirect(url_for("auth.login"))
+
+    return render_template("set_password.html", member=member, token=token,
+                           minimum=PASSWORD_MIN), 400
+
+
+@bp.route("/recuperar", methods=["GET", "POST"])
+def recover():
+    """Replaces Gitea's recovery page, which is dead without a mailer."""
+    if request.method == "GET":
+        return render_template("recover.html")
+
+    email = request.form.get("email", "").strip()
+    member = get_db().execute(
+        """SELECT * FROM members
+            WHERE email = ? COLLATE NOCASE AND active = 1
+              AND role IN ('owner', 'admin', 'user')""",
+        (email,),
+    ).fetchone()
+
+    if member is not None and not invites.rate_limited(member["id"]):
+        try:
+            mail.send_reset(member["email"], member["display_name"],
+                            invite_url(invites.issue(member["id"], "reset")))
+        except (mail.MailFailed, mail.MailNotConfigured) as exc:
+            current_app.logger.warning("Reset mail failed: %s", exc)
+
+    # The same answer either way, whatever happened above. Saying "no account
+    # with that address" would turn this form into a way to find out who is a
+    # member, one address at a time.
+    return render_template("recover.html", sent=True)
 
 
 @bp.route("/logout", methods=["POST"])
