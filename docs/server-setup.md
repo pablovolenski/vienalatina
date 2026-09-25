@@ -193,9 +193,16 @@ your laptop):
 cd ~/vienalatina
 git remote add gitea https://git.vienalatina.com/pablo/vienalatina.git
 git push gitea main
+
+# Name the GitHub remote too, while you are here. The clone in step 5 called it
+# `origin`, but `main` came to track `gitea/main` — so a bare `git pull` asks
+# Gitea, and new work arrives on GitHub. Having both named saves you from typing
+# the URL every time you deploy.
+git remote add github https://github.com/pablovolenski/vienalatina.git
+git remote -v
 ```
 
-(It will ask for your Gitea username/password.)
+(Gitea will ask for your Gitea username/password.)
 
 In Woodpecker (**https://ci.vienalatina.com**):
 
@@ -381,12 +388,30 @@ nothing that is running, and neither does `docker compose up -d
 reports success and the server behaves exactly as it did before, which is the
 most expensive kind of nothing.
 
-An update is a rebuild:
+**And `git pull` on its own will not fetch it.** This is worth knowing before
+it costs you an afternoon: `main` on the server tracks `gitea/main`, while new
+work is pushed to a branch on **GitHub**. So a bare `git pull` asks Gitea,
+finds Gitea level with your local `main`, and answers *"Already up to date."* —
+which is true about the wrong remote, and reads exactly like there is nothing
+to do.
+
+An update is a named pull, a push to Gitea so the build pipeline sees it, and a
+rebuild:
 
 ```sh
 cd ~/vienalatina
-git pull
+git pull --no-edit github <the-branch-name>   # e.g. claude/relaxed-faraday-h4zd09
+git push gitea main
 sudo bash scripts/deploy-board.sh
+```
+
+`--no-edit` accepts the default merge message. Without it git opens an editor,
+which is a strange place to find yourself mid-deploy.
+
+If `github` is not a remote yet, add it once — see the end of step 8:
+
+```sh
+git remote add github https://github.com/pablovolenski/vienalatina.git
 ```
 
 That rebuilds the image, copies the compose file across, restarts, and prints
