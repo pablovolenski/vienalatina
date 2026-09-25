@@ -37,6 +37,16 @@
 	</p>
 	{% endif %}
 
+	{% if can_create_accounts and not can_send_mail %}
+	{# Not an error: the account is still created and the invitation still
+	   issued. But it leaves by hand, and finding that out after filling the
+	   form is how an invitation ends up believed sent and never delivered. #}
+	<p class="muted small">
+		Este servidor todavía no envía correo, así que la invitación no se
+		enviará sola: al terminar te mostraremos el enlace para que se lo pases.
+	</p>
+	{% endif %}
+
 	{% if can_make_admin %}
 	<label for="role">Rol</label>
 	<select id="role" name="role">

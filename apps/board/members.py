@@ -129,6 +129,10 @@ def new():
             # The form says so before it is filled in; offering a ticked checkbox
             # and reporting the problem on submit wastes the work of filling it.
             can_create_accounts=bool(current_app.config.get("ADMIN_TOKEN")),
+            # Same courtesy for mail: without a server configured the invitation
+            # cannot leave the box, and the admin has to pass the link on by
+            # hand. Worth knowing before filling the form rather than after.
+            can_send_mail=mail.configured(),
             gitea_url=current_app.config["GITEA_URL"].rstrip("/"),
         )
 
@@ -175,19 +179,25 @@ def new():
         return redirect(url_for("members.new"))
 
     invite_link = None
+    mail_problem = None
     if create_account:
         link = auth.invite_url(invites.issue(cursor.lastrowid, "invite"))
         try:
             mail.send_invite(email, display_name or login, link)
-        except (mail.MailFailed, mail.MailNotConfigured):
+        except mail.MailNotConfigured:
+            # Nothing is broken — this server has simply never been given a mail
+            # server. Told apart from a failure on purpose: an admin sent looking
+            # for an SMTP error that does not exist is an afternoon wasted.
+            invite_link, mail_problem = link, "unconfigured"
+        except mail.MailFailed:
             # The account exists and the member cannot reach it. Showing the
             # admin the link is the difference between a delayed invitation and
             # a person who simply never gets in.
-            invite_link = link
+            invite_link, mail_problem = link, "failed"
 
     return render_template("member_created.html", login=login,
                            email=email, created=create_account,
-                           invite_link=invite_link,
+                           invite_link=invite_link, mail_problem=mail_problem,
                            role_label=ROLE_LABELS[role])
 
 

@@ -12,14 +12,28 @@
 	{# The account exists but the invitation never left the building. Showing the
 	   link is the difference between a delayed invitation and a person who
 	   simply never gets in. #}
-	<p class="flash flash--error">
-		No se pudo enviar el correo. Pásale este enlace por un canal privado —
-		sirve una sola vez y caduca en 7 días.
+	{% if mail_problem == 'unconfigured' %}
+	<p class="flash">
+		Este servidor todavía no envía correo. Pásale este enlace por un canal
+		privado — sirve una sola vez y caduca en 7 días.
 	</p>
+	{% else %}
+	<p class="flash flash--error">
+		No se pudo enviar el correo: el servidor de correo rechazó el envío o no
+		respondió. Pásale este enlace por un canal privado — sirve una sola vez y
+		caduca en 7 días.
+	</p>
+	{% endif %}
 	<p class="password mono">{{ invite_link }}</p>
 	<p class="muted small">
+		{% if mail_problem == 'unconfigured' %}
+		Añade los valores <span class="mono">MAIL_*</span> en
+		<span class="mono">/srv/board/.env</span> para que la próxima invitación
+		salga sola.
+		{% else %}
 		Revisa la configuración de correo del servidor para que la próxima
 		invitación salga sola.
+		{% endif %}
 	</p>
 
 	{% else %}

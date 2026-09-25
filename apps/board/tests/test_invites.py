@@ -262,3 +262,35 @@ def test_linking_an_existing_account_sends_nothing(
         "role": "user", "create_account": "",
     })
     assert outbox == []
+
+
+# --- when the server cannot send at all -----------------------------------
+
+def test_an_unconfigured_server_does_not_blame_the_mail_server(
+        app, client, post, owner_id, sign_in, monkeypatch):
+    """No MAIL_HOST is not a failure, and saying "no se pudo enviar" sends the
+    admin hunting for an SMTP error that was never produced."""
+    monkeypatch.setattr(gitea, "admin_create_user",
+                        lambda login, email, name, password: None)
+    app.config["MAIL_HOST"] = ""
+    sign_in(owner_id)
+
+    page = post("/comunidad/miembros/nuevo", {
+        "login": "maria", "display_name": "María", "email": "m@example.com",
+        "role": "user", "create_account": "on",
+    }).get_data(as_text=True)
+
+    assert "todavía no envía correo" in page
+    assert "No se pudo enviar el correo" not in page
+    assert "/comunidad/invitacion/" in page
+
+
+def test_the_form_warns_before_it_is_filled_in(app, client, owner_id, sign_in):
+    app.config["MAIL_HOST"] = ""
+    sign_in(owner_id)
+    assert "no envía correo" in client.get(
+        "/comunidad/miembros/nuevo").get_data(as_text=True)
+
+    app.config["MAIL_HOST"] = "smtp.example.com"
+    assert "no envía correo" not in client.get(
+        "/comunidad/miembros/nuevo").get_data(as_text=True)

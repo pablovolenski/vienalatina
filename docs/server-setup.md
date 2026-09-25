@@ -372,6 +372,33 @@ It cannot be used to take ownership later: that is deliberate, because otherwise
 editing a file on disk would be a quieter route to the top than asking for it.
 Ownership moves only through *Transferir titularidad* inside the app.
 
+#### Updating it later — a pull is not a deploy
+
+The app's code is **inside the image**: `docker/board/Dockerfile` ends with
+`COPY apps /srv/apps`. So pulling new commits into `~/vienalatina` changes
+nothing that is running, and neither does `docker compose up -d
+--force-recreate` — same image tag, same layers, same old code. Everything
+reports success and the server behaves exactly as it did before, which is the
+most expensive kind of nothing.
+
+An update is a rebuild:
+
+```sh
+cd ~/vienalatina
+git pull
+sudo bash scripts/deploy-board.sh
+```
+
+That rebuilds the image, copies the compose file across, restarts, and prints
+the log. It never touches `/srv/board/.env` — that file holds the secrets and
+lives only on the server — but it does compare it against `.env.example` and
+name any setting that has appeared in the repository and is missing from yours.
+New settings are always added by hand.
+
+The database schema is applied at start-up with `CREATE TABLE IF NOT EXISTS`,
+so a release that adds a table needs no migration step: the table appears when
+the new code does.
+
 ### 11.4 Route it through Caddy
 
 Add to the `vienalatina.com` block in `/etc/caddy/Caddyfile` (already present in
@@ -622,8 +649,19 @@ perfectly in a mail client fails here, and the error it produces is a timeout
 rather than anything that names the cause.
 
 ```sh
-cd /srv/board && sudo docker compose up -d --force-recreate
+cd ~/vienalatina && sudo bash scripts/deploy-board.sh
 ```
+
+Not `docker compose up -d --force-recreate` on its own: if the code that reads
+these settings arrived in the same pull, that restart runs the old image and
+mail stays unconfigured with the settings sitting right there in `.env`. The
+script rebuilds first.
+
+The variables also have to be listed in `/srv/board/docker-compose.yml`, which
+they now are. Compose does not hand `.env` to a container — it substitutes into
+the compose file — so a setting added to `.env` and not to the compose file is
+read by nobody. `apps/board/tests/test_deployment.py` fails the build if the
+two ever drift apart again.
 
 Test it by adding a member with an address you can read. If the mail cannot be
 sent, the screen says so and shows you the invitation link to pass on by hand —

@@ -35,6 +35,23 @@ services:
       - GITEA_ADMIN_TOKEN=${GITEA_ADMIN_TOKEN:-}
 
       - BOARD_DB=/data/board.db
+
+      # Outgoing mail, for invitations and password resets. Empty MAIL_HOST is
+      # a supported state: the members area still works, but nobody can be
+      # invited or recover a password, and the screens say so.
+      #
+      # Every one of these has to be listed here. Compose does not hand the
+      # contents of .env to the container by itself — it only substitutes into
+      # this file — so a variable added to .env and not added here is read by
+      # nobody, and the app reports mail as unconfigured with the settings
+      # sitting right there on disk.
+      - MAIL_HOST=${MAIL_HOST:-}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_SECURITY=${MAIL_SECURITY:-starttls}
+      - MAIL_USER=${MAIL_USER:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - "MAIL_FROM=${MAIL_FROM:-Viena Latina <hola@vienalatina.com>}"
+
     volumes:
       - ./data:/data
     ports:
