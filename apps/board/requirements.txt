@@ -10,3 +10,6 @@ gunicorn==23.0.0
 markdown-it-py==4.2.0
 linkify-it-py==2.2.0
 requests==2.33.1
+# Same serialiser the pipeline uses, so frontmatter written by the editor and
+# by scripts/translate.py is byte-identical in a diff.
+pyyaml==6.0.2

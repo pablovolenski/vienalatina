@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.label }}{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Contenido</h1>
+	<a class="btn" href="{{ url_for('content.new', collection=collection) }}">
+		Nuevo {{ meta.singular|lower }}
+	</a>
+</div>
+
+<nav class="tabs" aria-label="Tipo de contenido">
+	{% for key, other in collections.items() %}
+	<a class="tab {{ 'tab--on' if key == collection }}"
+	   href="{{ url_for('content.index', collection=key) }}">{{ other.label }}</a>
+	{% endfor %}
+</nav>
+
+{% if not items %}
+<article class="card">
+	<p class="muted">Todavía no hay nada aquí.</p>
+</article>
+{% else %}
+<table class="table">
+	<thead>
+		<tr><th>Título</th>{% if meta.dated %}<th>Fecha</th>{% endif %}<th>Categorías</th><th></th></tr>
+	</thead>
+	<tbody>
+	{% for item in items %}
+		<tr>
+			<td>
+				<a href="{{ url_for('content.edit', collection=collection, name=item.name) }}">{{ item.title }}</a>
+				<div class="muted small mono">{{ item.name }}</div>
+			</td>
+			{% if meta.dated %}<td>{{ item.date }}</td>{% endif %}
+			<td>{{ item.categories }}</td>
+			<td class="actions actions--row">
+				<a class="linkish" href="{{ url_for('content.edit', collection=collection, name=item.name) }}">Editar</a>
+				<form method="post"
+				      action="{{ url_for('content.delete', collection=collection, name=item.name) }}"
+				      data-confirm="Se eliminará «{{ item.title }}» del sitio público. ¿Seguro?">
+					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+					<button class="linkish linkish--danger" type="submit">Eliminar</button>
+				</form>
+			</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+
+<p class="muted small">
+	Se escribe en español. El alemán y el portugués los genera la traducción
+	automática un par de minutos después de publicar, y no se editan aquí: para
+	corregir una traducción a mano, marca «traducción manual» en ese archivo.
+</p>
+{% endblock %}

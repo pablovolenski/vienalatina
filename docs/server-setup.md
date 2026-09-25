@@ -434,3 +434,70 @@ Members' names, emails and writing are personal data under GDPR.
 - **Retention:** soft-deleted posts stay in the database until removed by hand.
   If you want a real retention limit, that is a `DELETE ... WHERE deleted_at <`
   in this same cron slot — and a decision to take deliberately, not by default.
+
+### 11.8 The content editor (`/comunidad/contenido/`)
+
+Admins and the owner can write, edit and delete posts and pages from inside the
+members area, instead of Decap at `/admin/`.
+
+**Decap is still there and still works.** Nothing was removed. Use the new
+editor for a few real posts first; if something turns out to be missing, switch
+tabs. Removing Decap is a separate decision — see below.
+
+Nothing extra to install or configure: it runs in the container already serving
+`/comunidad/`, and commits through the Gitea OAuth application registered in
+§11.1. Two settings exist if the repository is ever renamed:
+
+```
+CONTENT_REPO=pablo/vienalatina      # owner/repo inside Gitea
+CONTENT_BRANCH=main
+```
+
+**How publishing works.** The editor is a form that commits a file through
+Gitea's contents API. Gitea's webhook fires Woodpecker, and translate → build →
+deploy runs exactly as it does for a Decap commit — the pipeline cannot tell
+which editor wrote the file, which is what makes running both at once safe.
+
+**Commits are made with your own account**, not a bot's, so `git log` shows who
+wrote each post and Gitea's permissions apply unchanged. Your access token is
+stored in the members-area database (never in a cookie) and refreshed
+automatically; Gitea expires them after about an hour, and without refreshing,
+saving would start failing mid-afternoon for no visible reason.
+
+**Filenames follow the same rules Decap used**, because `scripts/translate.py`
+reads them: `YYYY-MM-DD-slug.es.md` for posts, `slug.es.md` for pages. A file
+whose name breaks that contract publishes in Spanish and is never translated,
+with nothing reported anywhere — which is why the tests import translate.py and
+run its parser over what the editor writes.
+
+**Two people editing one post** is a visible conflict, not a silent overwrite:
+the form carries the file's git sha and Gitea rejects a write whose sha has
+moved on. You are asked to reopen the post rather than losing the other edit.
+
+**Images** are committed as a second, separate commit before the post itself,
+so publishing with a picture produces two pipeline runs. Harmless, and the
+alternative — batching both into one commit via the git trees API — is
+considerably more code for something nobody sees.
+
+**What it deliberately does not do:** rich-text editing (markdown with a
+preview button instead), a media library, drafts, or editing the generated
+German and Portuguese files. Those stay the pipeline's, and a hand-written
+translation is still frozen with `manual_translation: true`.
+
+#### Worth tightening later
+
+The OAuth application requests no explicit scope, so Gitea grants the default —
+full access to the account, which is more than the editor needs. Narrowing it to
+`read:user write:repository` is a one-line change in `apps/board/gitea.py`'s
+`authorize_url()`, but it invalidates existing authorisations: everyone has to
+approve the app again. Worth doing while the member list is short, and worth
+testing on a throwaway account first, since a wrong scope string breaks sign-in
+for everybody.
+
+#### Removing Decap, once you are confident
+
+Not urgent — leaving it costs a folder and one `wget` in the pipeline:
+
+1. `rm -rf static/admin/`
+2. Delete the `wget … decap-cms.js` line from `.woodpecker.yml`
+3. Delete the `decap-cms` OAuth application in Gitea

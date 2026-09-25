@@ -50,6 +50,11 @@ def create_app(overrides: dict | None = None) -> Flask:
         ADMIN_TOKEN=os.environ.get("GITEA_ADMIN_TOKEN", ""),
         OWNER_LOGIN=os.environ.get("BOARD_OWNER", ""),
         BASE_URL=os.environ.get("BOARD_BASE_URL", "https://vienalatina.com"),
+        # The repository the editor commits to — the same one Woodpecker builds,
+        # which is what makes publishing from here indistinguishable from
+        # publishing from Decap as far as the pipeline is concerned.
+        CONTENT_REPO=os.environ.get("CONTENT_REPO", "pablo/vienalatina"),
+        CONTENT_BRANCH=os.environ.get("CONTENT_BRANCH", "main"),
         URL_PREFIX=URL_PREFIX,
         COOLDOWN_SECONDS=int(os.environ.get("BOARD_COOLDOWN_SECONDS", "20")),
         SESSION_COOKIE_HTTPONLY=True,
@@ -59,7 +64,11 @@ def create_app(overrides: dict | None = None) -> Flask:
         # types the address without https.
         SESSION_COOKIE_SECURE=_env_flag("BOARD_COOKIE_SECURE", True),
         SESSION_COOKIE_NAME="vl_board",
-        MAX_CONTENT_LENGTH=256 * 1024,
+        # Generous enough for a photo off a phone. The board itself needs a
+        # fraction of this; the editor uploads images, and a writer whose
+        # picture is silently refused has no way to tell what went wrong.
+        MAX_CONTENT_LENGTH=10 * 1024 * 1024,
+        UPLOAD_MAX_BYTES=int(os.environ.get("BOARD_UPLOAD_MAX_BYTES", 8 * 1024 * 1024)),
     )
     if overrides:
         app.config.update(overrides)
@@ -69,9 +78,10 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import auth, board, members
+    from . import auth, board, content, members
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(content.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(board.bp, url_prefix=URL_PREFIX)
 
     app.teardown_appcontext(close_db)

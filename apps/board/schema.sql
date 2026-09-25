@@ -54,3 +54,38 @@ CREATE TABLE IF NOT EXISTS comments (
 
 CREATE INDEX IF NOT EXISTS comments_thread
   ON comments(thread_id, created_at) WHERE deleted_at IS NULL;
+
+-- Gitea access tokens for the editor.
+--
+-- Kept here rather than in the session cookie. Flask signs cookies but does not
+-- encrypt them, so a live token sitting in one is readable by anything that can
+-- read the cookie — and a token is enough to commit to the repository as its
+-- owner. ON DELETE CASCADE ties the token to the membership: erasing a member
+-- takes their token with it, with nothing to remember.
+CREATE TABLE IF NOT EXISTS gitea_tokens (
+  member_id     INTEGER PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
+  access_token  TEXT    NOT NULL,
+  refresh_token TEXT    NOT NULL DEFAULT '',
+  expires_at    TEXT,
+  updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Frontmatter of content files, keyed by the git blob sha.
+--
+-- Listing a folder through Gitea's contents API returns names and shas but no
+-- bodies, so showing titles and dates means fetching every file. Caching on the
+-- sha turns that from one request per post on every page load into one request
+-- in total, because a sha changes only when the file does. Nothing needs
+-- invalidating: a row is only ever read for a path the listing still returns.
+CREATE TABLE IF NOT EXISTS content_cache (
+  path        TEXT PRIMARY KEY,
+  sha         TEXT NOT NULL,
+  title       TEXT NOT NULL DEFAULT '',
+  date        TEXT NOT NULL DEFAULT '',
+  categories  TEXT NOT NULL DEFAULT '',
+  -- Files carrying `translated_from` are the pipeline's output, not anyone's
+  -- draft. Recorded here so the listing can skip them without re-reading
+  -- every file to find out what it already knew.
+  generated   INTEGER NOT NULL DEFAULT 0 CHECK (generated IN (0, 1)),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

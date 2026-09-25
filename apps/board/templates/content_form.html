@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if item else 'Nuevo' }} {{ meta.singular|lower }}{% endblock %}
+
+{% set f = fields or {} %}
+
+{% block main %}
+{% if preview_html %}
+<article class="card">
+	<div class="card__meta"><span class="tag tag--quiet">Vista previa</span></div>
+	<h1 class="card__title">{{ f.title }}</h1>
+	<div class="prose">{{ preview_html }}</div>
+</article>
+{% endif %}
+
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('content.edit', collection=collection, name=item.name) if item
+                else url_for('content.new', collection=collection) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	{% if item %}
+	<input type="hidden" name="sha" value="{{ item.sha }}">
+	<input type="hidden" name="name" value="{{ item.name }}">
+	{% endif %}
+
+	<h1>{{ 'Editar' if item else 'Nuevo' }} {{ meta.singular|lower }}</h1>
+
+	<label for="title">Título</label>
+	<input id="title" name="title" maxlength="140" required value="{{ f.title or '' }}">
+
+	{% if meta.dated %}
+	<label for="date">Fecha</label>
+	<input id="date" name="date" type="date" required value="{{ f.date or today }}">
+	{% endif %}
+
+	{% if collection == 'post' %}
+	<fieldset class="fieldset">
+		<legend>Categorías</legend>
+		{% for category in categories %}
+		<label class="check">
+			<input type="checkbox" name="categories" value="{{ category }}"
+			       {{ 'checked' if category in (f.categories or []) }}>
+			{{ category }}
+		</label>
+		{% endfor %}
+	</fieldset>
+
+	<label for="description">Resumen</label>
+	<textarea id="description" name="description" rows="2">{{ f.description or '' }}</textarea>
+
+	<label for="picture">Imagen destacada</label>
+	{% if f.image %}
+	<p class="muted small">Actual: <span class="mono">{{ f.image }}</span> — sube otra para reemplazarla.</p>
+	<input type="hidden" name="image" value="{{ f.image }}">
+	{% endif %}
+	<input id="picture" name="picture" type="file" accept="image/*">
+	{% endif %}
+
+	<label for="body">Cuerpo</label>
+	<textarea id="body" name="body" rows="18" required
+	          placeholder="Markdown: **negrita**, ## títulos, listas, [enlaces](https://…).">{{ body }}</textarea>
+
+	<label class="check">
+		<input type="checkbox" name="manual_translation" {{ 'checked' if f.manual_translation }}>
+		Traducción manual — no generar alemán ni portugués para esto
+	</label>
+
+	<div class="actions">
+		<button class="btn" type="submit">{{ 'Guardar' if item else 'Publicar' }}</button>
+		<button class="linkish" type="submit"
+		        formaction="{{ url_for('content.preview', collection=collection) }}">
+			Vista previa
+		</button>
+		<a class="linkish" href="{{ url_for('content.index', collection=collection) }}">Cancelar</a>
+	</div>
+</form>
+{% endblock %}

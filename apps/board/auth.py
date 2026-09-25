@@ -14,7 +14,7 @@ import secrets
 from flask import (Blueprint, current_app, flash, g, redirect, render_template,
                    request, session, url_for)
 
-from . import gitea
+from . import gitea, tokens
 from .db import get_db
 
 bp = Blueprint("auth", __name__)
@@ -77,8 +77,8 @@ def callback():
         return redirect(url_for("auth.login"))
 
     try:
-        token = gitea.exchange_code(code, redirect_uri())
-        profile = gitea.fetch_user(token)
+        credentials = gitea.exchange_code(code, redirect_uri())
+        profile = gitea.fetch_user(credentials["access_token"])
     except gitea.GiteaError as exc:
         current_app.logger.warning("OAuth failed: %s", exc)
         flash(str(exc), "error")
@@ -117,6 +117,10 @@ def callback():
     session.clear()
     session["member_id"] = member["id"]
 
+    # Kept so the editor can commit as this person rather than as a bot. Stored
+    # in the database, never in the cookie — see apps/board/tokens.py.
+    tokens.save(member["id"], credentials)
+
     target = request.args.get("next") or session.pop("oauth_next", "") or ""
     # Only ever redirect within this app: an absolute URL here would make the
     # login page an open redirect that phishing can point anywhere.
@@ -127,6 +131,10 @@ def callback():
 
 @bp.route("/logout", methods=["POST"])
 def logout():
+    # Drop the Gitea token too. Signing out should stop the server being able to
+    # act as you, not just stop the browser being able to ask it to.
+    if g.member is not None:
+        tokens.forget(g.member["id"])
     session.clear()
     flash("Sesión cerrada.", "ok")
     return redirect(url_for("auth.login"))

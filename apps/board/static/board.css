@@ -177,7 +177,8 @@ label { display: block; margin: 1rem 0 0.35rem; font-weight: 600; font-size: 0.9
 label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; }
 label.check input { margin: 0; }
 
-input[type="text"], input[type="email"], input:not([type]), select, textarea {
+input[type="text"], input[type="email"], input[type="date"],
+input:not([type]), select, textarea {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border-light);
@@ -272,4 +273,36 @@ textarea { resize: vertical; line-height: 1.55; }
 @media (max-width: 640px) {
   .feed-head { flex-direction: column; align-items: flex-start; }
   .table { display: block; overflow-x: auto; }
+}
+
+/* --- editor ----------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.tab {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.9rem;
+}
+.tab--on { background: var(--brand-soft); color: var(--brand-dark); font-weight: 600; }
+
+.fieldset {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem 1rem;
+  margin: 1rem 0 0;
+}
+.fieldset legend { padding: 0 0.4rem; font-weight: 600; font-size: 0.9rem; }
+.fieldset .check { margin: 0.35rem 0; }
+
+input[type="file"] {
+  width: 100%;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
 }

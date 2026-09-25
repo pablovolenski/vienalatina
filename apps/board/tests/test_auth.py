@@ -23,7 +23,11 @@ def test_anonymous_is_sent_to_login(client, path):
 
 
 def _stub_gitea(monkeypatch, login):
-    monkeypatch.setattr(gitea, "exchange_code", lambda code, uri: "token")
+    # exchange_code returns the whole token response now, because the editor
+    # needs the refresh token to keep working past Gitea's one-hour expiry.
+    monkeypatch.setattr(gitea, "exchange_code", lambda code, uri: {
+        "access_token": "token", "refresh_token": "refresh", "expires_in": 3600,
+    })
     monkeypatch.setattr(gitea, "fetch_user", lambda token: {
         "login": login, "full_name": login.title(), "email": f"{login}@example.com",
     })

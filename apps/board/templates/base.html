@@ -30,6 +30,9 @@
 	<nav class="site-bar__pages" aria-label="Secciones">
 		<ul class="page-nav">
 			<li><a href="{{ url_for('board.threads') }}">Mensajes</a></li>
+			{% if g.member.role in ('owner', 'admin') %}
+			<li><a href="{{ url_for('content.index') }}">Contenido</a></li>
+			{% endif %}
 			<li><a href="{{ url_for('members.index') }}">Miembros</a></li>
 		</ul>
 	</nav>

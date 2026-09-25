@@ -154,9 +154,12 @@ apps/board/
   auth.py       Gitea OAuth2 (confidential client) and the membership gate
   members.py    roles, provisioning, ownership transfer, GDPR erasure/export
   board.py      threads and comments
+  content.py    the editor — writes posts to Gitea's contents API
+  gitea.py      the only module that talks to Gitea
+  tokens.py     per-member access tokens, refreshed before they expire
   render.py     markdown with raw HTML disabled
-  schema.sql    three tables and the one-owner index
-  tests/        pytest, 41 checks — `python3 -m pytest apps/board/tests`
+  schema.sql    the tables, including the one-owner index
+  tests/        pytest, 97 checks — `python3 -m pytest apps/board/tests`
 ```
 
 Three things about it are load-bearing and easy to undo by accident:
@@ -177,6 +180,26 @@ included. Removing a post is visible to its author, quietly rewriting it is not.
 Its SQLite database is the only state on the server that git does not hold.
 `scripts/backup-board.sh` takes a consistent snapshot nightly — see
 `docs/server-setup.md` §11.
+
+### Writing posts
+
+`/comunidad/contenido/` replaces Decap CMS for admins: a form that commits a
+file through Gitea's contents API, so Woodpecker sees an ordinary push and
+translate → build → deploy runs unchanged. Commits carry the author's own
+account, not a bot's.
+
+It exists because Decap has no supported way to be themed — its maintainer's
+answer is override its CSS and accept that class names move, or fork it — so
+`/admin/` would always look like a different product bolted on.
+
+**Decap is still running.** Both editors write the same files, and the pipeline
+cannot tell them apart, so there is no cutover to get wrong. `docs/server-setup.md`
+§11.8 covers removing Decap when the new editor has earned it.
+
+Filenames are the contract, not a detail: `YYYY-MM-DD-slug.es.md` is what
+`split_lang()` parses and what keeps two posts off one URL. The tests import
+`scripts/translate.py` and run its parser over what the editor writes, because
+a file it cannot parse publishes in Spanish and is never translated, silently.
 
 ## GEO/SEO surfaces
 
