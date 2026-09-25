@@ -18,6 +18,8 @@ set -euo pipefail
 GITEA_DIR="${GITEA_DIR:-/srv/gitea}"
 REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 SERVICE="${SERVICE:-gitea}"
+# Gitea is published on localhost by infra/gitea/docker-compose.yml.
+GITEA_LOCAL="${GITEA_LOCAL:-http://127.0.0.1:3000}"
 
 OVERRIDES="$REPO_DIR/infra/gitea/theme-vienalatina.overrides.css"
 LOGO="$REPO_DIR/infra/gitea/assets/logo.svg"
@@ -32,12 +34,17 @@ done
 
 echo "== reading the installed Gitea's light theme"
 cd "$GITEA_DIR"
-BASE="$(docker compose exec -T "$SERVICE" \
-          cat /app/gitea/public/assets/css/theme-gitea-light.css)"
+
+# Over HTTP rather than out of the container's filesystem. The official image
+# compiles its static assets into the gitea binary, so there is no
+# /app/gitea/public/assets/css to read — but the server still serves the file,
+# and what it serves is by definition the version that is running.
+BASE="$(curl -fsS "$GITEA_LOCAL/assets/css/theme-gitea-light.css" || true)"
 
 if [ -z "$BASE" ]; then
-  echo "Could not read Gitea's own theme — is the container running?" >&2
-  echo "Check with: cd $GITEA_DIR && docker compose ps" >&2
+  echo "Could not read Gitea's own theme from $GITEA_LOCAL." >&2
+  echo "Is the container up?  cd $GITEA_DIR && docker compose ps" >&2
+  echo "Different port?       GITEA_LOCAL=http://127.0.0.1:PORT bash \$0" >&2
   exit 1
 fi
 
