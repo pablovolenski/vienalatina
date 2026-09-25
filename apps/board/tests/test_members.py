@@ -182,3 +182,40 @@ def test_the_export_is_only_your_own_writing(client, db, make_member, sign_in):
     body = client.get("/comunidad/mis-datos").get_data(as_text=True)
     assert "Mío" in body
     assert "Suyo" not in body
+
+
+def test_the_form_says_so_when_accounts_cannot_be_created(app, client, owner_id, sign_in):
+    """Without a site-admin token the server cannot create Gitea accounts. That
+    is the documented safer setup, not a fault — but it has to be said before
+    someone fills the form, not after they submit it."""
+    app.config["ADMIN_TOKEN"] = ""
+    sign_in(owner_id)
+
+    body = client.get("/comunidad/miembros/nuevo").get_data(as_text=True)
+    assert "no puede crear cuentas" in body
+    assert 'name="create_account" disabled' in body
+    assert 'name="create_account" checked' not in body
+
+
+def test_with_a_token_the_form_is_unchanged(app, client, owner_id, sign_in):
+    app.config["ADMIN_TOKEN"] = "admintoken"
+    sign_in(owner_id)
+
+    body = client.get("/comunidad/miembros/nuevo").get_data(as_text=True)
+    assert 'name="create_account" checked' in body
+    assert "no puede crear cuentas" not in body
+
+
+def test_ticking_it_anyway_still_creates_nothing(app, client, db, post, owner_id, sign_in):
+    """A disabled input is a courtesy, not a permission — the refusal lives in
+    the handler, where a hand-crafted POST also meets it."""
+    app.config["ADMIN_TOKEN"] = ""
+    sign_in(owner_id)
+
+    response = post("/comunidad/miembros/nuevo", {
+        "login": "maria", "display_name": "María", "email": "m@example.com",
+        "role": "user", "create_account": "on",
+    }, follow_redirects=True)
+
+    assert "GITEA_ADMIN_TOKEN" in response.get_data(as_text=True)
+    assert db.execute("SELECT 1 FROM members WHERE gitea_login = 'maria'").fetchone() is None

@@ -346,6 +346,11 @@ board's environment — the compose file, `docker inspect`, a shell in the
 container — can use it. If you would rather not have that on the box, leave
 `GITEA_ADMIN_TOKEN` empty and create accounts in Gitea by hand.
 
+Leaving it empty is a supported configuration, not a half-finished one: the
+*Dar de alta* form checks for the token when it renders, says plainly that this
+server cannot create accounts, and links to Gitea's own create-user page. You
+then add that username here, with the checkbox already off.
+
 ### 11.3 Build and run
 
 ```sh

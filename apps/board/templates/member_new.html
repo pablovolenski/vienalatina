@@ -17,10 +17,25 @@
 	<label for="email">Correo</label>
 	<input id="email" name="email" type="email" placeholder="maria@ejemplo.com">
 
+	{% if can_create_accounts %}
 	<label class="check">
 		<input type="checkbox" name="create_account" checked>
 		Crear también su cuenta (desmarca si ya tiene una)
 	</label>
+	{% else %}
+	{# Disabled rather than hidden: "you cannot do this here" is more use than
+	   an option that quietly is not there. The handler refuses it either way. #}
+	<label class="check">
+		<input type="checkbox" name="create_account" disabled>
+		Crear también su cuenta
+	</label>
+	<p class="muted small">
+		Este servidor no puede crear cuentas (no tiene un token de administración
+		de Gitea). Crea la cuenta primero en
+		<a href="{{ gitea_url }}/admin/users/new">Gitea</a> y luego da de alta
+		aquí ese mismo usuario.
+	</p>
+	{% endif %}
 
 	{% if can_make_admin %}
 	<label for="role">Rol</label>

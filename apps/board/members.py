@@ -18,7 +18,7 @@ import json
 import re
 import sqlite3
 
-from flask import (Blueprint, Response, abort, flash, g, redirect,
+from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
 from . import gitea
@@ -121,7 +121,16 @@ def index():
 @admin_required
 def new():
     if request.method == "GET":
-        return render_template("member_new.html", can_make_admin=g.member["role"] == "owner")
+        return render_template(
+            "member_new.html",
+            can_make_admin=g.member["role"] == "owner",
+            # Without a site-admin token the server cannot create Gitea accounts,
+            # which is the documented safer configuration rather than a fault.
+            # The form says so before it is filled in; offering a ticked checkbox
+            # and reporting the problem on submit wastes the work of filling it.
+            can_create_accounts=bool(current_app.config.get("ADMIN_TOKEN")),
+            gitea_url=current_app.config["GITEA_URL"].rstrip("/"),
+        )
 
     login = request.form.get("login", "").strip()
     display_name = request.form.get("display_name", "").strip()
