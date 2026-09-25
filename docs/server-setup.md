@@ -400,13 +400,17 @@ rebuild:
 
 ```sh
 cd ~/vienalatina
-git pull --no-edit github <the-branch-name>   # e.g. claude/relaxed-faraday-h4zd09
+git pull --no-rebase --no-edit github <the-branch-name>
 git push gitea main
 sudo bash scripts/deploy-board.sh
 ```
 
-`--no-edit` accepts the default merge message. Without it git opens an editor,
-which is a strange place to find yourself mid-deploy.
+Both flags earn their place. `main` and the branch have genuinely diverged —
+main carries the previous merge, the branch carries the new work — and a git
+with no `pull.rebase` set refuses to guess, with *"fatal: Need to specify how to
+reconcile divergent branches."* `--no-rebase` says merge, which is what every
+deploy here has done. `--no-edit` then accepts the default merge message instead
+of opening an editor, which is a strange place to find yourself mid-deploy.
 
 If `github` is not a remote yet, add it once — see the end of step 8:
 
