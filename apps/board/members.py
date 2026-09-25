@@ -148,7 +148,7 @@ def new():
         flash("El usuario solo puede tener letras, números, punto, guion y guion bajo.", "error")
         return redirect(url_for("members.new"))
     if create_account and "@" not in email:
-        flash("Hace falta un correo válido para crear la cuenta en Gitea.", "error")
+        flash("Hace falta un correo válido para crear la cuenta.", "error")
         return redirect(url_for("members.new"))
 
     db = get_db()

@@ -380,7 +380,7 @@ def test_a_member_without_a_gitea_account_is_named_as_such(
                 {"password": "una-contrasena-larga",
                  "confirm": "una-contrasena-larga"}).get_data(as_text=True)
 
-    assert "No existe la cuenta «fantasma» en Gitea" in page
+    assert "No existe la cuenta «fantasma»" in page
     assert "404" not in page
     # And the link survives, so it still works once the account exists.
     assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is None

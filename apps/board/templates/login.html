@@ -8,7 +8,7 @@
 		Este espacio es sólo para miembros de Viena Latina. Se entra con la misma
 		cuenta que se usa para publicar en el sitio.
 	</p>
-	<a class="btn" href="{{ url_for('auth.start', next=next) }}">Entrar con Gitea</a>
+	<a class="btn" href="{{ url_for('auth.start', next=next) }}">Entrar</a>
 	{# Offered only when the server can actually complete it: without a Gitea
 	   admin token the recovery page can do nothing but apologise. #}
 	{% if can_recover %}

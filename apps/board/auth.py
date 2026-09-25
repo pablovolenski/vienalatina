@@ -81,7 +81,7 @@ def callback():
 
     code = request.args.get("code", "")
     if not code:
-        flash("Gitea no devolvió un código de autorización.", "error")
+        flash("No se recibió el código de autorización. Inténtalo de nuevo.", "error")
         return redirect(url_for("auth.login"))
 
     try:
@@ -93,7 +93,8 @@ def callback():
         return redirect(url_for("auth.login"))
     except Exception:  # network trouble, malformed JSON, Gitea down
         current_app.logger.exception("OAuth failed unexpectedly")
-        flash("No se pudo contactar con Gitea. Inténtalo más tarde.", "error")
+        flash("No se pudo contactar con el servidor de cuentas. "
+              "Inténtalo más tarde.", "error")
         return redirect(url_for("auth.login"))
 
     login_name = (profile.get("login") or "").strip()

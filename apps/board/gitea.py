@@ -86,7 +86,7 @@ def _token_request(payload: dict) -> dict:
         raise GiteaError("No se pudo completar el inicio de sesión.")
     data = response.json()
     if not data.get("access_token"):
-        raise GiteaError("Gitea no devolvió un token de acceso.")
+        raise GiteaError("El servidor de cuentas no devolvió un token de acceso.")
     return data
 
 
@@ -115,7 +115,7 @@ def fetch_user(token: str) -> dict:
         timeout=TIMEOUT,
     )
     if response.status_code != 200:
-        raise GiteaError("No se pudo leer el perfil desde Gitea.")
+        raise GiteaError("No se pudo leer tu perfil desde el servidor de cuentas.")
     return response.json()
 
 
@@ -163,10 +163,10 @@ def admin_create_user(login: str, email: str, full_name: str, password: str) -> 
     if response.status_code in (201, 200):
         return
     if response.status_code == 422:
-        raise GiteaError("Ese usuario o correo ya existe en Gitea.")
+        raise GiteaError("Ese usuario o ese correo ya están en uso.")
     if response.status_code in (401, 403):
-        raise GiteaError("El token de administración de Gitea no es válido.")
-    raise GiteaError(f"Gitea rechazó la creación del usuario ({response.status_code}).")
+        raise GiteaError("El token de administración no es válido.")
+    raise GiteaError(f"No se pudo crear la cuenta ({response.status_code}).")
 
 
 def admin_set_password(login: str, password: str) -> None:
@@ -204,19 +204,19 @@ def admin_set_password(login: str, password: str) -> None:
         # Gitea enforces its own minimum length and complexity, and its message
         # is in the admin's language rather than the member's, so it is not
         # passed through.
-        raise GiteaError("Gitea rechazó esa contraseña. Prueba con una más larga.")
+        raise GiteaError("No se aceptó esa contraseña. Prueba con una más larga.")
     if response.status_code in (401, 403):
-        raise GiteaError("El token de administración de Gitea no es válido.")
+        raise GiteaError("El token de administración no es válido.")
     if response.status_code == 404:
         # Reachable: a member can be added here without ticking "crear también
         # su cuenta", and then invited. Everything works right up to this call,
         # which is asked to change the password of an account that was never
         # made. A bare "(404)" sends the admin looking at the wrong thing.
         raise GiteaError(
-            f"No existe la cuenta «{login}» en Gitea, así que no se le puede "
+            f"No existe la cuenta «{login}», así que no se le puede "
             "poner contraseña. Pide a un administrador que la cree."
         )
-    raise GiteaError(f"Gitea rechazó el cambio de contraseña ({response.status_code}).")
+    raise GiteaError(f"No se pudo cambiar la contraseña ({response.status_code}).")
 
 
 # --- content (the member's own token) ------------------------------------
@@ -245,7 +245,7 @@ def list_directory(path: str, token: str) -> list[dict]:
     if response.status_code == 404:
         return []          # an empty content folder is normal, not an error
     if response.status_code != 200:
-        raise GiteaError(f"Gitea no devolvió la lista de archivos ({response.status_code}).")
+        raise GiteaError(f"No se pudo leer la lista de archivos ({response.status_code}).")
     payload = response.json()
     return [item for item in payload if item.get("type") == "file"]
 
@@ -282,7 +282,7 @@ def write_file(path: str, data: bytes, message: str, token: str,
             "Alguien más guardó este archivo mientras lo editabas. "
             "Vuelve a abrirlo para no perder su trabajo."
         )
-    raise GiteaError(f"Gitea rechazó el guardado ({response.status_code}).")
+    raise GiteaError(f"No se pudo guardar el archivo ({response.status_code}).")
 
 
 def delete_file(path: str, sha: str, message: str, token: str) -> None:
@@ -293,4 +293,4 @@ def delete_file(path: str, sha: str, message: str, token: str) -> None:
         return
     if response.status_code in (409, 422):
         raise StaleFile("El archivo cambió desde que lo abriste. Recarga la lista.")
-    raise GiteaError(f"Gitea rechazó el borrado ({response.status_code}).")
+    raise GiteaError(f"No se pudo borrar el archivo ({response.status_code}).")

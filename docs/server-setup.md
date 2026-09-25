@@ -586,6 +586,44 @@ How often anyone sees them is worth knowing before judging the result: the
 and the **sign-in form only when their Gitea session has lapsed**, which
 "Remember This Device" pushes out to weeks. This is a first-impression fix.
 
+### The name, not just the colours
+
+Themed or not, those two screens said **Gitea** — in the tab, the heading and
+the footer. A member has no idea what that is, and for anyone the platform is
+ever sold to it is a competitor's name on their login page. Three settings in
+`/srv/gitea/docker-compose.yml` take care of it:
+
+```
+GITEA__DEFAULT__APP_NAME=Viena Latina
+GITEA__other__SHOW_FOOTER_POWERED_BY=false
+GITEA__other__SHOW_FOOTER_VERSION=false
+```
+
+`APP_NAME` lives in `app.ini`'s unnamed root section, which the environment
+mapping spells `DEFAULT`. **Check it took**, because a key written to a section
+that does not exist is accepted in silence:
+
+```sh
+cd /srv/gitea && sudo docker compose up -d
+sudo docker compose exec gitea head -5 /data/gitea/conf/app.ini
+```
+
+That should show `APP_NAME = Viena Latina`. Hiding the version is the one with
+a security argument as well as a cosmetic one: it tells a passer-by exactly
+which advisories to try.
+
+**On the licence**, since this is rebranding somebody else's software: Gitea is
+MIT, whose only obligation is that the copyright and permission notice travel
+with copies of the software. We are not redistributing it — the official image
+runs unmodified, with its own `LICENSE` file untouched, and we talk to it over
+HTTP. MIT requires no attribution in a user interface, and Gitea itself ships
+`SHOW_FOOTER_POWERED_BY` as a supported setting, which settles what the project
+intends. The name is a trademark of Gitea Limited; that restricts using it to
+brand something else, not declining to display it. Redistributing a modified
+Gitea under its own name would be a different question — this is not that.
+
+### The theme
+
 Unlike Decap, Gitea supports this properly: a theme is a CSS file in a directory
 it already reads.
 

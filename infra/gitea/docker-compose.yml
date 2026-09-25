@@ -31,6 +31,24 @@ services:
       # Install the theme first: bash scripts/gitea-theme.sh
       - GITEA__ui__DEFAULT_THEME=vienalatina
 
+      # The name on those same screens. A member signing in should not be
+      # handed off to a product they have never heard of — as far as they are
+      # concerned this is still Viena Latina, and the page title, the tab and
+      # the heading should say so. APP_NAME lives in app.ini's unnamed root
+      # section, which is spelled DEFAULT in the environment mapping.
+      #
+      # VERIFY IT TOOK: `docker compose exec gitea cat /data/gitea/conf/app.ini
+      # | head -5` should show APP_NAME = Viena Latina. A key written to the
+      # wrong section is accepted in silence and changes nothing.
+      - GITEA__DEFAULT__APP_NAME=Viena Latina
+
+      # The footer, which otherwise advertises the software and its version on
+      # every page. The version is the one with a security argument: it tells a
+      # passer-by exactly which advisories to try.
+      - GITEA__other__SHOW_FOOTER_POWERED_BY=false
+      - GITEA__other__SHOW_FOOTER_VERSION=false
+      - GITEA__other__SHOW_FOOTER_TEMPLATE_LOAD_TIME=false
+
       # Two tabs on the sign-in page that should not be offered here.
       # OpenID is sign-in with an external identity URL, which nobody in
       # this association will ever use; the register button contradicts
