@@ -121,6 +121,18 @@ def fetch_user(token: str) -> dict:
 
 # --- account creation (site-admin token) ---------------------------------
 
+def admin_configured() -> bool:
+    """Whether this server holds a site-admin token.
+
+    Without one it can neither create accounts nor set passwords. That is a
+    supported configuration — server-setup.md §11.2 says why somebody might
+    choose it — and it is why both calls below refuse before reaching Gitea.
+    Exposed as a predicate so a screen can say so *before* asking somebody to
+    fill in a form that cannot be saved, the way `mail.configured()` is used.
+    """
+    return bool(current_app.config.get("ADMIN_TOKEN"))
+
+
 def generate_password() -> str:
     # Shown once to the admin, then changed by the member on first login.
     # Punctuation is left out on purpose: this gets read aloud or copied by
@@ -195,6 +207,15 @@ def admin_set_password(login: str, password: str) -> None:
         raise GiteaError("Gitea rechazó esa contraseña. Prueba con una más larga.")
     if response.status_code in (401, 403):
         raise GiteaError("El token de administración de Gitea no es válido.")
+    if response.status_code == 404:
+        # Reachable: a member can be added here without ticking "crear también
+        # su cuenta", and then invited. Everything works right up to this call,
+        # which is asked to change the password of an account that was never
+        # made. A bare "(404)" sends the admin looking at the wrong thing.
+        raise GiteaError(
+            f"No existe la cuenta «{login}» en Gitea, así que no se le puede "
+            "poner contraseña. Pide a un administrador que la cree."
+        )
     raise GiteaError(f"Gitea rechazó el cambio de contraseña ({response.status_code}).")
 
 

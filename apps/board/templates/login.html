@@ -9,9 +9,13 @@
 		cuenta que se usa para publicar en el sitio.
 	</p>
 	<a class="btn" href="{{ url_for('auth.start', next=next) }}">Entrar con Gitea</a>
+	{# Offered only when the server can actually complete it: without a Gitea
+	   admin token the recovery page can do nothing but apologise. #}
+	{% if can_recover %}
 	<p class="muted small">
 		<a href="{{ url_for('auth.recover') }}">¿Olvidaste tu contraseña?</a>
 	</p>
+	{% endif %}
 	<p class="muted small">
 		¿No tienes cuenta? Pídesela a un administrador: las cuentas se crean a mano,
 		no hay registro abierto.

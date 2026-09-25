@@ -338,11 +338,14 @@ a secret and should — a confidential client is the stronger of the two.
 
 Save the **Client ID** and the **Client Secret**.
 
-### 11.2 Optional: a token for creating accounts
+### 11.2 A token for creating accounts and setting passwords
 
-Without it, admins can add people who already have a Gitea login, and nothing
-else changes. With it, they can create the Gitea account from inside the members
-area and hand over a one-time password.
+This was optional when the members area only created accounts. **It is not
+optional any more**, because the same token is what lets a member choose their
+own password (section 13). Without it the invitation link opens a page that can
+only apologise, and *¿olvidaste tu contraseña?* refuses rather than mailing a
+link to that page. Adding people who already have a Gitea login still works
+with no token, and so does the rest of the members area.
 
 Log in as a Gitea **site administrator** → Settings → Applications → *Generate
 New Token* → scope **admin (write)**.
@@ -353,10 +356,18 @@ board's environment — the compose file, `docker inspect`, a shell in the
 container — can use it. If you would rather not have that on the box, leave
 `GITEA_ADMIN_TOKEN` empty and create accounts in Gitea by hand.
 
-Leaving it empty is a supported configuration, not a half-finished one: the
-*Dar de alta* form checks for the token when it renders, says plainly that this
-server cannot create accounts, and links to Gitea's own create-user page. You
-then add that username here, with the checkbox already off.
+Leaving it empty is a supported configuration, not a half-finished one, and
+every screen that depends on it checks **before** asking anyone to do work: the
+*Dar de alta* form says this server cannot create accounts and links to Gitea's
+own create-user page; the invitation page says so instead of showing a password
+field; the sign-in page stops offering recovery. What none of them will do is
+accept a password and then refuse it.
+
+One trap worth knowing, since the deploy script now warns about it: a line
+reading `GITEA_ADMIN_TOKEN=` with nothing after it is **not** the same as a
+configured token, but it looks identical to a missing one in every listing of
+your `.env`. `scripts/deploy-board.sh` names any setting that is present but
+empty, and what each one switches off.
 
 ### 11.3 Build and run
 

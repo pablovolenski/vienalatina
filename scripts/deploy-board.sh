@@ -53,6 +53,26 @@ if [ -n "$missing" ]; then
   echo
 fi
 
+# Present but empty, which the check above cannot see: `NAME=` has the name.
+# Worth its own warning, because an empty value is how a feature ends up
+# switched off while looking configured — GITEA_ADMIN_TOKEN= reads as a settled
+# decision and behaves as a missing one. Each of these disables something whole.
+blank="$(grep -oE '^[A-Z][A-Z0-9_]*=[[:space:]]*$' "$TARGET/.env" | sed 's/=.*//' || true)"
+if [ -n "$blank" ]; then
+  echo
+  echo "!! These are set to nothing in your .env, so their feature is off:"
+  while read -r name; do
+    case "$name" in
+      GITEA_ADMIN_TOKEN) note="no se pueden crear cuentas ni cambiar contraseñas" ;;
+      MAIL_HOST|MAIL_PASSWORD) note="no se envían invitaciones ni recuperaciones" ;;
+      BOARD_SECRET_KEY) note="LA APP NO ARRANCA" ;;
+      *) note="" ;;
+    esac
+    printf '     %-20s %s\n' "$name" "$note"
+  done <<< "$blank"
+  echo
+fi
+
 echo "==> Restarting"
 cd "$TARGET"
 docker compose up -d --force-recreate

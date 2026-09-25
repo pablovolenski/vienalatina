@@ -294,3 +294,93 @@ def test_the_form_warns_before_it_is_filled_in(app, client, owner_id, sign_in):
     app.config["MAIL_HOST"] = "smtp.example.com"
     assert "no envía correo" not in client.get(
         "/comunidad/miembros/nuevo").get_data(as_text=True)
+
+
+# --- when the server cannot set passwords at all --------------------------
+#
+# Without GITEA_ADMIN_TOKEN nothing in this file can complete. The point of
+# these four is that the refusal arrives *before* somebody does work, not
+# after — which is how it was found: a member chose a password, typed it
+# twice, pressed save, and met the name of an environment variable.
+
+def test_the_invitation_page_refuses_before_showing_a_password_field(
+        app, client, make_member):
+    with app.test_request_context():
+        token = invites.issue(make_member("maria"), "invite")
+    app.config["ADMIN_TOKEN"] = ""
+
+    response = client.get(f"/comunidad/invitacion/{token}")
+    page = response.get_data(as_text=True)
+
+    assert response.status_code == 503
+    assert 'name="password"' not in page
+    assert "enlace sigue siendo válido" in page
+
+
+def test_the_refusal_says_nothing_about_the_token_or_the_account(
+        app, client, make_member):
+    """A made-up token and a real one must answer identically here, or this
+    page becomes an oracle for guessing tokens."""
+    with app.test_request_context():
+        real = invites.issue(make_member("maria"), "invite")
+    app.config["ADMIN_TOKEN"] = ""
+
+    good = client.get(f"/comunidad/invitacion/{real}")
+    bad = client.get("/comunidad/invitacion/inventado")
+
+    assert good.status_code == bad.status_code == 503
+    assert good.get_data() == bad.get_data()
+
+
+def test_recovery_sends_nothing_when_the_link_could_not_work(
+        app, client, post, make_member, outbox):
+    """The reset link leads to a page that sets a password through Gitea. With
+    no token that page can only apologise, so mailing the link would put a dead
+    end in somebody's inbox — and the deliberately identical answer would hide
+    that from the admin too."""
+    make_member("maria")
+    app.config["ADMIN_TOKEN"] = ""
+
+    response = post("/comunidad/recuperar", {"email": "maria@example.com"})
+
+    assert response.status_code == 503
+    assert outbox == []
+    assert "no puede cambiar contraseñas" in response.get_data(as_text=True)
+
+
+def test_the_sign_in_page_stops_offering_recovery(app, client):
+    app.config["ADMIN_TOKEN"] = "admintoken"
+    # The positive case first, on a response asserted to be 200: "the link is
+    # absent" is equally true of a 404, so checking the negative case against a
+    # mistyped URL passes while proving nothing.
+    offered = client.get("/comunidad/login")
+    assert offered.status_code == 200
+    assert "/comunidad/recuperar" in offered.get_data(as_text=True)
+
+    app.config["ADMIN_TOKEN"] = ""
+    assert "/comunidad/recuperar" not in client.get(
+        "/comunidad/login").get_data(as_text=True)
+
+
+def test_a_member_without_a_gitea_account_is_named_as_such(
+        app, db, post, make_member, monkeypatch):
+    """Reachable: added without ticking "crear también su cuenta", then invited.
+    Everything works until Gitea is asked to change the password of an account
+    that was never made, and a bare "(404)" blames the wrong thing."""
+    import requests
+
+    class NotFound:
+        status_code = 404
+
+    monkeypatch.setattr(requests, "patch", lambda *a, **k: NotFound())
+    with app.test_request_context():
+        token = invites.issue(make_member("fantasma"), "invite")
+
+    page = post(f"/comunidad/invitacion/{token}",
+                {"password": "una-contrasena-larga",
+                 "confirm": "una-contrasena-larga"}).get_data(as_text=True)
+
+    assert "No existe la cuenta «fantasma» en Gitea" in page
+    assert "404" not in page
+    # And the link survives, so it still works once the account exists.
+    assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is None

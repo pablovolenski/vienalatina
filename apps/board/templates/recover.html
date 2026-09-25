@@ -2,7 +2,21 @@
 {% block title %}Recuperar contraseña{% endblock %}
 
 {% block main %}
-{% if sent %}
+{% if unavailable %}
+{# Refusing out loud rather than accepting the address and sending nothing.
+   Silence here would be indistinguishable from success — that is the point of
+   the identical answer below — so the one case where the server knows in
+   advance that it cannot help has to be said plainly. #}
+<article class="card card--center">
+	<h1>Todavía no</h1>
+	<p class="muted">
+		Este servidor aún no puede cambiar contraseñas, así que un enlace de
+		recuperación no serviría de nada. Escribe a un administrador y te darán
+		acceso a mano.
+	</p>
+	<p><a class="linkish" href="{{ url_for('auth.login') }}">Volver a entrar</a></p>
+</article>
+{% elif sent %}
 <article class="card card--center">
 	<h1>Revisa tu correo</h1>
 	{# Says the same thing whether or not that address belongs to a member.

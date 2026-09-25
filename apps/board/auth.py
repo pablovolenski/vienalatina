@@ -54,7 +54,11 @@ def load_member() -> None:
 def login():
     if g.member is not None:
         return redirect(url_for("board.threads"))
-    return render_template("login.html", next=request.args.get("next", ""))
+    return render_template("login.html", next=request.args.get("next", ""),
+                           # No site-admin token means no password can be set,
+                           # so offering recovery here would only lead somebody
+                           # to a page that refuses.
+                           can_recover=gitea.admin_configured())
 
 
 @bp.route("/login/start")
@@ -147,6 +151,16 @@ def set_password(token: str):
     link lived. The token is the only credential: somebody arriving here is not
     signed in and cannot be.
     """
+    if not gitea.admin_configured():
+        # Checked before the form is drawn rather than when it is submitted.
+        # The server cannot save the password either way — but learning that
+        # after choosing one, typing it twice and pressing the button reads as
+        # "I did something wrong", which is the opposite of true. Answering
+        # this way gives nothing away: the refusal is about the server, not
+        # about the token or any account behind it.
+        return render_template("set_password.html", member=None, token=token,
+                               minimum=PASSWORD_MIN, unavailable=True), 503
+
     member = invites.lookup(token)
     if member is None:
         # Deliberately one message for every reason it might fail — expired,
@@ -185,6 +199,15 @@ def set_password(token: str):
 @bp.route("/recuperar", methods=["GET", "POST"])
 def recover():
     """Replaces Gitea's recovery page, which is dead without a mailer."""
+    if not gitea.admin_configured():
+        # A reset link leads to a page that sets a password through Gitea's
+        # admin API. Without the token that page cannot save anything, so
+        # sending the mail would put a dead link in somebody's inbox and — the
+        # worse half — the identical answer below would hide that from
+        # everyone, including the admin. Refuse out loud instead. This says
+        # nothing about any account, only about the server.
+        return render_template("recover.html", unavailable=True), 503
+
     if request.method == "GET":
         return render_template("recover.html")
 
