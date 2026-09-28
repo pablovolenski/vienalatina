@@ -96,3 +96,22 @@
   height: 26px !important;
   width: auto !important;
 }
+
+/* The dead "Forgot password?" link on the sign-in form.
+ *
+ * It goes to /user/forgot_password, which answers "Account recovery is
+ * disabled because no email is set up" and always will: the SMTP details live
+ * in the members area's environment, and this is a different container that
+ * has no mailer and does not need one. Recovery is at
+ * vienalatina.com/comunidad/recuperar instead, which works.
+ *
+ * Every member who forgets a password reaches the sign-in form first, so
+ * leaving the link there means the broken route is the one they find. Hidden
+ * in CSS rather than by overriding the template, because a replaced template
+ * has to be re-checked against every Gitea release, whereas an attribute
+ * selector that stops matching leaves the link visible — the state we are in
+ * today, not a broken page.
+ */
+a[href$="/user/forgot_password"] {
+  display: none !important;
+}

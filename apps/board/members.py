@@ -201,6 +201,45 @@ def new():
                            role_label=ROLE_LABELS[role])
 
 
+@bp.route("/miembros/<int:member_id>/invitar", methods=["POST"])
+@admin_required
+def invite(member_id: int):
+    """Send a fresh invitation to somebody who is already a member.
+
+    This exists because creating the account and inviting the person were one
+    action, and there are several ordinary ways to end up needing only the
+    second: the admin made the account by hand in the account server and added
+    the member with the box unticked, the mail failed the first time, the link
+    sat unopened for more than a week, or the address was wrong and has been
+    corrected. Before this, every one of those left a member with an account
+    nobody knows the password to and no way to reach it.
+
+    Issuing a new token invalidates the previous one, which `invites.issue`
+    already guarantees — so a link that has been forwarded, or is sitting in a
+    mailbox somebody else can read, stops working the moment a new one is sent.
+    """
+    target = _load(member_id)
+    if not target["email"]:
+        flash(f"{target['display_name']} no tiene correo. Añádelo primero.", "error")
+        return redirect(url_for("members.index"))
+    if not target["active"] or target["role"] == "tombstone":
+        abort(403)
+
+    link = auth.invite_url(invites.issue(member_id, "invite"))
+    try:
+        mail.send_invite(target["email"], target["display_name"], link)
+    except (mail.MailNotConfigured, mail.MailFailed) as exc:
+        # The link is shown rather than withheld: it is already issued and
+        # valid, and the alternative is an admin who knows only that something
+        # did not work.
+        current_app.logger.warning("Invite mail to %s failed: %s", target["email"], exc)
+        flash(f"No se pudo enviar el correo. Pásale este enlace: {link}", "error")
+        return redirect(url_for("members.index"))
+
+    flash(f"Invitación enviada a {target['email']}.", "ok")
+    return redirect(url_for("members.index"))
+
+
 @bp.route("/miembros/<int:member_id>/estado", methods=["POST"])
 @admin_required
 def set_active(member_id: int):

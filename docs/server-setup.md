@@ -639,13 +639,25 @@ GITEA__other__SHOW_FOOTER_VERSION=false
 ```
 
 `APP_NAME` lives in `app.ini`'s unnamed root section, which the environment
-mapping spells `DEFAULT`. **Check it took**, because a key written to a section
-that does not exist is accepted in silence:
+mapping spells `DEFAULT`.
+
+**`/srv/gitea/docker-compose.yml` is a copy, and nothing kept it in step with
+this repository.** That is worth stating plainly because it cost a week: every
+Gitea setting added here — CORS, the theme, OpenID, the register button, the
+footer — was committed and documented and never reached the server, because the
+only thing that syncs a compose file is `deploy-board.sh`, and it syncs the
+board's. The file on the server stays valid, the container stays healthy, and
+the setting is simply absent.
 
 ```sh
-cd /srv/gitea && sudo docker compose up -d
-sudo docker compose exec gitea head -5 /data/gitea/conf/app.ini
+cd ~/vienalatina && sudo bash scripts/deploy-gitea.sh
 ```
+
+That copies `infra/gitea/docker-compose.yml` across (keeping the old one as
+`.bak` and printing the diff, since it may have been hand-edited), restarts,
+and then **reads the settings back out of the running container** and prints
+them. Treat that output as the only evidence: a line missing there is a setting
+not in effect, whatever the compose file says.
 
 That should show `APP_NAME = Viena Latina`. Hiding the version is the one with
 a security argument as well as a cosmetic one: it tells a passer-by exactly
@@ -672,16 +684,19 @@ git pull --no-rebase --no-edit gitea main
 bash scripts/gitea-theme.sh
 ```
 
-Then add the line the script prints to `/srv/gitea/docker-compose.yml` (it is
-already in `infra/gitea/docker-compose.yml`):
-
-```
-- GITEA__ui__DEFAULT_THEME=vienalatina
-```
+`GITEA__ui__DEFAULT_THEME=vienalatina` is already in
+`infra/gitea/docker-compose.yml`, so it arrives with the sync — no hand-editing
+of the server's copy:
 
 ```sh
-cd /srv/gitea && sudo docker compose up -d
+cd ~/vienalatina && sudo bash scripts/deploy-gitea.sh
 ```
+
+The script prints `DEFAULT_THEME` back out of the container. If it says
+`vienalatina` and the screens are still grey, the setting is fine and the
+*theme file* was never built — run `bash scripts/gitea-theme.sh` first. Those
+are two different failures with one symptom, which is why the script names
+both.
 
 Check it in a private window at **https://git.vienalatina.com/user/login** —
 cream background, the Viena Latina wordmark, `#c0391c` buttons. Then browse a
@@ -807,12 +822,20 @@ behind it.
 ### 13.4 The sign-in page loses two tabs
 
 `GITEA__openid__ENABLE_OPENID_SIGNIN=false` and
-`GITEA__service__SHOW_REGISTRATION_BUTTON=false` in
-`/srv/gitea/docker-compose.yml`. OpenID is sign-in with an external identity
+`GITEA__service__SHOW_REGISTRATION_BUTTON=false`, already in
+`infra/gitea/docker-compose.yml`. OpenID is sign-in with an external identity
 URL, which nobody here will use, and the register button contradicts
 `DISABLE_REGISTRATION` — it invited people to try something the server then
 refused.
 
+It also loses a third thing, the *Forgot password?* link, which goes to a page
+that answers "Account recovery is disabled because no email is set up" and
+always will: the SMTP details are the members area's, and this container has no
+mailer and needs none. Recovery lives at **vienalatina.com/comunidad/recuperar**
+and works. The link is hidden by a rule in the theme file rather than by
+replacing the template, so a Gitea upgrade cannot quietly undo it — and if the
+selector ever stops matching, the link reappears rather than the page breaking.
+
 ```sh
-cd /srv/gitea && sudo docker compose up -d
+cd ~/vienalatina && sudo bash scripts/deploy-gitea.sh
 ```

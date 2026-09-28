@@ -384,3 +384,92 @@ def test_a_member_without_a_gitea_account_is_named_as_such(
     assert "404" not in page
     # And the link survives, so it still works once the account exists.
     assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is None
+
+
+# --- inviting somebody who is already a member ----------------------------
+#
+# Creating the account and inviting the person used to be one action, so a
+# member added any other way had no route in at all: no invitation was ever
+# issued for them and nothing could issue one later.
+
+def test_an_existing_member_can_be_invited(app, client, post, owner_id, make_member,
+                                           sign_in, outbox):
+    """The case that prompted this: the admin made the account by hand, added
+    the member with the box unticked, and nobody could reach the account —
+    including the admin, who never knew the password."""
+    member_id = make_member("salvador")
+    sign_in(owner_id)
+
+    post(f"/comunidad/miembros/{member_id}/invitar")
+
+    assert len(outbox) == 1
+    assert outbox[0]["to"] == "salvador@example.com"
+    with app.test_request_context():
+        assert invites.lookup(token_in(outbox[0]["body"])) is not None
+
+
+def test_re_inviting_kills_the_previous_link(app, client, post, owner_id, make_member,
+                                             sign_in, outbox):
+    """A link that was forwarded, or is sitting in a mailbox somebody else can
+    read, must stop working the moment a replacement is sent."""
+    member_id = make_member("salvador")
+    sign_in(owner_id)
+
+    post(f"/comunidad/miembros/{member_id}/invitar")
+    post(f"/comunidad/miembros/{member_id}/invitar")
+
+    with app.test_request_context():
+        assert invites.lookup(token_in(outbox[0]["body"])) is None
+        assert invites.lookup(token_in(outbox[1]["body"])) is not None
+
+
+def test_an_admin_can_invite_without_waiting_for_the_owner(
+        app, client, post, make_member, sign_in, outbox):
+    sign_in(make_member("admina", role="admin"))
+    post(f"/comunidad/miembros/{make_member('salvador')}/invitar")
+    assert len(outbox) == 1
+
+
+def test_a_plain_user_cannot_invite(client, post, make_member, sign_in, outbox):
+    sign_in(make_member("cualquiera"))
+    response = post(f"/comunidad/miembros/{make_member('salvador')}/invitar")
+
+    assert response.status_code == 403
+    assert outbox == []
+
+
+def test_a_member_with_no_address_is_refused_before_a_token_is_made(
+        app, client, db, post, owner_id, sign_in, outbox):
+    """Issuing the token first would invalidate a previous, working invitation
+    in exchange for one that cannot be delivered."""
+    member_id = db.execute(
+        "INSERT INTO members (gitea_login, display_name, role) VALUES ('sincorreo', 'Sin', 'user')"
+    ).lastrowid
+    sign_in(owner_id)
+
+    post(f"/comunidad/miembros/{member_id}/invitar", follow_redirects=True)
+
+    assert outbox == []
+    assert db.execute("SELECT 1 FROM invites").fetchone() is None
+
+
+def test_a_suspended_member_cannot_be_invited(client, post, owner_id, make_member,
+                                              sign_in, outbox):
+    sign_in(owner_id)
+    response = post(f"/comunidad/miembros/{make_member('fuera', active=0)}/invitar")
+
+    assert response.status_code == 403
+    assert outbox == []
+
+
+def test_when_the_mail_fails_the_admin_is_handed_the_link(
+        app, client, post, owner_id, make_member, sign_in, monkeypatch):
+    def explode(to, subject, body):
+        raise mail.MailFailed("connection refused")
+    monkeypatch.setattr(mail, "send", explode)
+    sign_in(owner_id)
+
+    page = post(f"/comunidad/miembros/{make_member('salvador')}/invitar",
+                follow_redirects=True).get_data(as_text=True)
+
+    assert "/comunidad/invitacion/" in page

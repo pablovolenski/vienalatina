@@ -35,6 +35,19 @@
 						<button class="linkish" type="submit">{{ 'Suspender' if m.active else 'Reactivar' }}</button>
 					</form>
 
+					{# Any admin can re-send, not just the owner: the usual reason
+					   somebody needs this is that the admin who added them made
+					   the account by hand, and waiting for the owner to be
+					   around defeats the point. Hidden without an address,
+					   because the handler would only refuse. #}
+					{% if m.email and m.active %}
+					<form method="post" action="{{ url_for('members.invite', member_id=m.id) }}"
+					      data-confirm="Se enviará un enlace nuevo a {{ m.email }} y el anterior dejará de servir. ¿Seguro?">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<button class="linkish" type="submit">Enviar invitación</button>
+					</form>
+					{% endif %}
+
 					{% if is_owner %}
 						<form method="post" action="{{ url_for('members.set_role', member_id=m.id) }}">
 							<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
