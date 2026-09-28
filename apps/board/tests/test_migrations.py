@@ -9,6 +9,7 @@ never needed for.
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -42,6 +43,10 @@ def old_db(tmp_path):
     """A database as it existed before this migration, with real rows in it."""
     db = sqlite3.connect(tmp_path / "old.db", isolation_level=None)
     db.row_factory = sqlite3.Row
+    # As connect() does in db.py. Without this the fixture runs with SQLite's
+    # default (off) and a migration that mishandles foreign keys passes here
+    # and fails on the server.
+    db.execute("PRAGMA foreign_keys = ON")
     db.executescript(OLD_SCHEMA)
     db.execute("INSERT INTO members (id, gitea_login) VALUES (1, 'salvador')")
     db.execute("INSERT INTO threads (id) VALUES (7)")
@@ -126,3 +131,58 @@ def test_a_fresh_database_skips_it(app, db):
     done and return quietly rather than rebuilding a table it just created."""
     assert "message_id" in {row[1] for row in db.execute("PRAGMA table_info(attachments)")}
     assert migrations.apply(db) == []
+
+
+# --- the whole start-up, not just the step -------------------------------
+
+def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
+    """The test that was missing, and the reason the site went down.
+
+    Every other test here calls `migrations.apply` directly. The failure was
+    one layer above it: `init_db` runs `schema.sql` *first*, and schema.sql
+    carried `CREATE INDEX ... ON attachments(message_id)`. IF NOT EXISTS guards
+    the index name, not the column — so against a real database the script died
+    with "no such column: message_id" before any migration could fix anything,
+    the app never finished starting, and Caddy answered 502.
+
+    This builds a database with the schema as it shipped, puts a real row in
+    it, and starts the application the way gunicorn does.
+    """
+    from apps.board.app import create_app
+    from apps.board.db import connect
+
+    shipped = (Path(__file__).resolve().parents[3] / "apps/board/schema.sql")
+    old_sql = shipped.read_text(encoding="utf-8")
+    # Reduce it to the shape that predates this migration: no message_id
+    # anywhere, and the CHECK that goes with it.
+    old_sql = old_sql.replace("  message_id    INTEGER REFERENCES messages(id),\n", "")
+    old_sql = old_sql.replace(
+        "  CHECK ((thread_id IS NOT NULL) + (comment_id IS NOT NULL)\n"
+        "       + (message_id IS NOT NULL) = 1)",
+        "  CHECK ((thread_id IS NULL) <> (comment_id IS NULL))")
+
+    path = str(tmp_path / "board.db")
+    db = connect(path)
+    db.executescript(old_sql)
+    db.execute("INSERT INTO members (gitea_login, display_name, role) "
+               "VALUES ('salvador', 'Salvador', 'user')")
+    db.execute("INSERT INTO threads (author_id, title, body_md) VALUES (1, 'Hola', 'T')")
+    db.execute("""INSERT INTO attachments
+                      (thread_id, stored_name, original_name, content_type, bytes, uploaded_by)
+                  VALUES (1, 'foto-abc123abc123.jpg', 'foto.jpg', 'image/jpeg', 2048, 1)""")
+    db.close()
+
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+    # The row the server actually has, still there and still whole.
+    kept = db.execute("SELECT stored_name, thread_id, bytes FROM attachments").fetchone()
+    assert (kept["stored_name"], kept["thread_id"], kept["bytes"]) == (
+        "foto-abc123abc123.jpg", 1, 2048)
+
+    # And starting again changes nothing, because a container restarts.
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+    db.close()

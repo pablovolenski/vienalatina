@@ -45,11 +45,7 @@ def _attachments_accept_messages(db: sqlite3.Connection) -> None:
     on can cascade, and switched back on after, with a check that nothing was
     broken in between.
     """
-    if "message_id" in _columns(db, "attachments"):
-        return  # a new database: schema.sql already created it this way
-
-    db.execute("PRAGMA foreign_keys = OFF")
-    try:
+    if "message_id" not in _columns(db, "attachments"):
         db.execute("""
             CREATE TABLE attachments_new (
               id            INTEGER PRIMARY KEY,
@@ -83,8 +79,11 @@ def _attachments_accept_messages(db: sqlite3.Connection) -> None:
         broken = db.execute("PRAGMA foreign_key_check").fetchall()
         if broken:
             raise RuntimeError(f"migration left dangling references: {broken}")
-    finally:
-        db.execute("PRAGMA foreign_keys = ON")
+
+    # Outside the branch above: a database created fresh by schema.sql has the
+    # column but not this index, because schema.sql cannot carry it — see the
+    # note there. Both paths end up with the same table and the same indexes.
+    db.execute("CREATE INDEX IF NOT EXISTS attachments_message ON attachments(message_id)")
 
 
 # (number, description, function). The number is the value written to
@@ -101,6 +100,11 @@ def apply(db: sqlite3.Connection) -> list[str]:
     for number, description, step in sorted(STEPS):
         if number <= version:
             continue
+        # Outside the transaction, deliberately: "PRAGMA foreign_keys is a
+        # no-op within a transaction". Setting it inside BEGIN looks like it
+        # worked and changes nothing, which is how a table rebuild ends up
+        # running with enforcement still on.
+        db.execute("PRAGMA foreign_keys = OFF")
         db.execute("BEGIN IMMEDIATE")
         try:
             step(db)
@@ -111,5 +115,7 @@ def apply(db: sqlite3.Connection) -> list[str]:
         except Exception:
             db.execute("ROLLBACK")
             raise
+        finally:
+            db.execute("PRAGMA foreign_keys = ON")
         done.append(f"{number}: {description}")
     return done

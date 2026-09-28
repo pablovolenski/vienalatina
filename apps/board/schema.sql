@@ -137,7 +137,12 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 CREATE INDEX IF NOT EXISTS attachments_thread  ON attachments(thread_id);
 CREATE INDEX IF NOT EXISTS attachments_comment ON attachments(comment_id);
-CREATE INDEX IF NOT EXISTS attachments_message ON attachments(message_id);
+-- The index on message_id is NOT here, and that is not an oversight.
+-- CREATE INDEX IF NOT EXISTS guards the index NAME, not the column: run it
+-- against a database whose attachments table predates message_id and it fails
+-- with "no such column", taking the whole start-up with it. Any index on a
+-- column a migration introduces belongs in that migration, after the column
+-- exists. See migrations.py.
 
 -- Gitea access tokens for the editor.
 --
