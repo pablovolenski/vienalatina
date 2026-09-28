@@ -18,6 +18,7 @@ from __future__ import annotations
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
+from . import uploads
 from .db import get_db
 from .render import excerpt, to_html
 from .security import admin_required, login_required
@@ -130,7 +131,9 @@ def thread(thread_id: int):
     return render_template("thread.html", thread=row, author=author["display_name"],
                            comments=comments, body_html=to_html(row["body_md"]),
                            to_html=to_html, may_edit=may_edit, may_delete=may_delete,
-                           is_admin=is_admin())
+                           is_admin=is_admin(),
+                           thread_images=uploads.for_threads([thread_id]).get(thread_id, []),
+                           comment_images=uploads.for_comments([c["id"] for c in comments]))
 
 
 @bp.route("/nuevo", methods=["GET", "POST"])
@@ -147,11 +150,20 @@ def new_thread():
         flash(f"Espera {wait} segundos antes de publicar otra vez.", "error")
         return redirect(url_for("board.new_thread"))
 
+    # Checked before the thread exists, so a refused picture does not leave a
+    # half-made post behind for its author to find and wonder about.
+    try:
+        staged = uploads.stage(request.files.getlist("pictures"))
+    except uploads.RejectedUpload as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("board.new_thread"))
+
     title, body = cleaned
     cursor = get_db().execute(
         "INSERT INTO threads (author_id, title, body_md) VALUES (?, ?, ?)",
         (g.member["id"], title, body),
     )
+    uploads.save(staged, g.member["id"], thread_id=cursor.lastrowid)
     return redirect(url_for("board.thread", thread_id=cursor.lastrowid))
 
 
@@ -203,10 +215,17 @@ def comment(thread_id: int):
         flash(f"Espera {wait} segundos antes de comentar otra vez.", "error")
         return redirect(url_for("board.thread", thread_id=thread_id))
 
-    get_db().execute(
+    try:
+        staged = uploads.stage(request.files.getlist("pictures"))
+    except uploads.RejectedUpload as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("board.thread", thread_id=thread_id))
+
+    cursor = get_db().execute(
         "INSERT INTO comments (thread_id, author_id, body_md) VALUES (?, ?, ?)",
         (thread_id, g.member["id"], body),
     )
+    uploads.save(staged, g.member["id"], comment_id=cursor.lastrowid)
     return redirect(url_for("board.thread", thread_id=thread_id) + "#final")
 
 

@@ -2,7 +2,7 @@
 {% block title %}{{ 'Editar tema' if thread else 'Escribir' }}{% endblock %}
 
 {% block main %}
-<form class="card" method="post"
+<form class="card" method="post" enctype="multipart/form-data"
       action="{{ url_for('board.edit_thread', thread_id=thread.id) if thread else url_for('board.new_thread') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<h1>{{ 'Editar tema' if thread else 'Nuevo tema' }}</h1>
@@ -14,6 +14,14 @@
 	<label for="body">Mensaje</label>
 	<textarea id="body" name="body" rows="14" required
 	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces.">{{ thread.body_md if thread else '' }}</textarea>
+
+	{# Only when writing, not when editing: the edit route does not read files,
+	   and an input that silently does nothing is worse than no input. Photos
+	   already attached survive an edit — they are separate rows. #}
+	{% if not thread %}
+	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
+	<input id="pictures" name="pictures" type="file" multiple accept="image/*">
+	{% endif %}
 
 	<div class="actions">
 		<button class="btn" type="submit">{{ 'Guardar' if thread else 'Publicar' }}</button>

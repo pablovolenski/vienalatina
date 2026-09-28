@@ -34,6 +34,7 @@ def app(tmp_path):
         "OAUTH_CLIENT_ID": "cid",
         "OAUTH_CLIENT_SECRET": "secret",
         "ADMIN_TOKEN": "admintoken",
+        "UPLOAD_DIR": str(tmp_path / "uploads"),
         "TESTING": True,
     })
     yield application

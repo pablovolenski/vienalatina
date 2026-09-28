@@ -55,6 +55,32 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE INDEX IF NOT EXISTS comments_thread
   ON comments(thread_id, created_at) WHERE deleted_at IS NULL;
 
+-- Pictures attached to a thread or a comment.
+--
+-- The file itself lives in /data/uploads; this is the record of what it is and
+-- what it belongs to. `stored_name` is generated, never the name the browser
+-- sent, and is UNIQUE because it is also the URL.
+--
+-- The CHECK is the shape of the thing: an attachment hangs off exactly one of
+-- the two, never both and never neither. Without it a row with both columns
+-- set would be served under whichever parent was still alive, which is a
+-- quiet way for a deleted thread's photo to stay readable.
+CREATE TABLE IF NOT EXISTS attachments (
+  id            INTEGER PRIMARY KEY,
+  thread_id     INTEGER REFERENCES threads(id),
+  comment_id    INTEGER REFERENCES comments(id),
+  stored_name   TEXT    NOT NULL UNIQUE,
+  original_name TEXT    NOT NULL,
+  content_type  TEXT    NOT NULL,
+  bytes         INTEGER NOT NULL,
+  uploaded_by   INTEGER NOT NULL REFERENCES members(id),
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  CHECK ((thread_id IS NULL) <> (comment_id IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS attachments_thread  ON attachments(thread_id);
+CREATE INDEX IF NOT EXISTS attachments_comment ON attachments(comment_id);
+
 -- Gitea access tokens for the editor.
 --
 -- Kept here rather than in the session cookie. Flask signs cookies but does not

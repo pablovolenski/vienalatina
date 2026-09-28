@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_attachments.html" import attachments %}
 {% block title %}{{ thread.title }}{% endblock %}
 
 {% block main %}
@@ -11,6 +12,7 @@
 	</div>
 	<h1 class="card__title">{{ thread.title }}</h1>
 	<div class="prose">{{ body_html }}</div>
+	{{ attachments(thread_images) }}
 
 	<div class="actions">
 		{% if may_edit(thread) %}
@@ -49,6 +51,7 @@
 		{% if c.edited_at %}<span class="muted small">(editado)</span>{% endif %}
 	</div>
 	<div class="prose">{{ to_html(c.body_md) }}</div>
+	{{ attachments(comment_images.get(c.id, [])) }}
 	<div class="actions">
 		{% if may_edit(c) %}
 		<a class="linkish" href="{{ url_for('board.edit_comment', comment_id=c.id) }}">Editar</a>
@@ -68,11 +71,16 @@
 {% if thread.locked and not is_admin %}
 <p class="muted">Este tema está cerrado a nuevas respuestas.</p>
 {% else %}
-<form class="card" method="post" action="{{ url_for('board.comment', thread_id=thread.id) }}">
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('board.comment', thread_id=thread.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<label for="body">Responder</label>
 	<textarea id="body" name="body" rows="5" required
 	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
+
+	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
+	<input id="pictures" name="pictures" type="file" multiple accept="image/*">
+
 	<button class="btn" type="submit">Publicar respuesta</button>
 </form>
 {% endif %}

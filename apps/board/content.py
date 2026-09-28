@@ -34,6 +34,10 @@ from . import gitea, tokens
 from .db import get_db
 from .render import to_html
 from .security import admin_required
+# One list of accepted formats for the whole app, kept in the module that
+# knows what each one looks like on the wire, so the editor and the board
+# cannot drift apart about what a picture is.
+from .uploads import IMAGE_EXTENSIONS
 
 bp = Blueprint("content", __name__)
 
@@ -51,7 +55,6 @@ COLLECTIONS = {
 CATEGORIES = ["Turismo", "Cultura", "Gastronomía", "Comunidad", "Comercio"]
 
 UPLOAD_FOLDER = "static/uploads"
-IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "gif", "avif"}
 
 TITLE_MAX = 140
 BODY_MAX = 100_000

@@ -306,3 +306,21 @@ input[type="file"] {
   padding: 0.5rem 0;
   font-size: 0.9rem;
 }
+
+/* Attached pictures. A row that wraps, thumbnails rather than full-bleed:
+   a thread with four photos should still read as a conversation. */
+.shots {
+	list-style: none;
+	margin: 0.75rem 0 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+.shots img {
+	display: block;
+	max-height: 220px;
+	max-width: 100%;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border-light);
+}

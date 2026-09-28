@@ -471,6 +471,17 @@ database is live and in WAL mode — a plain `cp` can capture it missing its mos
 recent commits. Test a restore before you rely on it: stop the container, gunzip
 a backup over `/srv/board/data/board.db`, start it again.
 
+**It also archives `/srv/board/data/uploads`**, the pictures members attach to
+threads, as a second file `uploads-<stamp>.tar.gz`. This is not an extra: a
+database backup that completes looks exactly like a backup that worked, so
+before uploads were covered the nightly job would have gone on reporting
+success while silently leaving every photograph out. Restoring them is a plain
+`tar -xzf`, into `/srv/board/data/`.
+
+If there are no uploads yet the log says so by name, rather than saying
+nothing — "nobody has posted a photo" and "the path moved a month ago and this
+has been archiving air" are otherwise the same empty line.
+
 ### 11.6 Who can do what
 
 | | Owner | Admin | User |
@@ -573,6 +584,34 @@ Not urgent — leaving it costs a folder and one `wget` in the pipeline:
 1. `rm -rf static/admin/`
 2. Delete the `wget … decap-cms.js` line from `.woodpecker.yml`
 3. Delete the `decap-cms` OAuth application in Gitea
+
+### 11.9 Pictures on the board
+
+Members can attach images when they start a thread or reply. Nothing to
+install: the files go to `/data/uploads` inside the container, which is
+`/srv/board/data/uploads` on the host — the same volume that already holds
+`board.db`, so there is one directory to back up rather than two.
+
+**They are deliberately not in the site repository.** `/comunidad/contenido/`
+uploads pictures by committing them, which is right for a post about to be
+published. A photo in a private thread is the opposite: committing it would
+send it through the build pipeline and out onto vienalatina.com. These are
+served by the app, behind the same login as the thread.
+
+Three things the code does that are worth knowing if you ever change it:
+
+- **The type is read from the first bytes, not the filename.** A file called
+  `gato.png` containing HTML is refused. Served back as `image/png` from our
+  own domain, it would otherwise be a script running on vienalatina.com.
+- **The stored name is generated.** The name the browser sent is kept only as
+  text to show a person, never as a path.
+- **Deleting a post hides its pictures.** Threads and comments are soft-deleted,
+  so the serving route checks the parent is still live. Without that, taking a
+  post down would leave its photo readable by anyone who noted the URL.
+
+Limits: 4 images per message, and `BOARD_UPLOAD_MAX_BYTES` (8MB by default)
+each. Adding a picture to a post *after* publishing it means posting a reply —
+editing changes the words, and leaves the pictures alone.
 
 ## 12. Make Gitea look like the site
 

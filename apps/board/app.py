@@ -78,6 +78,10 @@ def create_app(overrides: dict | None = None) -> Flask:
         # picture is silently refused has no way to tell what went wrong.
         MAX_CONTENT_LENGTH=10 * 1024 * 1024,
         UPLOAD_MAX_BYTES=int(os.environ.get("BOARD_UPLOAD_MAX_BYTES", 8 * 1024 * 1024)),
+        # Board pictures, deliberately inside the volume that already
+        # holds board.db: one directory to back up, not two, and no
+        # second mount to remember when moving the app to a new box.
+        UPLOAD_DIR=os.environ.get("BOARD_UPLOAD_DIR", "/data/uploads"),
     )
     if overrides:
         app.config.update(overrides)
@@ -87,10 +91,11 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import auth, board, content, members
+    from . import auth, board, content, members, uploads
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(content.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(uploads.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(board.bp, url_prefix=URL_PREFIX)
 
     app.teardown_appcontext(close_db)

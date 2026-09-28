@@ -1,0 +1,16 @@
+{# Pictures on a thread or a comment. Each one links to itself so a photo can
+   be opened at full size without needing a viewer — the link is the viewer. #}
+{% macro attachments(images) %}
+{% if images %}
+<ul class="shots">
+	{% for image in images %}
+	<li>
+		<a href="{{ url_for('uploads.serve', name=image.stored_name) }}">
+			<img src="{{ url_for('uploads.serve', name=image.stored_name) }}"
+			     alt="{{ image.original_name }}" loading="lazy">
+		</a>
+	</li>
+	{% endfor %}
+</ul>
+{% endif %}
+{% endmacro %}
