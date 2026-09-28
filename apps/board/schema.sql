@@ -55,7 +55,62 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE INDEX IF NOT EXISTS comments_thread
   ON comments(thread_id, created_at) WHERE deleted_at IS NULL;
 
--- Pictures attached to a thread or a comment.
+-- Private messages between two members.
+--
+-- An inbox, not live chat: gunicorn's sync workers cannot hold a connection
+-- open per signed-in member, and that would be the first thing on this box
+-- with a real scaling limit.
+--
+-- Membership is its own table rather than two columns on `conversations`
+-- because the unread mark is per person: each side keeps its own
+-- `last_read_at`, and the badge counts messages newer than it that somebody
+-- else wrote. Two columns would need two last-read fields and a rule about
+-- which is which.
+CREATE TABLE IF NOT EXISTS conversations (
+  id          INTEGER PRIMARY KEY,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS conversation_members (
+  conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  member_id       INTEGER NOT NULL REFERENCES members(id),
+  last_read_at    TEXT,
+  PRIMARY KEY (conversation_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS conversation_members_member
+  ON conversation_members(member_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id              INTEGER PRIMARY KEY,
+  conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  author_id       INTEGER NOT NULL REFERENCES members(id),
+  body_md         TEXT    NOT NULL,
+  created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+  deleted_at      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS messages_conversation
+  ON messages(conversation_id, created_at) WHERE deleted_at IS NULL;
+
+-- Blocking is symmetric: one row stops messages in both directions.
+--
+-- The alternative — the blocker may still write, the blocked may not reply —
+-- turns a safety feature into a one-way megaphone, which is worse than not
+-- having one. Somebody who blocks a person and then wants to talk to them can
+-- unblock. The CHECK is there because blocking yourself is meaningless and
+-- would quietly disable your own inbox.
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id  INTEGER NOT NULL REFERENCES members(id),
+  blocked_id  INTEGER NOT NULL REFERENCES members(id),
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (blocker_id, blocked_id),
+  CHECK (blocker_id <> blocked_id)
+);
+
+CREATE INDEX IF NOT EXISTS blocks_blocked ON blocks(blocked_id);
+
+-- Pictures attached to a thread, a comment or a private message.
 --
 -- The file itself lives in /data/uploads; this is the record of what it is and
 -- what it belongs to. `stored_name` is generated, never the name the browser
@@ -69,17 +124,20 @@ CREATE TABLE IF NOT EXISTS attachments (
   id            INTEGER PRIMARY KEY,
   thread_id     INTEGER REFERENCES threads(id),
   comment_id    INTEGER REFERENCES comments(id),
+  message_id    INTEGER REFERENCES messages(id),
   stored_name   TEXT    NOT NULL UNIQUE,
   original_name TEXT    NOT NULL,
   content_type  TEXT    NOT NULL,
   bytes         INTEGER NOT NULL,
   uploaded_by   INTEGER NOT NULL REFERENCES members(id),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
-  CHECK ((thread_id IS NULL) <> (comment_id IS NULL))
+  CHECK ((thread_id IS NOT NULL) + (comment_id IS NOT NULL)
+       + (message_id IS NOT NULL) = 1)
 );
 
 CREATE INDEX IF NOT EXISTS attachments_thread  ON attachments(thread_id);
 CREATE INDEX IF NOT EXISTS attachments_comment ON attachments(comment_id);
+CREATE INDEX IF NOT EXISTS attachments_message ON attachments(message_id);
 
 -- Gitea access tokens for the editor.
 --

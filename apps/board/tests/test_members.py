@@ -268,8 +268,9 @@ def test_every_table_pointing_at_members_is_accounted_for(db):
     members.py's erase lists. Otherwise erasure breaks — and it breaks at the
     moment somebody exercises a right they are entitled to, which is the worst
     possible time to find out."""
-    from apps.board.members import CLEARED_ON_ERASE, REASSIGNED_ON_ERASE
-    handled = REASSIGNED_ON_ERASE | CLEARED_ON_ERASE
+    from apps.board.members import (CLEARED_ON_ERASE, REASSIGNED_ON_ERASE,
+                                    REMOVED_ON_ERASE)
+    handled = REASSIGNED_ON_ERASE | CLEARED_ON_ERASE | REMOVED_ON_ERASE
 
     tables = [row["name"] for row in db.execute(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")]

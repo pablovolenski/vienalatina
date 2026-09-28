@@ -28,7 +28,7 @@ import re
 import secrets
 from pathlib import Path
 
-from flask import Blueprint, abort, current_app, send_from_directory
+from flask import Blueprint, abort, current_app, g, send_from_directory
 
 from .db import get_db
 from .security import login_required
@@ -142,8 +142,20 @@ def stage(files) -> list[dict]:
     return staged
 
 
+def remove(stored_name: str) -> None:
+    """Take a picture off disk. Missing is not an error.
+
+    Called after a row has already gone, so the file being absent means an
+    earlier attempt got this far — which is the state we wanted anyway.
+    """
+    if not STORED_NAME.match(stored_name):
+        return
+    directory().joinpath(stored_name).unlink(missing_ok=True)
+
+
 def save(staged: list[dict], member_id: int,
-         thread_id: int | None = None, comment_id: int | None = None) -> None:
+         thread_id: int | None = None, comment_id: int | None = None,
+         message_id: int | None = None) -> None:
     """Write the files, then record them. In that order.
 
     A row pointing at a file that does not exist renders as a broken image on
@@ -155,11 +167,12 @@ def save(staged: list[dict], member_id: int,
         (folder / item["stored_name"]).write_bytes(item["data"])
         get_db().execute(
             """INSERT INTO attachments
-                   (thread_id, comment_id, stored_name, original_name,
-                    content_type, bytes, uploaded_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (thread_id, comment_id, item["stored_name"], item["original_name"],
-             item["content_type"], len(item["data"]), member_id),
+                   (thread_id, comment_id, message_id, stored_name,
+                    original_name, content_type, bytes, uploaded_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (thread_id, comment_id, message_id, item["stored_name"],
+             item["original_name"], item["content_type"], len(item["data"]),
+             member_id),
         )
 
 
@@ -169,6 +182,10 @@ def for_threads(thread_ids: list[int]) -> dict[int, list]:
 
 def for_comments(comment_ids: list[int]) -> dict[int, list]:
     return _grouped("comment_id", comment_ids)
+
+
+def for_messages(message_ids: list[int]) -> dict[int, list]:
+    return _grouped("message_id", message_ids)
 
 
 def _grouped(column: str, ids: list[int]) -> dict[int, list]:
@@ -187,6 +204,14 @@ def _grouped(column: str, ids: list[int]) -> dict[int, list]:
     return grouped
 
 
+def _in_conversation(conversation_id: int) -> bool:
+    return get_db().execute(
+        """SELECT 1 FROM conversation_members
+            WHERE conversation_id = ? AND member_id = ?""",
+        (conversation_id, g.member["id"]),
+    ).fetchone() is not None
+
+
 @bp.route("/media/<name>")
 @login_required
 def serve(name: str):
@@ -199,15 +224,21 @@ def serve(name: str):
     if not STORED_NAME.match(name):
         abort(404)
     row = get_db().execute(
-        """SELECT a.content_type
+        """SELECT a.content_type, m.conversation_id
              FROM attachments a
-             LEFT JOIN threads  t ON t.id = a.thread_id
-             LEFT JOIN comments c ON c.id = a.comment_id
+             LEFT JOIN threads   t ON t.id = a.thread_id
+             LEFT JOIN comments  c ON c.id = a.comment_id
+             LEFT JOIN messages  m ON m.id = a.message_id
             WHERE a.stored_name = ?
-              AND COALESCE(t.deleted_at, c.deleted_at) IS NULL""",
+              AND COALESCE(t.deleted_at, c.deleted_at, m.deleted_at) IS NULL""",
         (name,),
     ).fetchone()
     if row is None:
+        abort(404)
+    # A picture on the board is for every member; one in a private message is
+    # for the two people in that conversation and nobody else. Being signed in
+    # is the whole check for the first and not nearly enough for the second.
+    if row["conversation_id"] is not None and not _in_conversation(row["conversation_id"]):
         abort(404)
     # mimetype from our own column, never guessed from the name on disk, and
     # paired with the X-Content-Type-Options: nosniff set in app.py.

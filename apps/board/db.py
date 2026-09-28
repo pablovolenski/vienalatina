@@ -13,6 +13,8 @@ from pathlib import Path
 
 from flask import current_app, g
 
+from . import migrations
+
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 # Authorship of a removed member is reassigned to this row rather than deleted,
@@ -48,11 +50,20 @@ def close_db(_exception=None) -> None:
 
 
 def init_db(app) -> None:
-    """Apply the schema and make sure the fixed rows exist."""
+    """Apply the schema, bring old databases up to date, seed the fixed rows.
+
+    The order is deliberate. `schema.sql` is all CREATE TABLE IF NOT EXISTS, so
+    on an empty database it builds everything in its current shape and the
+    migrations below find nothing to do; on a database that has run before it
+    adds only what is new and silently leaves existing tables alone — which is
+    precisely why migrations have to come second and clean up after it.
+    """
     Path(app.config["DB_PATH"]).parent.mkdir(parents=True, exist_ok=True)
     db = connect(app.config["DB_PATH"])
     try:
         db.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        for step in migrations.apply(db):
+            app.logger.info("Applied migration %s", step)
         _ensure_tombstone(db)
         _seed_owner(db, app)
     finally:

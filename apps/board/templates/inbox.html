@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Privados{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Mensajes privados</h1>
+</div>
+
+{% if people %}
+<form class="card" method="post" action="{{ url_for('messages.start') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<label for="para">Escribir a</label>
+	<select id="para" name="member_id">
+		{% for person in people %}
+		<option value="{{ person.id }}">{{ person.display_name }}</option>
+		{% endfor %}
+	</select>
+	<button class="btn" type="submit">Abrir conversación</button>
+</form>
+{% endif %}
+
+{% if not conversations %}
+<p class="muted">Todavía no tienes conversaciones privadas.</p>
+{% endif %}
+
+{% for c in conversations %}
+<article class="card">
+	<a class="card__title" href="{{ url_for('messages.conversation', conversation_id=c.id) }}">
+		{{ c.other_name }}
+		{% if c.unread %}<span class="tag">{{ c.unread }}</span>{% endif %}
+	</a>
+	<p class="muted small">{{ excerpt(c.last_body) or 'Sin mensajes todavía.' }}</p>
+	<div class="card__meta">
+		{% if c.last_at %}<time>{{ c.last_at }}</time>{% endif %}
+		<form method="post" action="{{ url_for('messages.block', member_id=c.other_id) }}"
+		      data-confirm="Al bloquear a {{ c.other_name }} ninguno de los dos podrá escribir al otro. ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button class="linkish linkish--danger" type="submit">Bloquear</button>
+		</form>
+	</div>
+</article>
+{% endfor %}
+{% endblock %}

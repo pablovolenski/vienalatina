@@ -613,6 +613,51 @@ Limits: 4 images per message, and `BOARD_UPLOAD_MAX_BYTES` (8MB by default)
 each. Adding a picture to a post *after* publishing it means posting a reply —
 editing changes the words, and leaves the pictures alone.
 
+### 11.10 Private messages (`/comunidad/privados/`)
+
+An inbox between two members: conversations, unread badges, photos, blocking.
+Deliberately not live chat — that needs a connection held open per signed-in
+member, which gunicorn's sync workers cannot do, and it would be the first
+thing on this box with a real scaling limit.
+
+**Blocking is symmetric.** One block stops messages in both directions, and
+either person can only remove their own. A block that silenced just the blocked
+person would leave the blocker able to keep writing, which is a megaphone
+rather than a safety feature.
+
+**Erasing a member deletes their private messages, both sides.** A thread
+outlives its author as *Miembro eliminado*, because other people replied and
+the conversation would lose its shape; a two-party exchange has no such
+remainder. This does destroy the other person's copy — the uncomfortable half
+of the choice, and deliberate.
+
+### 11.11 Schema changes: `PRAGMA user_version`
+
+`schema.sql` is all `CREATE TABLE IF NOT EXISTS`, which handles exactly one
+kind of change — a brand-new table — and silently ignores every other. Until
+private messages, every change happened to be a new table, so nothing noticed.
+
+`apps/board/migrations.py` holds numbered steps applied once each, in order,
+recorded in SQLite's own `user_version`. `init_db` runs the schema first and
+the migrations second: on an empty database the schema builds the current
+shape and each step finds its work done; on an existing one the schema adds
+what is new and the steps fix up what it could not touch.
+
+**Never edit a step that has shipped**, and never renumber one. A server that
+has run it will not run it again, so a correction is a new step.
+
+The first step rebuilds `attachments` so a picture can belong to a private
+message. It has to be a rebuild rather than an `ALTER`, because the table
+carries a CHECK constraint and SQLite has no `DROP CONSTRAINT` — adding the
+column works and the next insert is refused by a constraint that can no longer
+be removed. That is tested against a database built in the old shape, with rows
+in it, because a migration tested only on a fresh database is tested against
+the one case it was never needed for.
+
+**After deploying this, check that an existing photo still renders.** That is
+the proof the rebuild kept real rows. Back up first — `scripts/backup-board.sh`
+— as with any migration.
+
 ## 12. Make Gitea look like the site
 
 Members sign in to `/comunidad/` through Gitea, so Gitea's sign-in form and its

@@ -21,7 +21,7 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import auth, gitea, invites, mail
+from . import auth, gitea, invites, mail, uploads
 from .db import TOMBSTONE_LOGIN, get_db
 from .security import admin_required, login_required, owner_required
 
@@ -91,17 +91,62 @@ REASSIGNED_ON_ERASE = {
 }
 CLEARED_ON_ERASE = {("members", "created_by")}
 
+# Private correspondence is not reassigned to the tombstone, it goes. A thread
+# outlives its author because other people replied and the conversation would
+# otherwise lose its shape; a two-party exchange has no such remainder, and
+# keeping half of somebody's erased correspondence is close to the thing
+# erasure exists to prevent. The other person's copy goes with it, which is the
+# uncomfortable half of that choice and is meant to be.
+REMOVED_ON_ERASE = {
+    ("conversation_members", "member_id"),
+    ("messages", "author_id"),
+    ("blocks", "blocker_id"),
+    ("blocks", "blocked_id"),
+}
 
-def erase_member(db: sqlite3.Connection, member_id: int) -> None:
-    """Remove a member and their personal data, keeping the conversation intact.
+
+def _conversations_of(member_id: int) -> str:
+    return "SELECT conversation_id FROM conversation_members WHERE member_id = ?"
+
+
+def erase_member(db: sqlite3.Connection, member_id: int) -> list[str]:
+    """Remove a member and their personal data, keeping the board intact.
 
     GDPR erasure means the name, login and address go. It does not mean the
-    threads other people replied to should vanish, so authorship moves to the
-    tombstone row instead of cascading or dangling.
+    threads other people replied to should vanish, so public authorship moves
+    to the tombstone row instead of cascading or dangling. Private messages are
+    the exception and are deleted outright — see REMOVED_ON_ERASE.
+
+    Returns the stored names of pictures whose rows have gone, so the caller can
+    take them off disk. Deleting files is not done here because this function
+    is a transaction: a file removed inside one cannot be put back if the
+    transaction rolls away underneath it.
     """
     ghost = tombstone_id(db)
     db.execute("BEGIN IMMEDIATE")
     try:
+        # Read before deleting: once the conversations are gone there is
+        # nothing left to work out which files they carried.
+        orphaned = [row["stored_name"] for row in db.execute(
+            f"""SELECT a.stored_name FROM attachments a
+                  JOIN messages m ON m.id = a.message_id
+                 WHERE m.conversation_id IN ({_conversations_of(member_id)})""",
+            (member_id,),
+        )]
+        # Attachments first: they point at messages without cascading, so
+        # deleting the conversation while they exist is refused.
+        db.execute(
+            f"""DELETE FROM attachments WHERE message_id IN (
+                    SELECT id FROM messages
+                     WHERE conversation_id IN ({_conversations_of(member_id)}))""",
+            (member_id,),
+        )
+        db.execute(
+            f"DELETE FROM conversations WHERE id IN ({_conversations_of(member_id)})",
+            (member_id,),
+        )
+        db.execute("DELETE FROM blocks WHERE blocker_id = ? OR blocked_id = ?",
+                   (member_id, member_id))
         # Table and column names come from the module constants above, never
         # from a request, so the interpolation is not a place user input can
         # reach.
@@ -116,6 +161,7 @@ def erase_member(db: sqlite3.Connection, member_id: int) -> None:
     except Exception:
         db.execute("ROLLBACK")
         raise
+    return orphaned
 
 
 def _load(member_id: int):
@@ -306,7 +352,10 @@ def erase(member_id: int):
     target = _load(member_id)
     if target["role"] == "owner":
         abort(403)
-    erase_member(get_db(), member_id)
+    # Files only after the transaction has committed: a rollback can put the
+    # rows back, and nothing can put the pictures back.
+    for stored_name in erase_member(get_db(), member_id):
+        uploads.remove(stored_name)
     flash(f"{target['display_name']} eliminado. Sus mensajes quedan como «Miembro eliminado».", "ok")
     return redirect(url_for("members.index"))
 

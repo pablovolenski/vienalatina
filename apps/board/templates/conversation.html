@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_attachments.html" import attachments %}
+{% block title %}{{ other.display_name if other else 'Conversación' }}{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>{{ other.display_name if other else 'Miembro eliminado' }}</h1>
+	<a class="linkish" href="{{ url_for('messages.inbox') }}">Volver</a>
+</div>
+
+{% for m in messages %}
+<article class="card card--comment">
+	<div class="card__meta">
+		<span>{{ m.author }}</span> · <time>{{ m.created_at }}</time>
+	</div>
+	<div class="prose">{{ to_html(m.body_md) }}</div>
+	{{ attachments(images.get(m.id, [])) }}
+</article>
+{% endfor %}
+
+<span id="final"></span>
+
+{% if other is none %}
+<p class="muted">Esta persona ya no está en la comunidad.</p>
+{% elif blocked %}
+<p class="muted">
+	Hay un bloqueo entre vosotros, así que ninguno de los dos puede escribir.
+</p>
+<form method="post" action="{{ url_for('messages.unblock', member_id=other.id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<button class="linkish" type="submit">Quitar mi bloqueo</button>
+</form>
+<p class="muted small">
+	Si el bloqueo lo puso la otra persona, esto no lo quita.
+</p>
+{% else %}
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('messages.send', conversation_id=conversation_id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<label for="body">Mensaje</label>
+	<textarea id="body" name="body" rows="4"
+	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
+
+	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
+	<input id="pictures" name="pictures" type="file" multiple accept="image/*">
+
+	<button class="btn" type="submit">Enviar</button>
+</form>
+{% endif %}
+{% endblock %}

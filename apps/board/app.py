@@ -91,11 +91,12 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import auth, board, content, members, uploads
+    from . import auth, board, content, members, messages, uploads
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(content.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(uploads.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(messages.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(board.bp, url_prefix=URL_PREFIX)
 
     app.teardown_appcontext(close_db)
@@ -105,6 +106,12 @@ def create_app(overrides: dict | None = None) -> Flask:
     @app.context_processor
     def _year():
         return {"current_year": datetime.now(timezone.utc).year}
+
+    @app.context_processor
+    def _unread():
+        # Lazily: base.html is rendered for signed-out pages and error pages
+        # too, and neither should run a query to draw a badge nobody sees.
+        return {"unread_private": messages.unread_count}
 
     @app.before_request
     def _before():
