@@ -124,7 +124,12 @@ def test_logout_says_the_gitea_session_is_still_open(client, db, make_member, si
 
     assert response.status_code == 200
     assert "sigue conectado" in page          # the warning, not a redirect
-    assert "/user/logout" in page
+    # This line used to assert `/user/logout` was in the page, which made the
+    # suite enforce the bug rather than catch it: that route is POST-only, so
+    # the link it was guarding answered 404 and closed nothing. What the page
+    # owes the member is the instruction and a way to get there.
+    assert "/user/logout" not in page
+    assert "Cerrar sesión" in page
 
     with client.session_transaction() as session:
         assert "member_id" not in session

@@ -734,10 +734,21 @@ Gitea's CSRF token. The `prompt=login` parameter that would force
 re-authentication is undocumented in every released version of Gitea's OAuth2
 provider, and a security control should not rest on that.
 
-So the logout page says plainly what is and is not closed, and offers the link
-that finishes the job. On a shared computer, use it — or close the browser,
-which also works. The members-area cookie is already a browser-session cookie,
-so it does not survive that either way.
+So the logout page says plainly what is and is not closed, and then **tells the
+member how to finish the job**: go to the account server, open the profile menu,
+choose *Cerrar sesión*. Or close the browser, which also works — the
+members-area cookie is a browser-session cookie and does not survive that.
+
+That wording is deliberate, and this paragraph used to say something else. The
+page shipped with a *"Cerrar sesión del todo"* button linking straight to
+`/user/logout`, which contradicted the paragraph directly above it: a click is
+a GET, the route is POST-only, and the server answered **404** with the session
+untouched. The button was live for a week. Nobody noticed, because a dead link
+on a page you reach once looks like nothing at all — and because it was never
+clicked against a running Gitea before shipping.
+
+`apps/board/tests/test_templates.py` now fails the build if any template links
+to `/user/logout` again.
 
 ## 13. Email: invitations and passwords
 

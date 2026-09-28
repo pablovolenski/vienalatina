@@ -38,6 +38,22 @@ def test_every_post_form_carries_a_csrf_token(template):
         assert "csrf_token" in form, f"{template.name} has a POST form without a CSRF token"
 
 
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda p: p.name)
+def test_nothing_links_to_the_account_server_logout(template):
+    """A link there is a GET, and that route is POST-only, so the browser gets
+    a 404 and the session it was meant to end carries on. We shipped exactly
+    that and it went unnoticed for a week, because a dead link on a page nobody
+    reaches twice looks like nothing at all.
+
+    It cannot be fixed by turning the link into a form either: the POST needs a
+    CSRF token belonging to that other domain, which is unreadable from here by
+    design. The page has to tell the member what to do instead."""
+    html = JINJA_COMMENT.sub("", template.read_text(encoding="utf-8"))
+    assert "/user/logout" not in html, (
+        f"{template.name} links to /user/logout, which answers 404 to a GET"
+    )
+
+
 # --- the name of the software behind the login ---------------------------
 #
 # Members sign in through an OAuth provider that happens to be Gitea. They are

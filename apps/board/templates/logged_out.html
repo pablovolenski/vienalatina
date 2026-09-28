@@ -13,14 +13,20 @@
 		que quien use este ordenador después podría volver a entrar sin escribirla.
 	</p>
 
+	{# There was a "Cerrar sesión del todo" button here that linked straight to
+	   /user/logout. It never worked: that route is POST-only, so the click was
+	   a GET and the account server answered 404 with the session untouched.
+	   It cannot be made to work from here either — signing out needs a CSRF
+	   token belonging to that other domain, which this page has no way to read,
+	   and that restriction is the whole point of the check. So the page gives
+	   the instruction instead of pretending to do it. #}
 	<p>
-		<a class="btn" href="{{ gitea_url }}/user/logout">Cerrar sesión del todo</a>
+		<a class="btn" href="{{ gitea_url }}">Ir al servidor de cuentas</a>
 	</p>
 
 	<p class="muted small">
-		Si esa página no te desconecta, abre el menú de tu perfil
-		<a href="{{ gitea_url }}">ahí</a> y elige <em>Sign Out</em>.
-		Cerrar el navegador también sirve.
+		Allí, abre el menú de tu perfil (arriba a la derecha) y elige
+		<em>Cerrar sesión</em>. Cerrar el navegador del todo también sirve.
 	</p>
 
 	<p class="muted small">
