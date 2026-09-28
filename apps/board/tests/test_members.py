@@ -227,3 +227,61 @@ def test_ticking_it_anyway_still_creates_nothing(app, client, db, post, owner_id
 
     assert "GITEA_ADMIN_TOKEN" in response.get_data(as_text=True)
     assert db.execute("SELECT 1 FROM members WHERE gitea_login = 'maria'").fetchone() is None
+
+
+# --- erasing somebody who has left traces --------------------------------
+
+def test_erasing_a_member_who_posted_a_picture(app, db, post, owner_id, make_member, sign_in):
+    """This failed in production with a 500 the first time it was tried.
+
+    `attachments.uploaded_by` is NOT NULL and does not cascade, so with a
+    picture in the database SQLite refuses to delete the member — and the admin
+    sees "Internal Server Error" with nothing to act on."""
+    author = make_member("saliente")
+    db.execute("INSERT INTO threads (author_id, title, body_md) VALUES (?, 'Hola', 'Texto')",
+               (author,))
+    db.execute(
+        """INSERT INTO attachments
+               (thread_id, stored_name, original_name, content_type, bytes, uploaded_by)
+           VALUES (1, 'foto-abc123abc123.jpg', 'foto.jpg', 'image/jpeg', 10, ?)""",
+        (author,),
+    )
+    sign_in(owner_id)
+
+    response = post(f"/comunidad/miembros/{author}/eliminar")
+
+    assert response.status_code == 302
+    assert db.execute("SELECT 1 FROM members WHERE id = ?", (author,)).fetchone() is None
+    # The picture stays with the thread, which survives as "Miembro eliminado" —
+    # the same rule the words follow. Deleting the post removes the picture.
+    row = db.execute(
+        """SELECT m.display_name FROM attachments a JOIN members m ON m.id = a.uploaded_by"""
+    ).fetchone()
+    assert row["display_name"] == "Miembro eliminado"
+
+
+def test_every_table_pointing_at_members_is_accounted_for(db):
+    """The guard that makes the bug above unrepeatable.
+
+    Read out of the live schema rather than written down twice: any future
+    table with a foreign key to members(id) either cascades, or is named in
+    members.py's erase lists. Otherwise erasure breaks — and it breaks at the
+    moment somebody exercises a right they are entitled to, which is the worst
+    possible time to find out."""
+    from apps.board.members import CLEARED_ON_ERASE, REASSIGNED_ON_ERASE
+    handled = REASSIGNED_ON_ERASE | CLEARED_ON_ERASE
+
+    tables = [row["name"] for row in db.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")]
+    unhandled = [
+        f"{table}.{fk['from']}"
+        for table in tables
+        for fk in db.execute(f"PRAGMA foreign_key_list('{table}')").fetchall()
+        if fk["table"] == "members"
+        and (fk["on_delete"] or "").upper() != "CASCADE"
+        and (table, fk["from"]) not in handled
+    ]
+    assert not unhandled, (
+        "these point at members(id), do not cascade, and erase_member does not "
+        f"touch them, so erasing a member will fail: {unhandled}"
+    )

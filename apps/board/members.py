@@ -74,6 +74,24 @@ def transfer_ownership(db: sqlite3.Connection, owner_id: int, target_id: int) ->
         raise
 
 
+# Every column pointing at members(id) that does not cascade has to be dealt
+# with before the row can go, or SQLite refuses the delete and the admin gets a
+# 500 with nothing to read. These two sets are the list, and
+# test_members.py checks them against the schema's actual foreign keys — so a
+# table added later fails a test here rather than a button in production. That
+# is not hypothetical: `attachments` was added and forgotten, and the first
+# person who tried to remove a member who had posted a photo got the 500.
+REASSIGNED_ON_ERASE = {
+    ("threads", "author_id"),
+    ("comments", "author_id"),
+    # The picture belongs to the thread, which survives as "Miembro eliminado",
+    # so it is reassigned rather than deleted, exactly like the words around it.
+    # Removing the picture itself means deleting the post it is attached to.
+    ("attachments", "uploaded_by"),
+}
+CLEARED_ON_ERASE = {("members", "created_by")}
+
+
 def erase_member(db: sqlite3.Connection, member_id: int) -> None:
     """Remove a member and their personal data, keeping the conversation intact.
 
@@ -84,9 +102,15 @@ def erase_member(db: sqlite3.Connection, member_id: int) -> None:
     ghost = tombstone_id(db)
     db.execute("BEGIN IMMEDIATE")
     try:
-        db.execute("UPDATE threads  SET author_id = ? WHERE author_id = ?", (ghost, member_id))
-        db.execute("UPDATE comments SET author_id = ? WHERE author_id = ?", (ghost, member_id))
-        db.execute("UPDATE members  SET created_by = NULL WHERE created_by = ?", (member_id,))
+        # Table and column names come from the module constants above, never
+        # from a request, so the interpolation is not a place user input can
+        # reach.
+        for table, column in sorted(REASSIGNED_ON_ERASE):
+            db.execute(f"UPDATE {table} SET {column} = ? WHERE {column} = ?",
+                       (ghost, member_id))
+        for table, column in sorted(CLEARED_ON_ERASE):
+            db.execute(f"UPDATE {table} SET {column} = NULL WHERE {column} = ?",
+                       (member_id,))
         db.execute("DELETE FROM members WHERE id = ? AND role != 'owner'", (member_id,))
         db.execute("COMMIT")
     except Exception:
