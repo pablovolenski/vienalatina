@@ -1,21 +1,20 @@
-"""The only place that talks to Gitea.
+"""The only place that talks to the git server.
 
-Three unrelated conversations happen here, worth keeping apart in your head:
+**Sign-in is not here, and that is the point of the file.** Members have
+passwords in our own database and no account on this server at all. This talks
+to it about one thing: the repository the site is built from.
 
-* **Sign-in** uses OAuth2 on behalf of the person at the keyboard. The app is
-  registered as a *confidential* client with a secret, which it can hold
-  because it runs on the server. The Decap CMS app is the opposite — a public
-  client using PKCE — because that one runs in the visitor's browser and has
-  nowhere to keep a secret.
+It used to do much more. Identity was delegated here over OAuth2, each member
+had an account, and the editor committed with a token belonging to whoever was
+typing. That is what made signing in leave vienalatina.com and signing out
+impossible to finish, so it was taken back. What remains:
 
-* **Creating an account** uses a site-admin token belonging to the instance,
-  not to any member. That token can create and modify any Gitea user, so the
-  environment holding it is as sensitive as Gitea's own admin password.
-
-* **Reading and writing content** uses the signed-in member's *own* access
-  token. Commits are then attributed to the person who actually wrote the post,
-  and Gitea's permissions apply unchanged — the editor cannot grant write access
-  to somebody who does not already have it.
+* **Content** — reading, writing and deleting files in the site repository,
+  with one server-side token (`content_token()`), naming the real author on
+  every commit so `git log` still says who wrote what.
+* **Accounts** — `admin_create_user` and `admin_set_password` still exist for
+  the handful of real git users (pablo, the pipeline bots). Nothing in the
+  members area calls them any more.
 """
 
 from __future__ import annotations
@@ -61,63 +60,6 @@ def _branch() -> str:
 
 
 # --- sign-in -------------------------------------------------------------
-
-def authorize_url(state: str, redirect_uri: str) -> str:
-    query = urlencode({
-        "client_id": current_app.config["OAUTH_CLIENT_ID"],
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "state": state,
-    })
-    return f"{_base()}/login/oauth/authorize?{query}"
-
-
-def _token_request(payload: dict) -> dict:
-    response = requests.post(
-        f"{_base()}/login/oauth/access_token",
-        json={
-            "client_id": current_app.config["OAUTH_CLIENT_ID"],
-            "client_secret": current_app.config["OAUTH_CLIENT_SECRET"],
-            **payload,
-        },
-        timeout=TIMEOUT,
-    )
-    if response.status_code != 200:
-        raise GiteaError("No se pudo completar el inicio de sesión.")
-    data = response.json()
-    if not data.get("access_token"):
-        raise GiteaError("El servidor de cuentas no devolvió un token de acceso.")
-    return data
-
-
-def exchange_code(code: str, redirect_uri: str) -> dict:
-    """Returns the whole token response, not just the access token.
-
-    The refresh token matters: Gitea's access tokens last about an hour, and
-    without refreshing, saving a post would start failing partway through an
-    afternoon's work for no reason the writer could understand.
-    """
-    return _token_request({
-        "code": code,
-        "grant_type": "authorization_code",
-        "redirect_uri": redirect_uri,
-    })
-
-
-def refresh_token(token: str) -> dict:
-    return _token_request({"refresh_token": token, "grant_type": "refresh_token"})
-
-
-def fetch_user(token: str) -> dict:
-    response = requests.get(
-        _api("/user"),
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=TIMEOUT,
-    )
-    if response.status_code != 200:
-        raise GiteaError("No se pudo leer tu perfil desde el servidor de cuentas.")
-    return response.json()
-
 
 # --- account creation (site-admin token) ---------------------------------
 
@@ -226,6 +168,41 @@ def _contents_url(path: str) -> str:
     return _api(f"/repos/{_repo()}/contents/{quote(path, safe='/')}")
 
 
+def content_token() -> str:
+    """The token the editor commits with.
+
+    One service token instead of a token per writer. Members no longer have
+    accounts on the git server at all, so there is no per-member token to use —
+    and attribution does not need one, because each commit names its author
+    (see `_identity`).
+
+    CONTENT_TOKEN is preferred and GITEA_ADMIN_TOKEN is the fallback, so
+    nothing breaks on deploy. They can be the same, but they should not stay
+    that way: this needs write access to one repository, while the admin token
+    can create and modify every account on the instance.
+    """
+    token = (current_app.config.get("CONTENT_TOKEN")
+             or current_app.config.get("ADMIN_TOKEN") or "")
+    if not token:
+        raise GiteaError(
+            "Falta CONTENT_TOKEN: el servidor no puede guardar en el repositorio."
+        )
+    return token
+
+
+def _identity(member) -> dict:
+    """Who a commit is by.
+
+    Gitea's contents API takes `author` and `committer`, and uses the token's
+    own owner only when neither is given. So one token can commit as whoever
+    actually wrote the thing, and `git log` still says who to ask about a post.
+    """
+    name = (member["display_name"] or member["gitea_login"]) if member else "Viena Latina"
+    email = (member["email"] if member and member["email"]
+             else "hola@vienalatina.com")
+    return {"name": name, "email": email}
+
+
 def _content_request(method: str, url: str, token: str, **kwargs):
     response = requests.request(
         method, url,
@@ -264,12 +241,14 @@ def read_file(path: str, token: str) -> tuple[str, str]:
 
 
 def write_file(path: str, data: bytes, message: str, token: str,
-               sha: str | None = None) -> str:
+               sha: str | None = None, member=None) -> str:
     """Create when `sha` is None, update otherwise. Returns the new sha."""
     body = {
         "content": base64.b64encode(data).decode("ascii"),
         "message": message,
         "branch": _branch(),
+        "author": _identity(member),
+        "committer": _identity(member),
     }
     if sha:
         body["sha"] = sha
@@ -285,9 +264,10 @@ def write_file(path: str, data: bytes, message: str, token: str,
     raise GiteaError(f"No se pudo guardar el archivo ({response.status_code}).")
 
 
-def delete_file(path: str, sha: str, message: str, token: str) -> None:
+def delete_file(path: str, sha: str, message: str, token: str, member=None) -> None:
     response = _content_request("DELETE", _contents_url(path), token, json={
         "sha": sha, "message": message, "branch": _branch(),
+        "author": _identity(member), "committer": _identity(member),
     })
     if response.status_code in (200, 204):
         return

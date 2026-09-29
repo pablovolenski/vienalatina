@@ -31,8 +31,6 @@ def app(tmp_path):
         "SESSION_COOKIE_SECURE": False,
         "COOLDOWN_SECONDS": 0,
         "BASE_URL": "http://localhost",
-        "OAUTH_CLIENT_ID": "cid",
-        "OAUTH_CLIENT_SECRET": "secret",
         "ADMIN_TOKEN": "admintoken",
         "UPLOAD_DIR": str(tmp_path / "uploads"),
         "TESTING": True,

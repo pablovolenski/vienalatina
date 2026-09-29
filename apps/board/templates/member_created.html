@@ -5,10 +5,7 @@
 <article class="card">
 	<h1>{{ login }} ya es {{ role_label|lower }}</h1>
 
-	{% if not created %}
-	<p>No se creó ninguna cuenta nueva: ya existía. Puede entrar con la que tenía.</p>
-
-	{% elif invite_link %}
+	{% if invite_link %}
 	{# The account exists but the invitation never left the building. Showing the
 	   link is the difference between a delayed invitation and a person who
 	   simply never gets in. #}

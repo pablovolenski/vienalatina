@@ -62,7 +62,7 @@ def test_admin_cannot_create_an_admin(client, post, make_member, sign_in):
     sign_in(make_member("admina", role="admin"))
     response = post("/comunidad/miembros/nuevo", {
         "login": "nueva", "display_name": "Nueva", "email": "n@example.com",
-        "role": "admin", "create_account": "",
+        "role": "admin",
     })
     assert response.status_code == 403
 
@@ -71,7 +71,7 @@ def test_owner_can_create_an_admin(client, db, post, owner_id, sign_in):
     sign_in(owner_id)
     post("/comunidad/miembros/nuevo", {
         "login": "nueva", "display_name": "Nueva", "email": "n@example.com",
-        "role": "admin", "create_account": "",
+        "role": "admin",
     })
     row = db.execute("SELECT role FROM members WHERE gitea_login = 'nueva'").fetchone()
     assert row["role"] == "admin"
@@ -101,38 +101,8 @@ def test_an_admin_cannot_demote_another_admin(client, post, make_member, sign_in
     assert response.status_code == 403
 
 
-def test_the_password_is_never_shown_to_the_admin(
-        client, monkeypatch, post, owner_id, sign_in):
-    """It used to be, printed once for the admin to pass on. Now the member is
-    emailed a link and chooses their own, so the generated password exists only
-    to keep the Gitea account from being reachable before they do — and nobody,
-    the admin included, ever learns it."""
-    created = {}
-    monkeypatch.setattr(gitea, "admin_create_user",
-                        lambda login, email, name, password: created.update(
-                            login=login, password=password))
-    monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
-    sign_in(owner_id)
-
-    response = post("/comunidad/miembros/nuevo", {
-        "login": "maria", "display_name": "María", "email": "m@example.com",
-        "role": "user", "create_account": "on",
-    })
-
-    assert created["login"] == "maria"
-    assert created["password"].encode() not in response.data
 
 
-def test_a_rejected_gitea_call_creates_no_member(client, monkeypatch, db, post, owner_id, sign_in):
-    def boom(*args, **kwargs):
-        raise gitea.GiteaError("Ese usuario ya existe en Gitea.")
-    monkeypatch.setattr(gitea, "admin_create_user", boom)
-    sign_in(owner_id)
-    post("/comunidad/miembros/nuevo", {
-        "login": "maria", "display_name": "María", "email": "m@example.com",
-        "role": "user", "create_account": "on",
-    })
-    assert db.execute("SELECT 1 FROM members WHERE gitea_login = 'maria'").fetchone() is None
 
 
 def test_erasing_a_member_keeps_their_threads_readable(app, db, post, owner_id, make_member, sign_in):
@@ -192,41 +162,9 @@ def test_the_export_is_only_your_own_writing(client, db, make_member, sign_in):
     assert "Suyo" not in body
 
 
-def test_the_form_says_so_when_accounts_cannot_be_created(app, client, owner_id, sign_in):
-    """Without a site-admin token the server cannot create Gitea accounts. That
-    is the documented safer setup, not a fault — but it has to be said before
-    someone fills the form, not after they submit it."""
-    app.config["ADMIN_TOKEN"] = ""
-    sign_in(owner_id)
-
-    body = client.get("/comunidad/miembros/nuevo").get_data(as_text=True)
-    assert "no puede crear cuentas" in body
-    assert 'name="create_account" disabled' in body
-    assert 'name="create_account" checked' not in body
 
 
-def test_with_a_token_the_form_is_unchanged(app, client, owner_id, sign_in):
-    app.config["ADMIN_TOKEN"] = "admintoken"
-    sign_in(owner_id)
 
-    body = client.get("/comunidad/miembros/nuevo").get_data(as_text=True)
-    assert 'name="create_account" checked' in body
-    assert "no puede crear cuentas" not in body
-
-
-def test_ticking_it_anyway_still_creates_nothing(app, client, db, post, owner_id, sign_in):
-    """A disabled input is a courtesy, not a permission — the refusal lives in
-    the handler, where a hand-crafted POST also meets it."""
-    app.config["ADMIN_TOKEN"] = ""
-    sign_in(owner_id)
-
-    response = post("/comunidad/miembros/nuevo", {
-        "login": "maria", "display_name": "María", "email": "m@example.com",
-        "role": "user", "create_account": "on",
-    }, follow_redirects=True)
-
-    assert "GITEA_ADMIN_TOKEN" in response.get_data(as_text=True)
-    assert db.execute("SELECT 1 FROM members WHERE gitea_login = 'maria'").fetchone() is None
 
 
 # --- erasing somebody who has left traces --------------------------------
@@ -286,3 +224,69 @@ def test_every_table_pointing_at_members_is_accounted_for(db):
         "these point at members(id), do not cascade, and erase_member does not "
         f"touch them, so erasing a member will fail: {unhandled}"
     )
+
+
+# --- onboarding, now that there is only one account to make --------------
+
+def test_a_new_member_has_no_password_until_they_choose_one(
+        client, db, post, owner_id, sign_in, monkeypatch):
+    """No password is generated and none is shown. Until the invitation is
+    used, password_hash is NULL — and a NULL hash cannot be signed in with."""
+    monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
+    sign_in(owner_id)
+
+    post("/comunidad/miembros/nuevo", {
+        "login": "maria", "display_name": "María", "email": "m@example.com",
+        "role": "user",
+    })
+
+    row = db.execute("SELECT password_hash FROM members WHERE gitea_login = 'maria'"
+                     ).fetchone()
+    assert row is not None
+    assert row["password_hash"] is None
+
+
+def test_an_address_is_required(client, db, post, owner_id, sign_in):
+    """It is the only way the invitation reaches anybody, so a member without
+    one is a row that can never be used."""
+    sign_in(owner_id)
+    post("/comunidad/miembros/nuevo", {
+        "login": "maria", "display_name": "María", "email": "", "role": "user",
+    })
+    assert db.execute("SELECT 1 FROM members WHERE gitea_login = 'maria'").fetchone() is None
+
+
+def test_a_duplicate_is_refused_before_anything_is_written(
+        client, db, post, owner_id, make_member, sign_in, monkeypatch):
+    """The error that started this: "ya están en uso" for somebody who was not
+    on the list. There is one list now, so the message and the screen agree."""
+    monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
+    make_member("maria")
+    sign_in(owner_id)
+
+    response = post("/comunidad/miembros/nuevo", {
+        "login": "maria", "display_name": "Otra", "email": "otra@example.com",
+        "role": "user",
+    }, follow_redirects=True)
+
+    assert "ya están en uso" in response.get_data(as_text=True)
+    assert db.execute(
+        "SELECT COUNT(*) AS n FROM members WHERE gitea_login = 'maria'"
+    ).fetchone()["n"] == 1
+
+
+def test_erasing_a_member_lets_the_name_be_used_again(
+        client, db, post, owner_id, make_member, sign_in, monkeypatch):
+    """Deleting used to leave an account behind on the other server, so the
+    name stayed taken somewhere invisible. With one store, gone means gone."""
+    monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
+    sign_in(owner_id)
+    post(f"/comunidad/miembros/{make_member('salvador')}/eliminar")
+
+    post("/comunidad/miembros/nuevo", {
+        "login": "salvador", "display_name": "Salvador", "email": "s@example.com",
+        "role": "user",
+    })
+
+    assert db.execute(
+        "SELECT 1 FROM members WHERE gitea_login = 'salvador'").fetchone() is not None

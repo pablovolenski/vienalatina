@@ -27,10 +27,10 @@ from datetime import date as date_type
 from datetime import datetime
 
 import yaml
-from flask import (Blueprint, abort, current_app, flash, redirect,
+from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import gitea, tokens
+from . import gitea
 from .db import get_db
 from .render import to_html
 from .security import admin_required
@@ -135,7 +135,7 @@ def _cache_write(path: str, sha: str, fm: dict) -> None:
 
 def listing(collection: str) -> list[dict]:
     folder = COLLECTIONS[collection]["folder"]
-    entries = tokens.with_token(gitea.list_directory, folder)
+    entries = gitea.list_directory(folder, gitea.content_token())
 
     items = []
     for entry in entries:
@@ -146,7 +146,7 @@ def listing(collection: str) -> list[dict]:
 
         row = _cache_read(path, sha)
         if row is None:
-            text, _ = tokens.with_token(gitea.read_file, path)
+            text, _ = gitea.read_file(path, gitea.content_token())
             fm, _body = split_frontmatter(text)
             _cache_write(path, sha, fm)
             row = _cache_read(path, sha)
@@ -241,8 +241,9 @@ def _upload_image() -> str:
     # A random suffix rather than a counter: two people uploading "foto.jpg"
     # in the same minute must not race for the same path.
     name = f"{stem}-{secrets.token_hex(3)}.{extension}"
-    tokens.with_token(gitea.write_file, f"{UPLOAD_FOLDER}/{name}", data,
-                      f"content: subir {name}")
+    gitea.write_file(f"{UPLOAD_FOLDER}/{name}", data,
+                     f"content: subir {name}", gitea.content_token(),
+                     member=g.member)
     return f"/uploads/{name}"
 
 
@@ -255,8 +256,6 @@ def index(collection: str = "post"):
     meta = _collection_or_404(collection)
     try:
         items = listing(collection)
-    except tokens.NeedsSignIn:
-        return redirect(url_for("auth.login", next=request.path))
     except gitea.GiteaError as exc:
         flash(str(exc), "error")
         items = []
@@ -284,10 +283,9 @@ def new(collection: str):
         name = filename_for(collection, fields["title"], fields["date"])
         path = f"{meta['folder']}/{name}"
         document = build_document(frontmatter_for(collection, fields), body)
-        tokens.with_token(gitea.write_file, path, document.encode("utf-8"),
-                          f"content: publicar «{fields['title']}»")
-    except tokens.NeedsSignIn:
-        return redirect(url_for("auth.login", next=request.path))
+        gitea.write_file(path, document.encode("utf-8"),
+                         f"content: publicar «{fields['title']}»",
+                         gitea.content_token(), member=g.member)
     except gitea.GiteaError as exc:
         return _back_to_form(collection, meta, fields, body, [str(exc)], None)
 
@@ -304,9 +302,7 @@ def edit(collection: str, name: str):
 
     if request.method == "GET":
         try:
-            text, sha = tokens.with_token(gitea.read_file, path)
-        except tokens.NeedsSignIn:
-            return redirect(url_for("auth.login", next=request.path))
+            text, sha = gitea.read_file(path, gitea.content_token())
         except gitea.GiteaError as exc:
             flash(str(exc), "error")
             return redirect(url_for("content.index", collection=collection))
@@ -341,10 +337,9 @@ def edit(collection: str, name: str):
         if picture:
             fields["image"] = picture
         document = build_document(frontmatter_for(collection, fields), body)
-        tokens.with_token(gitea.write_file, path, document.encode("utf-8"),
-                          f"content: actualizar «{fields['title']}»", sha=sha)
-    except tokens.NeedsSignIn:
-        return redirect(url_for("auth.login", next=request.path))
+        gitea.write_file(path, document.encode("utf-8"),
+                         f"content: actualizar «{fields['title']}»",
+                         gitea.content_token(), sha=sha, member=g.member)
     except gitea.GiteaError as exc:
         return _back_to_form(collection, meta, fields, body, [str(exc)], item)
 
@@ -359,10 +354,8 @@ def delete(collection: str, name: str):
     name = _name_or_404(name)
     path = f"{meta['folder']}/{name}"
     try:
-        _text, sha = tokens.with_token(gitea.read_file, path)
-        tokens.with_token(gitea.delete_file, path, sha, f"content: eliminar {name}")
-    except tokens.NeedsSignIn:
-        return redirect(url_for("auth.login", next=request.path))
+        _text, sha = gitea.read_file(path, gitea.content_token())
+        gitea.delete_file(path, sha, f"content: eliminar {name}", gitea.content_token(), member=g.member)
     except gitea.GiteaError as exc:
         flash(str(exc), "error")
         return redirect(url_for("content.index", collection=collection))

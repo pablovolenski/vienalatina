@@ -1,10 +1,16 @@
-"""Who gets in, and who does not."""
+"""Who gets in, and who does not.
+
+Signing in happens here now, on this domain, against a hash in our own
+database. These tests are mostly about the ways it must refuse, and about
+refusing them all in the same words — a login form that is more specific
+about failure is a way to find out who is a member.
+"""
 
 from __future__ import annotations
 
 import pytest
 
-from apps.board import gitea
+from apps.board import passwords
 
 PROTECTED = [
     "/comunidad/",
@@ -22,53 +28,109 @@ def test_anonymous_is_sent_to_login(client, path):
     assert "/comunidad/login" in response.headers["Location"]
 
 
-def _stub_gitea(monkeypatch, login):
-    # exchange_code returns the whole token response now, because the editor
-    # needs the refresh token to keep working past Gitea's one-hour expiry.
-    monkeypatch.setattr(gitea, "exchange_code", lambda code, uri: {
-        "access_token": "token", "refresh_token": "refresh", "expires_in": 3600,
-    })
-    monkeypatch.setattr(gitea, "fetch_user", lambda token: {
-        "login": login, "full_name": login.title(), "email": f"{login}@example.com",
-    })
+def sign_up(db, make_member, login="maria", password="una-contrasena-larga", **kwargs):
+    """A member who has actually set a password, which is what most of these
+    need and what `make_member` alone does not give."""
+    member_id = make_member(login, **kwargs)
+    db.execute("UPDATE members SET password_hash = ? WHERE id = ?",
+               (passwords.hash_password(password), member_id))
+    return member_id
 
 
-def _callback(client, monkeypatch, login):
-    _stub_gitea(monkeypatch, login)
-    with client.session_transaction() as session:
-        session["oauth_state"] = "state123"
-    return client.get("/comunidad/auth/callback?code=abc&state=state123")
+def attempt(post, identifier, password, **kwargs):
+    return post("/comunidad/login",
+                {"identifier": identifier, "password": password}, **kwargs)
 
 
-def test_a_gitea_account_is_not_a_membership(client, monkeypatch):
-    """The single most important rule in the app: Gitea says who you are, the
-    members table says whether you belong. The translations bot has a perfectly
-    valid Gitea account and must not get in."""
-    response = _callback(client, monkeypatch, "vienalatina-translations")
+# --- getting in -----------------------------------------------------------
+
+def test_a_member_signs_in_with_their_password(client, db, post, make_member):
+    sign_up(db, make_member)
+    response = attempt(post, "maria", "una-contrasena-larga")
+
     assert response.status_code == 302
+    with client.session_transaction() as session:
+        assert session["member_id"]
+
+
+def test_the_email_works_as_well_as_the_username(client, db, post, make_member):
+    sign_up(db, make_member)
+    assert attempt(post, "MARIA@example.com", "una-contrasena-larga").status_code == 302
+
+
+def test_signing_in_starts_a_new_session(client, db, post, make_member):
+    """A cookie captured before sign-in must not still be good after it."""
+    member_id = sign_up(db, make_member)
+    with client.session_transaction() as session:
+        session["planted"] = "before"
+
+    attempt(post, "maria", "una-contrasena-larga")
+
+    with client.session_transaction() as session:
+        assert session["member_id"] == member_id
+        assert "planted" not in session
+
+
+# --- and the ways it must not --------------------------------------------
+
+def test_every_refusal_reads_the_same(client, db, post, make_member):
+    """Unknown name, wrong password, suspended member, invited but never
+    arrived. Four different situations, one answer, because the difference
+    between them is exactly what an outsider would like to learn."""
+    sign_up(db, make_member, "maria")
+    sign_up(db, make_member, "expulsada", active=0)
+    make_member("invitada")          # no password_hash at all
+
+    pages = [
+        attempt(post, "nadie", "una-contrasena-larga"),
+        attempt(post, "maria", "otra-contrasena"),
+        attempt(post, "expulsada", "una-contrasena-larga"),
+        attempt(post, "invitada", "una-contrasena-larga"),
+    ]
+
+    assert {page.status_code for page in pages} == {401}
+    assert len({page.get_data() for page in pages}) == 1
+
+
+def test_a_member_with_no_password_cannot_sign_in(client, db, post, make_member):
+    """NULL must never behave as "matches anything" — every member starts this
+    way, including the owner, the moment the column is added."""
+    make_member("invitada")
+    attempt(post, "invitada", "")
+    attempt(post, "invitada", "cualquier-cosa")
+
     with client.session_transaction() as session:
         assert "member_id" not in session
 
 
-def test_member_signs_in(client, monkeypatch, make_member):
-    make_member("maria")
-    response = _callback(client, monkeypatch, "maria")
-    assert response.status_code == 302
-    with client.session_transaction() as session:
-        assert "member_id" in session
+def test_guessing_is_rate_limited(client, db, post, make_member):
+    sign_up(db, make_member)
+    for _ in range(passwords.ATTEMPT_LIMIT):
+        attempt(post, "maria", "mal")
 
-
-def test_suspended_member_cannot_sign_in(client, monkeypatch, make_member):
-    make_member("expulsada", active=0)
-    _callback(client, monkeypatch, "expulsada")
+    blocked = attempt(post, "maria", "una-contrasena-larga")
+    assert blocked.status_code == 429
     with client.session_transaction() as session:
         assert "member_id" not in session
+
+
+def test_getting_it_right_clears_the_count(client, db, post, make_member):
+    """Somebody who mistypes three times and then succeeds should not be part
+    way to a lockout for the rest of the afternoon."""
+    sign_up(db, make_member)
+    for _ in range(3):
+        attempt(post, "maria", "mal")
+    attempt(post, "maria", "una-contrasena-larga")
+
+    assert db.execute(
+        "SELECT COUNT(*) AS n FROM login_attempts WHERE identifier = 'maria'"
+    ).fetchone()["n"] == 0
 
 
 def test_suspension_takes_effect_on_the_next_request(client, db, make_member, sign_in):
-    """The role is read per request, not cached in the cookie, so revoking
-    access does not wait for a session to expire."""
-    member_id = make_member("temporal")
+    """Read from the database on every request rather than trusted from the
+    cookie, so removing somebody does not wait for their session to expire."""
+    member_id = make_member("maria")
     sign_in(member_id)
     assert client.get("/comunidad/").status_code == 200
 
@@ -76,76 +138,57 @@ def test_suspension_takes_effect_on_the_next_request(client, db, make_member, si
     assert client.get("/comunidad/").status_code == 302
 
 
-def test_callback_rejects_a_mismatched_state(client, monkeypatch, make_member):
-    make_member("maria")
-    _stub_gitea(monkeypatch, "maria")
-    with client.session_transaction() as session:
-        session["oauth_state"] = "the-real-state"
-    client.get("/comunidad/auth/callback?code=abc&state=attacker-state")
-    with client.session_transaction() as session:
-        assert "member_id" not in session
-
-
 def test_post_without_csrf_is_refused(client, make_member, sign_in):
     sign_in(make_member("maria"))
-    response = client.post("/comunidad/nuevo", data={"title": "Hola", "body": "Texto"})
-    assert response.status_code == 400
+    assert client.post("/comunidad/nuevo",
+                       data={"title": "Hola", "body": "Texto"}).status_code == 400
 
 
-def test_login_redirect_cannot_be_pointed_offsite(client, monkeypatch, make_member):
-    make_member("maria")
-    _stub_gitea(monkeypatch, "maria")
-    with client.session_transaction() as session:
-        session["oauth_state"] = "state123"
-    response = client.get(
-        "/comunidad/auth/callback?code=abc&state=state123&next=https://evil.example.com/"
-    )
-    assert "evil.example.com" not in response.headers["Location"]
+def test_login_redirect_cannot_be_pointed_offsite(client, db, post, make_member):
+    """Otherwise a crafted link signs somebody in and lands them on a page
+    somebody else controls, carrying the trust of having just arrived from
+    their own community site."""
+    sign_up(db, make_member)
+    for target in ("https://evil.example.com/", "//evil.example.com/",
+                   "/etc/passwd", "http://vienalatina.com.evil.test/"):
+        response = attempt(post, "maria", "una-contrasena-larga",
+                           follow_redirects=False)
+        assert response.status_code == 302
+        # The form carries `next`; none of these may survive it.
+        response = post("/comunidad/login", {
+            "identifier": "maria", "password": "una-contrasena-larga",
+            "next": target})
+        assert response.headers.get("Location", "").startswith("/comunidad/")
 
 
 def test_responses_say_do_not_index(client):
-    response = client.get("/comunidad/login")
-    assert response.headers["X-Robots-Tag"] == "noindex, nofollow"
+    assert client.get("/comunidad/login").headers["X-Robots-Tag"] == "noindex, nofollow"
 
 
-def test_logout_says_the_gitea_session_is_still_open(client, db, make_member, sign_in, post):
-    """Redirecting to the login page would hide the problem: one click on
-    "Entrar con Gitea" signs you straight back in, because Gitea's session and
-    its record of the authorisation both survive."""
-    member_id = make_member("maria")
-    db.execute(
-        "INSERT INTO gitea_tokens (member_id, access_token) VALUES (?, 'tok')",
-        (member_id,),
-    )
-    sign_in(member_id)
+# --- and out --------------------------------------------------------------
+
+def test_logout_is_one_click_and_final(client, make_member, sign_in, post):
+    """It used to render a page apologising that signing out had not really
+    signed you out, because the session that mattered lived on another server.
+    There is only one session now."""
+    sign_in(make_member("maria"))
 
     response = post("/comunidad/logout")
-    page = response.get_data(as_text=True)
 
-    assert response.status_code == 200
-    assert "sigue conectado" in page          # the warning, not a redirect
-    # This line used to assert `/user/logout` was in the page, which made the
-    # suite enforce the bug rather than catch it: that route is POST-only, so
-    # the link it was guarding answered 404 and closed nothing. What the page
-    # owes the member is the instruction and a way to get there.
-    assert "/user/logout" not in page
-    assert "Cerrar sesión" in page
-
+    assert response.status_code == 302
+    assert "/comunidad/login" in response.headers["Location"]
     with client.session_transaction() as session:
         assert "member_id" not in session
-    assert db.execute("SELECT 1 FROM gitea_tokens WHERE member_id = ?",
-                      (member_id,)).fetchone() is None
+    assert client.get("/comunidad/").status_code == 302
 
 
-def test_logout_leaves_nothing_the_server_can_act_with(client, db, make_member, sign_in, post):
-    """The token is what lets this server commit as the member. Clearing the
-    cookie without dropping it would end the browser's access but not ours."""
-    member_id = make_member("maria")
-    db.execute(
-        "INSERT INTO gitea_tokens (member_id, access_token) VALUES (?, 'tok')",
-        (member_id,),
-    )
-    sign_in(member_id)
+def test_nothing_signs_you_back_in_without_a_password(client, db, post, make_member):
+    """The original complaint: Salir worked, then one click on Entrar let you
+    straight back in, because another server still considered you signed in."""
+    sign_up(db, make_member)
+    attempt(post, "maria", "una-contrasena-larga")
     post("/comunidad/logout")
 
-    assert db.execute("SELECT COUNT(*) AS n FROM gitea_tokens").fetchone()["n"] == 0
+    page = client.get("/comunidad/login").get_data(as_text=True)
+    assert 'name="password"' in page          # a form, not a redirect
+    assert client.get("/comunidad/").status_code == 302

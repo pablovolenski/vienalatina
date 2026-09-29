@@ -2,23 +2,32 @@
 {% block title %}Entrar{% endblock %}
 
 {% block main %}
-<article class="card card--center">
+<form class="card card--center" method="post" action="{{ url_for('auth.login') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<input type="hidden" name="next" value="{{ next }}">
 	<h1>Área de la comunidad</h1>
 	<p class="muted">
-		Este espacio es sólo para miembros de Viena Latina. Se entra con la misma
-		cuenta que se usa para publicar en el sitio.
+		Este espacio es sólo para miembros de Viena Latina.
 	</p>
-	<a class="btn" href="{{ url_for('auth.start', next=next) }}">Entrar</a>
-	{# Offered only when the server can actually complete it: without a Gitea
-	   admin token the recovery page can do nothing but apologise. #}
-	{% if can_recover %}
+
+	<label for="identifier">Usuario o correo</label>
+	<input id="identifier" name="identifier" required autocomplete="username"
+	       autocapitalize="none" autofocus>
+
+	<label for="password">Contraseña</label>
+	<input id="password" name="password" type="password" required
+	       autocomplete="current-password">
+
+	<div class="actions">
+		<button class="btn" type="submit">Entrar</button>
+	</div>
+
 	<p class="muted small">
 		<a href="{{ url_for('auth.recover') }}">¿Olvidaste tu contraseña?</a>
 	</p>
-	{% endif %}
 	<p class="muted small">
-		¿No tienes cuenta? Pídesela a un administrador: las cuentas se crean a mano,
-		no hay registro abierto.
+		¿No tienes cuenta? Pídesela a un administrador: las cuentas se crean a
+		mano, no hay registro abierto.
 	</p>
-</article>
+</form>
 {% endblock %}

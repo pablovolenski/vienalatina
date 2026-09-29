@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS members (
   gitea_login   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
   display_name  TEXT    NOT NULL DEFAULT '',
   email         TEXT    NOT NULL DEFAULT '',
+  password_hash TEXT,
   role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'user', 'tombstone')),
   active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -54,6 +55,21 @@ CREATE TABLE IF NOT EXISTS comments (
 
 CREATE INDEX IF NOT EXISTS comments_thread
   ON comments(thread_id, created_at) WHERE deleted_at IS NULL;
+
+-- Failed sign-ins, kept only long enough to slow a guesser down.
+--
+-- The identifier is whatever was typed in the first box, lowercased — which
+-- may be a username, an address, or nonsense. It is deliberately not tied to a
+-- member row: the whole point is to count attempts against names that do not
+-- exist as well as ones that do.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id          INTEGER PRIMARY KEY,
+  identifier  TEXT    NOT NULL,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS login_attempts_recent
+  ON login_attempts(identifier, created_at);
 
 -- Private messages between two members.
 --
@@ -144,20 +160,12 @@ CREATE INDEX IF NOT EXISTS attachments_comment ON attachments(comment_id);
 -- column a migration introduces belongs in that migration, after the column
 -- exists. See migrations.py.
 
--- Gitea access tokens for the editor.
---
--- Kept here rather than in the session cookie. Flask signs cookies but does not
--- encrypt them, so a live token sitting in one is readable by anything that can
--- read the cookie — and a token is enough to commit to the repository as its
--- owner. ON DELETE CASCADE ties the token to the membership: erasing a member
--- takes their token with it, with nothing to remember.
-CREATE TABLE IF NOT EXISTS gitea_tokens (
-  member_id     INTEGER PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
-  access_token  TEXT    NOT NULL,
-  refresh_token TEXT    NOT NULL DEFAULT '',
-  expires_at    TEXT,
-  updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
-);
+-- There is no table here for the editor's credentials, and that is the point.
+-- Members sign in against password_hash above; the editor commits with one
+-- server-side token from the environment. The old gitea_tokens table held an
+-- OAuth access and refresh token per member, and migration 2 drops it — so it
+-- must not be recreated here, or every restart would put it back and the drop
+-- would only have worked once.
 
 -- Frontmatter of content files, keyed by the git blob sha.
 --

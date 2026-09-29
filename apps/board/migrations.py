@@ -86,10 +86,29 @@ def _attachments_accept_messages(db: sqlite3.Connection) -> None:
     db.execute("CREATE INDEX IF NOT EXISTS attachments_message ON attachments(message_id)")
 
 
+def _members_own_their_passwords(db: sqlite3.Connection) -> None:
+    """Give members somewhere to keep a password, and drop the OAuth tokens.
+
+    A plain ADD COLUMN, with nothing like step 1's difficulty: `members` has no
+    CHECK constraint to collide with. Everyone's hash starts NULL, including
+    the owner's, and a NULL hash cannot be signed in with — so the way back in
+    is the invitation and reset machinery, which already works, or
+    scripts/set-password.sh when mail is having a bad day.
+
+    `gitea_tokens` holds OAuth access tokens for a flow that no longer exists.
+    They are not merely unused, they are credentials, and keeping credentials
+    that nothing can spend is a liability with no upside.
+    """
+    if "password_hash" not in _columns(db, "members"):
+        db.execute("ALTER TABLE members ADD COLUMN password_hash TEXT")
+    db.execute("DROP TABLE IF EXISTS gitea_tokens")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
     (1, "attachments can belong to a private message", _attachments_accept_messages),
+    (2, "members keep their own password", _members_own_their_passwords),
 ]
 
 

@@ -21,7 +21,7 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import auth, gitea, invites, mail, uploads
+from . import auth, invites, mail, uploads
 from .db import TOMBSTONE_LOGIN, get_db
 from .security import admin_required, login_required, owner_required
 
@@ -194,49 +194,39 @@ def new():
         return render_template(
             "member_new.html",
             can_make_admin=g.member["role"] == "owner",
-            # Without a site-admin token the server cannot create Gitea accounts,
-            # which is the documented safer configuration rather than a fault.
-            # The form says so before it is filled in; offering a ticked checkbox
-            # and reporting the problem on submit wastes the work of filling it.
-            can_create_accounts=bool(current_app.config.get("ADMIN_TOKEN")),
-            # Same courtesy for mail: without a server configured the invitation
-            # cannot leave the box, and the admin has to pass the link on by
-            # hand. Worth knowing before filling the form rather than after.
+            # Without mail the invitation cannot leave the building, so the
+            # admin has to pass the link on by hand. Worth knowing before
+            # filling the form rather than after.
             can_send_mail=mail.configured(),
-            gitea_url=current_app.config["GITEA_URL"].rstrip("/"),
         )
 
     login = request.form.get("login", "").strip()
     display_name = request.form.get("display_name", "").strip()
     email = request.form.get("email", "").strip()
     role = request.form.get("role", "user")
-    create_account = request.form.get("create_account") == "on"
 
     if not may_create(g.member["role"], role):
         abort(403)
     if not LOGIN_RE.match(login):
         flash("El usuario solo puede tener letras, números, punto, guion y guion bajo.", "error")
         return redirect(url_for("members.new"))
-    if create_account and "@" not in email:
-        flash("Hace falta un correo válido para crear la cuenta.", "error")
+    if "@" not in email:
+        # Required now, not optional: the address is how the invitation gets
+        # there, and a member with no way to set a password is a row that can
+        # never be used.
+        flash("Hace falta un correo válido: ahí llega la invitación.", "error")
         return redirect(url_for("members.new"))
 
     db = get_db()
-    if db.execute("SELECT 1 FROM members WHERE gitea_login = ?", (login,)).fetchone():
-        flash("Ese usuario ya es miembro.", "error")
+    if db.execute("""SELECT 1 FROM members
+                      WHERE gitea_login = ? COLLATE NOCASE
+                         OR email = ? COLLATE NOCASE""",
+                  (login, email)).fetchone():
+        # One message for either collision. Which of the two it was is not
+        # something an admin needs and not something worth leaking if this
+        # screen is ever opened by somebody it should not be.
+        flash("Ese usuario o ese correo ya están en uso.", "error")
         return redirect(url_for("members.new"))
-
-    if create_account:
-        # A random password nobody ever sees, not even the admin creating the
-        # account. It exists only so the Gitea account is not passwordless
-        # until the invitation is used — and because nobody knows it, the
-        # invitation is the only way in, which is the point.
-        try:
-            gitea.admin_create_user(login, email, display_name or login,
-                                    gitea.generate_password())
-        except gitea.GiteaError as exc:
-            flash(str(exc), "error")
-            return redirect(url_for("members.new"))
 
     try:
         cursor = db.execute(
@@ -248,25 +238,21 @@ def new():
         flash("No se pudo dar de alta a ese miembro.", "error")
         return redirect(url_for("members.new"))
 
+    # No password is set here and none is generated. The member chooses their
+    # own through the invitation, and until they do, password_hash is NULL and
+    # cannot be signed in with.
     invite_link = None
     mail_problem = None
-    if create_account:
-        link = auth.invite_url(invites.issue(cursor.lastrowid, "invite"))
-        try:
-            mail.send_invite(email, display_name or login, link)
-        except mail.MailNotConfigured:
-            # Nothing is broken — this server has simply never been given a mail
-            # server. Told apart from a failure on purpose: an admin sent looking
-            # for an SMTP error that does not exist is an afternoon wasted.
-            invite_link, mail_problem = link, "unconfigured"
-        except mail.MailFailed:
-            # The account exists and the member cannot reach it. Showing the
-            # admin the link is the difference between a delayed invitation and
-            # a person who simply never gets in.
-            invite_link, mail_problem = link, "failed"
+    link = auth.invite_url(invites.issue(cursor.lastrowid, "invite"))
+    try:
+        mail.send_invite(email, display_name or login, link)
+    except mail.MailNotConfigured:
+        invite_link, mail_problem = link, "unconfigured"
+    except mail.MailFailed:
+        invite_link, mail_problem = link, "failed"
 
     return render_template("member_created.html", login=login,
-                           email=email, created=create_account,
+                           email=email, created=True,
                            invite_link=invite_link, mail_problem=mail_problem,
                            role_label=ROLE_LABELS[role])
 

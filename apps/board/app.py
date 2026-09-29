@@ -45,9 +45,12 @@ def create_app(overrides: dict | None = None) -> Flask:
         SECRET_KEY=os.environ.get("BOARD_SECRET_KEY", ""),
         DB_PATH=os.environ.get("BOARD_DB", "/data/board.db"),
         GITEA_URL=os.environ.get("GITEA_URL", "https://git.vienalatina.com"),
-        OAUTH_CLIENT_ID=os.environ.get("BOARD_OAUTH_CLIENT_ID", ""),
-        OAUTH_CLIENT_SECRET=os.environ.get("BOARD_OAUTH_CLIENT_SECRET", ""),
         ADMIN_TOKEN=os.environ.get("GITEA_ADMIN_TOKEN", ""),
+        # What the editor commits with. Needs write access to one
+        # repository — not the admin token, which can create and modify
+        # every account on the instance. Falls back to it so nothing
+        # breaks on deploy, but the narrower token is the right one.
+        CONTENT_TOKEN=os.environ.get("CONTENT_TOKEN", ""),
         OWNER_LOGIN=os.environ.get("BOARD_OWNER", ""),
         BASE_URL=os.environ.get("BOARD_BASE_URL", "https://vienalatina.com"),
         # The repository the editor commits to — the same one Woodpecker builds,

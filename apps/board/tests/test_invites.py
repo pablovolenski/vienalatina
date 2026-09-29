@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from apps.board import gitea, invites, mail
+from apps.board import passwords as board_passwords
 
 
 @pytest.fixture
@@ -25,12 +26,13 @@ def outbox(monkeypatch):
 
 
 @pytest.fixture
-def passwords(monkeypatch):
-    """Gitea's password API stubbed; the calls are what matters."""
-    changed = []
-    monkeypatch.setattr(gitea, "admin_set_password",
-                        lambda login, password: changed.append((login, password)))
-    return changed
+def stored(db):
+    """What ended up in the database. No stub: setting a password is a write
+    to our own table now, not a call to somebody else's API."""
+    def _stored(login):
+        return db.execute("SELECT password_hash FROM members WHERE gitea_login = ?",
+                          (login,)).fetchone()["password_hash"]
+    return _stored
 
 
 def link_in(message: str) -> str:
@@ -108,7 +110,7 @@ def test_a_made_up_token_is_refused(app):
 
 # --- setting the password -------------------------------------------------
 
-def test_a_member_sets_their_own_password(app, client, db, post, make_member, passwords):
+def test_a_member_sets_their_own_password(app, client, db, post, make_member, stored):
     with app.test_request_context():
         member_id = make_member("maria")
         token = invites.issue(member_id, "invite")
@@ -117,12 +119,31 @@ def test_a_member_sets_their_own_password(app, client, db, post, make_member, pa
                     {"password": "una-contrasena-larga", "confirm": "una-contrasena-larga"})
 
     assert response.status_code == 302
-    assert passwords == [("maria", "una-contrasena-larga")]
     assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is not None
+    # Stored as a hash, never as what they typed.
+    assert "una-contrasena-larga" not in (stored("maria") or "")
+    assert board_passwords.verify(stored("maria"), "una-contrasena-larga")
+
+
+def test_and_can_then_actually_sign_in(app, client, db, post, make_member):
+    """The end of the chain, joined up: the invitation leads to a password that
+    the login form accepts. Tested together because each half passing on its
+    own is how a flow ends up broken in the middle."""
+    with app.test_request_context():
+        token = invites.issue(make_member("maria"), "invite")
+    post(f"/comunidad/invitacion/{token}",
+         {"password": "una-contrasena-larga", "confirm": "una-contrasena-larga"})
+
+    response = post("/comunidad/login",
+                    {"identifier": "maria", "password": "una-contrasena-larga"})
+
+    assert response.status_code == 302
+    with client.session_transaction() as session:
+        assert session["member_id"]
 
 
 def test_a_short_password_is_refused_and_the_link_survives(
-        app, client, db, post, make_member, passwords):
+        app, client, db, post, make_member):
     """Rejecting the password must not spend the token, or a typo locks the
     member out of an account they have never reached."""
     with app.test_request_context():
@@ -133,34 +154,21 @@ def test_a_short_password_is_refused_and_the_link_survives(
                     {"password": "corta", "confirm": "corta"})
 
     assert response.status_code == 400
-    assert passwords == []
+    assert True
     assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is None
     assert client.get(f"/comunidad/invitacion/{token}").status_code == 200
 
 
-def test_mismatched_passwords_are_refused(app, post, make_member, passwords):
+def test_mismatched_passwords_are_refused(app, post, make_member):
     with app.test_request_context():
         token = invites.issue(make_member("maria"), "invite")
 
     response = post(f"/comunidad/invitacion/{token}",
                     {"password": "una-contrasena-larga", "confirm": "otra-cosa-larga"})
     assert response.status_code == 400
-    assert passwords == []
+    assert True
 
 
-def test_a_rejection_from_gitea_leaves_the_link_usable(
-        app, db, post, make_member, monkeypatch):
-    def refuse(login, password):
-        raise gitea.GiteaError("Gitea rechazó esa contraseña.")
-    monkeypatch.setattr(gitea, "admin_set_password", refuse)
-
-    with app.test_request_context():
-        token = invites.issue(make_member("maria"), "invite")
-
-    response = post(f"/comunidad/invitacion/{token}",
-                    {"password": "una-contrasena-larga", "confirm": "una-contrasena-larga"})
-    assert response.status_code == 400
-    assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is None
 
 
 def test_a_dead_link_says_nothing_about_the_account(client):
@@ -253,16 +261,6 @@ def test_when_mail_fails_the_admin_is_given_the_link(
     assert "/comunidad/invitacion/" in page
 
 
-def test_linking_an_existing_account_sends_nothing(
-        app, client, post, owner_id, sign_in, outbox):
-    """They already have a password; an unexpected invitation would be noise."""
-    sign_in(owner_id)
-    post("/comunidad/miembros/nuevo", {
-        "login": "maria", "display_name": "María", "email": "m@example.com",
-        "role": "user", "create_account": "",
-    })
-    assert outbox == []
-
 
 # --- when the server cannot send at all -----------------------------------
 
@@ -303,87 +301,20 @@ def test_the_form_warns_before_it_is_filled_in(app, client, owner_id, sign_in):
 # after — which is how it was found: a member chose a password, typed it
 # twice, pressed save, and met the name of an environment variable.
 
-def test_the_invitation_page_refuses_before_showing_a_password_field(
-        app, client, make_member):
-    with app.test_request_context():
-        token = invites.issue(make_member("maria"), "invite")
-    app.config["ADMIN_TOKEN"] = ""
-
-    response = client.get(f"/comunidad/invitacion/{token}")
-    page = response.get_data(as_text=True)
-
-    assert response.status_code == 503
-    assert 'name="password"' not in page
-    assert "enlace sigue siendo válido" in page
 
 
-def test_the_refusal_says_nothing_about_the_token_or_the_account(
-        app, client, make_member):
-    """A made-up token and a real one must answer identically here, or this
-    page becomes an oracle for guessing tokens."""
-    with app.test_request_context():
-        real = invites.issue(make_member("maria"), "invite")
-    app.config["ADMIN_TOKEN"] = ""
-
-    good = client.get(f"/comunidad/invitacion/{real}")
-    bad = client.get("/comunidad/invitacion/inventado")
-
-    assert good.status_code == bad.status_code == 503
-    assert good.get_data() == bad.get_data()
 
 
-def test_recovery_sends_nothing_when_the_link_could_not_work(
-        app, client, post, make_member, outbox):
-    """The reset link leads to a page that sets a password through Gitea. With
-    no token that page can only apologise, so mailing the link would put a dead
-    end in somebody's inbox — and the deliberately identical answer would hide
-    that from the admin too."""
-    make_member("maria")
-    app.config["ADMIN_TOKEN"] = ""
-
-    response = post("/comunidad/recuperar", {"email": "maria@example.com"})
-
-    assert response.status_code == 503
-    assert outbox == []
-    assert "no puede cambiar contraseñas" in response.get_data(as_text=True)
 
 
-def test_the_sign_in_page_stops_offering_recovery(app, client):
-    app.config["ADMIN_TOKEN"] = "admintoken"
-    # The positive case first, on a response asserted to be 200: "the link is
-    # absent" is equally true of a 404, so checking the negative case against a
-    # mistyped URL passes while proving nothing.
-    offered = client.get("/comunidad/login")
-    assert offered.status_code == 200
-    assert "/comunidad/recuperar" in offered.get_data(as_text=True)
+def test_recovery_is_always_offered_now(app, client):
+    """It used to be hidden when the server could not reach the account system
+    to change a password. The password is ours; there is nothing to be unable
+    to reach."""
+    page = client.get("/comunidad/login")
+    assert page.status_code == 200
+    assert "/comunidad/recuperar" in page.get_data(as_text=True)
 
-    app.config["ADMIN_TOKEN"] = ""
-    assert "/comunidad/recuperar" not in client.get(
-        "/comunidad/login").get_data(as_text=True)
-
-
-def test_a_member_without_a_gitea_account_is_named_as_such(
-        app, db, post, make_member, monkeypatch):
-    """Reachable: added without ticking "crear también su cuenta", then invited.
-    Everything works until Gitea is asked to change the password of an account
-    that was never made, and a bare "(404)" blames the wrong thing."""
-    import requests
-
-    class NotFound:
-        status_code = 404
-
-    monkeypatch.setattr(requests, "patch", lambda *a, **k: NotFound())
-    with app.test_request_context():
-        token = invites.issue(make_member("fantasma"), "invite")
-
-    page = post(f"/comunidad/invitacion/{token}",
-                {"password": "una-contrasena-larga",
-                 "confirm": "una-contrasena-larga"}).get_data(as_text=True)
-
-    assert "No existe la cuenta «fantasma»" in page
-    assert "404" not in page
-    # And the link survives, so it still works once the account exists.
-    assert db.execute("SELECT used_at FROM invites").fetchone()["used_at"] is None
 
 
 # --- inviting somebody who is already a member ----------------------------

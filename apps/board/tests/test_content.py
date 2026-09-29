@@ -41,6 +41,7 @@ class FakeRepo:
     def __init__(self):
         self.files: dict[str, bytes] = {}
         self.commits: list[str] = []
+        self.authors: list[dict] = []
         self.reads = 0
 
     @staticmethod
@@ -61,14 +62,15 @@ class FakeRepo:
             raise gitea.GiteaError("Ese archivo ya no existe.")
         return self.files[path].decode("utf-8"), self._sha(self.files[path])
 
-    def write_file(self, path, data, message, token=None, sha=None):
+    def write_file(self, path, data, message, token=None, sha=None, member=None):
         if sha and self.files.get(path) is not None and self._sha(self.files[path]) != sha:
             raise gitea.StaleFile("Alguien más guardó este archivo mientras lo editabas.")
         self.files[path] = data
         self.commits.append(message)
+        self.authors.append(gitea._identity(member))
         return self._sha(data)
 
-    def delete_file(self, path, sha, message, token=None):
+    def delete_file(self, path, sha, message, token=None, member=None):
         self.files.pop(path, None)
         self.commits.append(message)
 
@@ -83,13 +85,9 @@ def repo(monkeypatch):
 
 @pytest.fixture
 def editor(db, make_member, sign_in):
-    """An admin with a stored Gitea token, which every content route needs."""
+    """An admin. The editor commits through the server's own content token
+    now, so there is nothing to store per person."""
     member_id = make_member("editora", role="admin")
-    db.execute(
-        """INSERT INTO gitea_tokens (member_id, access_token, refresh_token, expires_at)
-           VALUES (?, 'tok', 'ref', NULL)""",
-        (member_id,),
-    )
     sign_in(member_id)
     return member_id
 
@@ -226,12 +224,14 @@ def test_anonymous_is_sent_to_login(repo, client, path):
     assert "/comunidad/login" in response.headers["Location"]
 
 
-def test_a_member_without_a_token_is_sent_back_through_gitea(
-        repo, client, make_member, sign_in):
-    sign_in(make_member("sintoken", role="admin"))
-    response = client.get("/comunidad/contenido")
-    assert response.status_code == 302
-    assert "/comunidad/login" in response.headers["Location"]
+def test_a_commit_is_attributed_to_whoever_wrote_it(repo, client, post, editor, db):
+    """One token does the committing, so the author has to be named explicitly
+    or git history would credit every post to the same service account and
+    there would be nobody to ask about a page a year from now."""
+    publish(post)
+
+    assert repo.authors, "nothing was committed"
+    assert repo.authors[-1] == {"name": "Editora", "email": "editora@example.com"}
 
 
 # --- images --------------------------------------------------------------

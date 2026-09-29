@@ -16,10 +16,9 @@ services:
       # Changing it signs everyone out; losing it means nothing worse.
       - BOARD_SECRET_KEY=${BOARD_SECRET_KEY}
 
-      # Gitea OAuth2 application — a CONFIDENTIAL client, unlike the Decap one.
+      # Where the site's content lives. Members never see it: they sign in
+      # here, against a password in our own database.
       - GITEA_URL=https://git.vienalatina.com
-      - BOARD_OAUTH_CLIENT_ID=${BOARD_OAUTH_CLIENT_ID}
-      - BOARD_OAUTH_CLIENT_SECRET=${BOARD_OAUTH_CLIENT_SECRET}
       - BOARD_BASE_URL=https://vienalatina.com
 
       # The Gitea username that becomes the one owner, applied once on an empty
@@ -33,6 +32,7 @@ services:
       # Leave it empty to run without account creation — admins then add people
       # who already have a Gitea login, and everything else still works.
       - GITEA_ADMIN_TOKEN=${GITEA_ADMIN_TOKEN:-}
+      - CONTENT_TOKEN=${CONTENT_TOKEN:-}
 
       - BOARD_DB=/data/board.db
 

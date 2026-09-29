@@ -321,53 +321,50 @@ The private area: roles and an internal board. It is the only part of the site
 that runs code to answer a request, and the only data on the server that is not
 already in git.
 
-### 11.1 Register the OAuth application
+### 11.1 No OAuth application, and no accounts for members
 
-Gitea → **Site Administration → Integrations → Applications** →
-*Create new OAuth2 application*:
+**Members sign in on vienalatina.com, against a password stored here.** They
+have no account on the git server at all. If you are reading an older copy of
+this file: it described registering an OAuth application and handing members to
+git.vienalatina.com to type their password. That is gone, along with every
+problem it caused — the hand-off to a differently-designed domain, a *Forgot
+password?* that could never work, and a *Salir* that could not finish because
+the session belonged to a server we could not reach.
 
-- Name: `vienalatina-board`
-- Redirect URI: `https://vienalatina.com/comunidad/auth/callback`
-- **Leave "Confidential Client" TICKED.**
+What is left of the git server, as far as members are concerned, is nothing.
+It stores the site's content. One token lets the editor commit there
+(`CONTENT_TOKEN`, §11.2), and only pablo and the pipeline bots have logins.
 
-That last point is the opposite of the Decap application in step 6.2, and the
-difference is worth understanding rather than memorising. Decap runs in the
-visitor's browser, where any secret would be readable by the visitor, so it has
-to be a public client using PKCE. The board runs on the server, so it can hold
-a secret and should — a confidential client is the stronger of the two.
+Passwords are scrypt hashes via `werkzeug.security`, which arrives with Flask.
+Nobody — not an admin, not the server — ever sees a member's password: a new
+member's `password_hash` is NULL until they choose one through the invitation
+link, and a NULL hash cannot be signed in with.
 
-Save the **Client ID** and the **Client Secret**.
+**If a member already had a git-server account** from the old flow, it is now
+an orphan. Delete those at **git.vienalatina.com/-/admin/users**, keeping only
+`pablo` and the bots. Nothing here reads them any more.
 
-### 11.2 A token for creating accounts and setting passwords
+### 11.2 The token the editor commits with
 
-This was optional when the members area only created accounts. **It is not
-optional any more**, because the same token is what lets a member choose their
-own password (section 13). Without it the invitation link opens a page that can
-only apologise, and *¿olvidaste tu contraseña?* refuses rather than mailing a
-link to that page. Adding people who already have a Gitea login still works
-with no token, and so does the rest of the members area.
+The members area needs one credential on the git server: something that can
+write to the site repository when somebody publishes a post.
 
-Log in as a Gitea **site administrator** → Settings → Applications → *Generate
-New Token* → scope **admin (write)**.
+Gitea → as **pablo** → Settings → Applications → *Generate New Token*, scope
+**repository: Read and Write**. Put it in `/srv/board/.env` as `CONTENT_TOKEN`.
 
-Understand what this token is before you create it: it can create and modify any
-account on the instance, including administrators. Anything that can read the
-board's environment — the compose file, `docker inspect`, a shell in the
-container — can use it. If you would rather not have that on the box, leave
-`GITEA_ADMIN_TOKEN` empty and create accounts in Gitea by hand.
+```
+CONTENT_TOKEN=
+```
 
-Leaving it empty is a supported configuration, not a half-finished one, and
-every screen that depends on it checks **before** asking anyone to do work: the
-*Dar de alta* form says this server cannot create accounts and links to Gitea's
-own create-user page; the invitation page says so instead of showing a password
-field; the sign-in page stops offering recovery. What none of them will do is
-accept a password and then refuse it.
+It falls back to `GITEA_ADMIN_TOKEN` if left empty, so an existing install
+keeps working — but they should not stay the same. The admin token can create
+and modify every account on the instance; publishing a post needs one
+repository. Since members no longer have accounts to create, the admin token
+has no remaining job and can be revoked once `CONTENT_TOKEN` is in place.
 
-One trap worth knowing, since the deploy script now warns about it: a line
-reading `GITEA_ADMIN_TOKEN=` with nothing after it is **not** the same as a
-configured token, but it looks identical to a missing one in every listing of
-your `.env`. `scripts/deploy-board.sh` names any setting that is present but
-empty, and what each one switches off.
+**Commits still say who wrote them.** One token does the committing, and each
+commit names its author, so `git log` shows the member and there is somebody to
+ask about a page a year from now.
 
 ### 11.3 Build and run
 
@@ -764,36 +761,31 @@ cd /srv/gitea && sudo docker compose restart gitea
 Nothing breaks if you forget — an unknown variable is a declaration nobody
 reads, so the worst case is a corner that stays grey.
 
-### Signing out is two steps, and the app says so
+### Signing out
 
-Clicking **Salir** in the members area closes that session and deletes the
-stored Gitea token. It cannot close the **Gitea** session in the same browser,
-and Gitea remembers that the app was authorised — so without saying anything,
-the next click on *Entrar con Gitea* would sign the person straight back in with
-no password. On a laptop shared around the association, that is a button that
-lies.
+One click. *Salir* clears the session and returns to the sign-in form, which
+asks for a password.
 
-Gitea cannot be signed out from another site: its logout has been POST-only
-since 1.11.2, so a link cannot trigger it and a cross-site POST would need
-Gitea's CSRF token. The `prompt=login` parameter that would force
-re-authentication is undocumented in every released version of Gitea's OAuth2
-provider, and a security control should not rest on that.
+This section used to explain at length why that was not true — the session
+belonged to the git server, its logout is POST-only and unreachable from
+another domain, and one click on *Entrar* signed you straight back in. All of
+that followed from delegating identity, and none of it survived taking it back.
 
-So the logout page says plainly what is and is not closed, and then **tells the
-member how to finish the job**: go to the account server, open the profile menu,
-choose *Cerrar sesión*. Or close the browser, which also works — the
-members-area cookie is a browser-session cookie and does not survive that.
+### 11.12 When nobody can sign in
 
-That wording is deliberate, and this paragraph used to say something else. The
-page shipped with a *"Cerrar sesión del todo"* button linking straight to
-`/user/logout`, which contradicted the paragraph directly above it: a click is
-a GET, the route is POST-only, and the server answered **404** with the session
-untouched. The button was live for a week. Nobody noticed, because a dead link
-on a page you reach once looks like nothing at all — and because it was never
-clicked against a running Gitea before shipping.
+Every path to a first password goes through email: the invitation when a member
+is added, and *¿olvidaste tu contraseña?* afterwards. If the mailbox is down
+and the owner is locked out, that is a circle with no way in.
 
-`apps/board/tests/test_templates.py` now fails the build if any template links
-to `/user/logout` again.
+```sh
+sudo bash scripts/set-password.sh pablo
+```
+
+Prompts for a password without echoing it, hashes it with the same code the
+application uses, inside the running container. Never takes the password as an
+argument — an argument is visible in `ps` to everyone on the box.
+
+**Test it while you still have another way in**, not on the day you need it.
 
 ## 13. Email: invitations and passwords
 

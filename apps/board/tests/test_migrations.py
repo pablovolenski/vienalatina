@@ -160,6 +160,13 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
         "  CHECK ((thread_id IS NOT NULL) + (comment_id IS NOT NULL)\n"
         "       + (message_id IS NOT NULL) = 1)",
         "  CHECK ((thread_id IS NULL) <> (comment_id IS NULL))")
+    # …and predates members owning their own passwords.
+    old_sql = old_sql.replace("  password_hash TEXT,\n", "")
+    old_sql += """
+    CREATE TABLE gitea_tokens (
+      member_id INTEGER PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
+      access_token TEXT NOT NULL);
+    """
 
     path = str(tmp_path / "board.db")
     db = connect(path)
@@ -176,7 +183,12 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
                 "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
 
     db = connect(path)
-    assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert db.execute("PRAGMA user_version").fetchone()[0] == max(
+        number for number, _, _ in migrations.STEPS)
+    # Step 2: somewhere to keep a password, and the dead OAuth tokens gone.
+    assert "password_hash" in {row[1] for row in db.execute("PRAGMA table_info(members)")}
+    assert db.execute(
+        "SELECT name FROM sqlite_master WHERE name = 'gitea_tokens'").fetchone() is None
     # The row the server actually has, still there and still whole.
     kept = db.execute("SELECT stored_name, thread_id, bytes FROM attachments").fetchone()
     assert (kept["stored_name"], kept["thread_id"], kept["bytes"]) == (
