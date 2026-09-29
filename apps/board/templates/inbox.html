@@ -7,15 +7,16 @@
 </div>
 
 {% if people %}
-<form class="card" method="post" action="{{ url_for('messages.start') }}">
-	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{# GET, not POST: choosing somebody to write to is navigation, not a change.
+   It also means no conversation is created just because a name was picked. #}
+<form class="card" method="get" action="{{ url_for('messages.pick') }}">
 	<label for="para">Escribir a</label>
 	<select id="para" name="member_id">
 		{% for person in people %}
 		<option value="{{ person.id }}">{{ person.display_name }}</option>
 		{% endfor %}
 	</select>
-	<button class="btn" type="submit">Abrir conversación</button>
+	<button class="btn" type="submit">Escribir</button>
 </form>
 {% endif %}
 
@@ -25,7 +26,7 @@
 
 {% for c in conversations %}
 <article class="card">
-	<a class="card__title" href="{{ url_for('messages.conversation', conversation_id=c.id) }}">
+	<a class="card__title" href="{{ url_for('messages.talk', member_id=c.other_id) }}">
 		{{ c.other_name }}
 		{% if c.unread %}<span class="tag">{{ c.unread }}</span>{% endif %}
 	</a>

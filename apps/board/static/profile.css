@@ -1,0 +1,88 @@
+/* The public profile page at vienalatina.com/su-nombre.
+ *
+ * A separate file rather than a <style> block in the template, and that is not
+ * a matter of taste. The Content-Security-Policy in app.py is
+ * `default-src 'self'` with no 'unsafe-inline', so a browser silently ignores
+ * an inline <style> — the page arrives in Times New Roman with blue links and
+ * nothing in the console explains why. Served from /comunidad/static/ it is
+ * same-origin, allowed, and the policy keeps its teeth.
+ *
+ * The colours are repeated from themes/vienalatina/assets/css/main.css rather
+ * than shared with it: Hugo fingerprints its stylesheet, so there is no stable
+ * URL to link to. If the brand changes there, change it here. A deliberate
+ * duplicate, said out loud.
+ */
+
+:root {
+	--brand: #c0391c;
+	--ink: #2b2320;
+	--muted: #6b5f59;
+	--surface: #fffaf6;
+	--line: #e7dcd4;
+	--radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+	margin: 0;
+	background: var(--surface);
+	color: var(--ink);
+	font: 1rem/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.wrap { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+
+a { color: var(--brand); }
+
+.home {
+	display: inline-block;
+	margin-bottom: 2rem;
+	font-size: .9rem;
+	text-decoration: none;
+}
+
+.head { display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap; }
+
+/* Bounded on both axes: a photo straight off a phone is several thousand
+   pixels wide, and without this it pushes the name off the screen. */
+.photo {
+	width: 104px;
+	height: 104px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid var(--line);
+}
+
+h1 { margin: 0; font-size: 1.7rem; line-height: 1.2; }
+
+.bio { margin-top: 1.75rem; }
+.bio :first-child { margin-top: 0; }
+.bio img { max-width: 100%; height: auto; border-radius: var(--radius); }
+
+ul.links {
+	list-style: none;
+	padding: 0;
+	margin: 1.75rem 0 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+}
+
+ul.links a {
+	display: inline-block;
+	padding: .4rem .8rem;
+	background: #fff;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	text-decoration: none;
+	font-size: .9rem;
+}
+
+footer {
+	margin-top: 3rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid var(--line);
+	color: var(--muted);
+	font-size: .85rem;
+}

@@ -27,6 +27,26 @@ def test_no_inline_event_handlers(template):
 
 
 @pytest.mark.parametrize("template", TEMPLATES, ids=lambda p: p.name)
+def test_no_inline_style_blocks(template):
+    """The same policy, the same silence, a different symptom.
+
+    `default-src 'self'` covers style-src too, and 'self' does not permit an
+    inline <style>. The browser drops the whole block without a word, and the
+    page arrives in Times New Roman with blue links — which is exactly how the
+    public profile page shipped. Put it in static/ and link it, where the
+    policy allows it and the browser caches it.
+    """
+    # Comments stripped first: profile.html explains in a Jinja comment why it
+    # has no <style> block, and a guard that trips on its own documentation is
+    # a guard people delete.
+    html = JINJA_COMMENT.sub("", template.read_text(encoding="utf-8"))
+    assert "<style" not in html, (
+        f"{template.name} has an inline <style> block, which the CSP ignores. "
+        "Move it to apps/board/static/ and link it with url_for('static', …)."
+    )
+
+
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda p: p.name)
 def test_every_post_form_carries_a_csrf_token(template):
     """The hook in app.py rejects a POST without one, so a form that forgets it
     is a button that always fails — and fails with a 400 that reads like the

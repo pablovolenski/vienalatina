@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "_attachments.html" import attachments %}
-{% block title %}{{ other.display_name if other else 'Conversación' }}{% endblock %}
+{% block title %}{{ other.display_name }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>{{ other.display_name if other else 'Miembro eliminado' }}</h1>
+	<h1>{{ other.display_name }}</h1>
 	<a class="linkish" href="{{ url_for('messages.inbox') }}">Volver</a>
 </div>
 
@@ -16,13 +16,13 @@
 	<div class="prose">{{ to_html(m.body_md) }}</div>
 	{{ attachments(images.get(m.id, [])) }}
 </article>
+{% else %}
+<p class="muted">Todavía no os habéis escrito. Empieza abajo.</p>
 {% endfor %}
 
 <span id="final"></span>
 
-{% if other is none %}
-<p class="muted">Esta persona ya no está en la comunidad.</p>
-{% elif blocked %}
+{% if blocked %}
 <p class="muted">
 	Hay un bloqueo entre vosotros, así que ninguno de los dos puede escribir.
 </p>
@@ -34,11 +34,14 @@
 	Si el bloqueo lo puso la otra persona, esto no lo quita.
 </p>
 {% else %}
+{# Always on this page, under the history. There is no separate step to "open"
+   a conversation: arriving at somebody's name is opening it, and nothing is
+   created in the database until the first message is actually sent. #}
 <form class="card" method="post" enctype="multipart/form-data"
-      action="{{ url_for('messages.send', conversation_id=conversation_id) }}">
+      action="{{ url_for('messages.talk', member_id=other.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<label for="body">Mensaje</label>
-	<textarea id="body" name="body" rows="4"
+	<textarea id="body" name="body" rows="4" autofocus
 	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
 
 	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
