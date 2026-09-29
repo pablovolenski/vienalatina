@@ -94,13 +94,18 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import auth, board, content, members, messages, uploads
+    from . import auth, board, content, members, messages, profiles, uploads
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(content.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(uploads.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(messages.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(board.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(profiles.bp, url_prefix=URL_PREFIX)
+    # No prefix: a public profile lives at the top level of the
+    # site. Caddy only forwards a single-segment path that Hugo
+    # has not built, so this never competes with the static site.
+    app.register_blueprint(profiles.public_bp)
 
     app.teardown_appcontext(close_db)
     app.jinja_env.globals["csrf_token"] = csrf_token

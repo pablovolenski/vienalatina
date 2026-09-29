@@ -37,6 +37,39 @@ vienalatina.com {
 	@board path /comunidad /comunidad/*
 	reverse_proxy @board 127.0.0.1:8080
 
+	# Public profiles at vienalatina.com/su-nombre.
+	#
+	# This shares a namespace with the entire static site, so the rule is that
+	# the static site always wins — decided by asking the disk, not by keeping
+	# a list of reserved paths that would be wrong the first time Hugo grows
+	# one. Three conditions, each load-bearing:
+	#
+	#   path_regexp  one segment only, so /page/acerca/ never comes here
+	#   not path     /comunidad is the members area, matched above
+	#   not file     if Hugo built anything at this path, Hugo serves it
+	#
+	# A member called "de" therefore shadows nothing: /de/ is a real directory,
+	# so it is served, and their profile is simply unreachable. The app refuses
+	# such names at sign-up for that reason, but the site is safe either way.
+	#
+	# handle_response turns the app's 404 for an unknown name into the site's
+	# own 404 page, so a visitor sees the public site's error, not the members
+	# area's, and the app never needs a public-facing error template.
+	@profile {
+		path_regexp ^/([A-Za-z0-9][A-Za-z0-9._-]{0,38})/?$
+		not path /comunidad /comunidad/*
+		not file {
+			try_files {path} {path}/index.html
+		}
+	}
+	reverse_proxy @profile 127.0.0.1:8080 {
+		@nobody status 404
+		handle_response @nobody {
+			rewrite * /404.html
+			file_server
+		}
+	}
+
 	# llms.txt is markdown (matches the old WP behaviour)
 	header /llms.txt Content-Type "text/markdown; charset=utf-8"
 

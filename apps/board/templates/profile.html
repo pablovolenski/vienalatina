@@ -1,0 +1,67 @@
+{# A page on the PUBLIC site, so it does not extend base.html — that is the
+   members-area chrome, with its navigation and its "Área privada" footer.
+
+   The colours are repeated here rather than shared. Hugo fingerprints its
+   stylesheet, so the app cannot link to it and get a stable URL; this is the
+   same problem the Gitea theme has. Source of truth is
+   themes/vienalatina/assets/css/main.css — if the brand changes there, change
+   it here too. A deliberate duplicate, said out loud. #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ member.display_name }} — Viena Latina</title>
+	<meta name="description" content="{{ (member.bio or '')[:150] }}">
+	<style>
+		:root { --brand:#c0391c; --ink:#2b2320; --muted:#6b5f59;
+		        --surface:#fffaf6; --line:#e7dcd4; --radius:12px; }
+		* { box-sizing:border-box; }
+		body { margin:0; background:var(--surface); color:var(--ink);
+		       font:1rem/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+		.wrap { max-width:42rem; margin:0 auto; padding:2.5rem 1rem 4rem; }
+		a { color:var(--brand); }
+		.home { display:inline-block; margin-bottom:2rem; font-size:.9rem;
+		        text-decoration:none; }
+		.head { display:flex; gap:1.25rem; align-items:center; flex-wrap:wrap; }
+		.photo { width:104px; height:104px; border-radius:50%; object-fit:cover;
+		         border:1px solid var(--line); }
+		h1 { margin:0; font-size:1.7rem; line-height:1.2; }
+		.bio { margin-top:1.75rem; }
+		.bio :first-child { margin-top:0; }
+		.bio img { max-width:100%; height:auto; border-radius:var(--radius); }
+		ul.links { list-style:none; padding:0; margin:1.75rem 0 0;
+		           display:flex; flex-wrap:wrap; gap:.5rem; }
+		ul.links a { display:inline-block; padding:.4rem .8rem; background:#fff;
+		             border:1px solid var(--line); border-radius:999px;
+		             text-decoration:none; font-size:.9rem; }
+		footer { margin-top:3rem; padding-top:1.25rem; border-top:1px solid var(--line);
+		         color:var(--muted); font-size:.85rem; }
+	</style>
+</head>
+<body>
+<div class="wrap">
+	<a class="home" href="/">← Viena Latina</a>
+
+	<div class="head">
+		{% if photo %}<img class="photo" src="{{ photo }}" alt="{{ member.display_name }}">{% endif %}
+		<h1>{{ member.display_name }}</h1>
+	</div>
+
+	{% if member.bio %}<div class="bio">{{ bio_html }}</div>{% endif %}
+
+	{% if links %}
+	<ul class="links">
+		{# nofollow + noopener: these are addresses somebody typed into a form,
+		   and the page they point at should gain neither our ranking nor a
+		   handle on the window it was opened from. #}
+		{% for link in links %}
+		<li><a href="{{ link.url }}" rel="nofollow noopener">{{ link.label }}</a></li>
+		{% endfor %}
+	</ul>
+	{% endif %}
+
+	<footer>Miembro de <a href="/">Viena Latina</a>.</footer>
+</div>
+</body>
+</html>

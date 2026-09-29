@@ -21,7 +21,7 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import auth, invites, mail, uploads
+from . import auth, invites, mail, profiles, uploads
 from .db import TOMBSTONE_LOGIN, get_db
 from .security import admin_required, login_required, owner_required
 
@@ -127,7 +127,10 @@ def erase_member(db: sqlite3.Connection, member_id: int) -> list[str]:
     try:
         # Read before deleting: once the conversations are gone there is
         # nothing left to work out which files they carried.
-        orphaned = [row["stored_name"] for row in db.execute(
+        photo = db.execute("SELECT photo_name FROM members WHERE id = ?",
+                           (member_id,)).fetchone()
+        orphaned = [photo["photo_name"]] if photo and photo["photo_name"] else []
+        orphaned += [row["stored_name"] for row in db.execute(
             f"""SELECT a.stored_name FROM attachments a
                   JOIN messages m ON m.id = a.message_id
                  WHERE m.conversation_id IN ({_conversations_of(member_id)})""",
@@ -209,6 +212,13 @@ def new():
         abort(403)
     if not LOGIN_RE.match(login):
         flash("El usuario solo puede tener letras, números, punto, guion y guion bajo.", "error")
+        return redirect(url_for("members.new"))
+    if not profiles.name_is_available(login):
+        # The name would collide with a path the site already serves. The
+        # routing gives the static site every collision, so nothing breaks —
+        # their public page would simply never load. Refused here so nobody
+        # finds that out months later.
+        flash(f"«{login}» coincide con una dirección del sitio. Elige otro.", "error")
         return redirect(url_for("members.new"))
     if "@" not in email:
         # Required now, not optional: the address is how the invitation gets

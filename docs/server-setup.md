@@ -655,6 +655,51 @@ the one case it was never needed for.
 the proof the rebuild kept real rows. Back up first — `scripts/backup-board.sh`
 — as with any migration.
 
+### 11.13 Public profiles at `vienalatina.com/su-nombre`
+
+A member fills in *Mi perfil* and ticks *Publicar mi página*. Until they do,
+there is no page: `profile_published` starts at 0 and an unpublished profile
+404s exactly like a name that was never a member.
+
+**The routing is the part to understand before changing anything.** A profile
+sits at the top level, sharing a namespace with the whole static site. Caddy
+forwards a request to the app only when all three hold:
+
+- the path is **one segment** — `/page/acerca/` never reaches the app
+- it is not `/comunidad`
+- **Hugo has built nothing there** (`not file` with `try_files`)
+
+That last one is what makes it safe, and why there is no reserved-path list in
+the Caddyfile: the question is answered by the filesystem, so it stays correct
+when the site grows a page nobody remembered. A member called `de` shadows
+nothing — `/de/` is a real directory, so it is served, and their profile is
+merely unreachable. The app refuses such names at sign-up for that reason.
+
+An unknown name 404s from the app, and `handle_response` turns that into the
+site's own `404.html`, so a visitor never sees the members area's error page.
+
+**After reloading Caddy, check the public site first**, before looking at any
+profile:
+
+```sh
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+for path in / /de/ /pt-br/ /page/acerca/ /categories/ /robots.txt /comunidad/ /noexiste; do
+  printf '%-20s %s\n' "$path" "$(curl -s -o /dev/null -w '%{http_code}' https://vienalatina.com$path)"
+done
+```
+
+Everything but the last should be 200 (or 301). `/noexiste` should be 404 and
+should look like the site's own 404 page. A routing change that shadows the
+public site is worse than having no profiles, so if anything there is wrong,
+revert the Caddyfile and reload before investigating.
+
+**The profile page repeats the brand colours** instead of sharing them. Hugo
+fingerprints its stylesheet, so the app cannot link to it with a stable URL —
+the same problem the Gitea theme has. If the colours change in
+`themes/vienalatina/assets/css/main.css`, change them in
+`apps/board/templates/profile.html` too.
+
 ## 12. Make Gitea look like the site
 
 Members sign in to `/comunidad/` through Gitea, so Gitea's sign-in form and its

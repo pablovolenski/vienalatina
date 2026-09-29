@@ -104,11 +104,30 @@ def _members_own_their_passwords(db: sqlite3.Connection) -> None:
     db.execute("DROP TABLE IF EXISTS gitea_tokens")
 
 
+def _members_get_a_public_page(db: sqlite3.Connection) -> None:
+    """Columns for the profile at vienalatina.com/<name>.
+
+    Plain ADD COLUMNs. `profile_published` carries a default so the existing
+    rows are valid the moment it appears — and the default is 0, so nobody
+    wakes up with a public page they did not ask for.
+    """
+    existing = _columns(db, "members")
+    for column, definition in (
+        ("profile_published", "INTEGER NOT NULL DEFAULT 0"),
+        ("bio", "TEXT"),
+        ("links", "TEXT"),
+        ("photo_name", "TEXT"),
+    ):
+        if column not in existing:
+            db.execute(f"ALTER TABLE members ADD COLUMN {column} {definition}")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
     (1, "attachments can belong to a private message", _attachments_accept_messages),
     (2, "members keep their own password", _members_own_their_passwords),
+    (3, "members can have a public page", _members_get_a_public_page),
 ]
 
 

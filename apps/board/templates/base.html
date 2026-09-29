@@ -36,6 +36,7 @@
 				   The badge is only drawn when there is something to see. #}
 				<a href="{{ url_for('messages.inbox') }}">Privados{% set pending = unread_private() %}{% if pending %} <span class="tag">{{ pending }}</span>{% endif %}</a>
 			</li>
+			<li><a href="{{ url_for('profiles.edit') }}">Mi perfil</a></li>
 			<li><a href="{{ url_for('content.index') }}">Contenido</a></li>
 			{% endif %}
 			<li><a href="{{ url_for('members.index') }}">Miembros</a></li>

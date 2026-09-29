@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS members (
   display_name  TEXT    NOT NULL DEFAULT '',
   email         TEXT    NOT NULL DEFAULT '',
   password_hash TEXT,
+  -- Public profile at vienalatina.com/<gitea_login>. Opt-in: a member has no
+  -- page until they publish one, because "public" should be something somebody
+  -- did on purpose rather than a consequence of being added to a board.
+  profile_published INTEGER NOT NULL DEFAULT 0 CHECK (profile_published IN (0, 1)),
+  bio           TEXT,
+  links         TEXT,          -- JSON array of {label, url}
+  photo_name    TEXT,
   role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'user', 'tombstone')),
   active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
