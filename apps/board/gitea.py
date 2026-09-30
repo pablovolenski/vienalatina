@@ -22,7 +22,7 @@ from __future__ import annotations
 import base64
 import secrets
 import string
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 
 import requests
 from flask import current_app
@@ -58,8 +58,6 @@ def _repo() -> str:
 def _branch() -> str:
     return current_app.config["CONTENT_BRANCH"]
 
-
-# --- sign-in -------------------------------------------------------------
 
 # --- account creation (site-admin token) ---------------------------------
 
@@ -204,6 +202,22 @@ def _identity(member) -> dict:
 
 
 def _content_request(method: str, url: str, token: str, **kwargs):
+    """Every content call goes through here, and every refusal comes back as a
+    GiteaError the caller already knows how to show.
+
+    This used to raise `PermissionError("gitea-unauthorised")` on a 401 or 403,
+    with a comment saying the caller would refresh the token and retry. That
+    caller was `tokens.py`, which refreshed OAuth tokens and was deleted when
+    the members area took over its own logins — so for two phases the refusal
+    was an exception nothing caught. It escaped `content.index` as a 500, and
+    `submissions.approve` mistook it for a missing file, because PermissionError
+    is a subclass of OSError. One line, two wrong answers, and a whole feature
+    that had never worked: the token in .env was a site-admin token, and Gitea's
+    scopes are per category, so `admin` grants nothing over a repository.
+
+    Hence the message: the thing to check is the token's scope, and it should
+    say so on the screen rather than in a traceback nobody reads.
+    """
     response = requests.request(
         method, url,
         headers={"Authorization": f"Bearer {token}"},
@@ -211,7 +225,11 @@ def _content_request(method: str, url: str, token: str, **kwargs):
         **kwargs,
     )
     if response.status_code in (401, 403):
-        raise PermissionError("gitea-unauthorised")  # caller refreshes and retries
+        raise GiteaError(
+            "El servidor de git rechazó el token del editor. Comprueba que "
+            "CONTENT_TOKEN existe y tiene permiso de escritura sobre el "
+            "repositorio (repository: Read and Write), no sólo de administración."
+        )
     return response
 
 

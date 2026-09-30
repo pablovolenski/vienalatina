@@ -96,6 +96,8 @@ def inbox():
         """SELECT c.id,
                   other.display_name AS other_name,
                   other.id           AS other_id,
+                  other.gitea_login  AS other_login,
+                  other.profile_published AS other_published,
                   (SELECT body_md FROM messages
                     WHERE conversation_id = c.id AND deleted_at IS NULL
                     ORDER BY created_at DESC LIMIT 1)    AS last_body,
@@ -201,7 +203,9 @@ def talk(member_id: int):
     rows = []
     if conversation_id is not None:
         rows = db.execute(
-            """SELECT m.*, a.display_name AS author
+            """SELECT m.*, a.display_name AS author,
+                      a.gitea_login AS author_login,
+                      a.profile_published AS author_published
                  FROM messages m JOIN members a ON a.id = m.author_id
                 WHERE m.conversation_id = ? AND m.deleted_at IS NULL
                 ORDER BY m.created_at""",

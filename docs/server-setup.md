@@ -356,11 +356,23 @@ Gitea → as **pablo** → Settings → Applications → *Generate New Token*, s
 CONTENT_TOKEN=
 ```
 
-It falls back to `GITEA_ADMIN_TOKEN` if left empty, so an existing install
-keeps working — but they should not stay the same. The admin token can create
-and modify every account on the instance; publishing a post needs one
-repository. Since members no longer have accounts to create, the admin token
-has no remaining job and can be revoked once `CONTENT_TOKEN` is in place.
+**The scope matters more than this page used to admit.** Gitea's scopes are per
+category, and `admin` does not contain `repository` — a site-admin token gets a
+403 from the contents API, no matter how powerful it is elsewhere. So the
+fallback to `GITEA_ADMIN_TOKEN` when `CONTENT_TOKEN` is empty keeps the app
+*running*, but it does not keep publishing working: with an admin-only token the
+editor cannot commit at all. That is exactly what happened here, and it went
+undiagnosed for three phases because the refusal escaped as a 500 on
+*Contenido* and, when approving a submission, as a message blaming a missing
+photograph. Both now say what is wrong, but the fix is this token.
+
+Once `CONTENT_TOKEN` is in place, **revoke `GITEA_ADMIN_TOKEN`**: it can create
+and modify every account on the instance, members no longer have accounts to
+create, and it has no remaining job.
+
+If *Contenido* says *"El servidor de git rechazó el token del editor"*, this
+section is the answer: the token is missing, revoked, or scoped to something
+other than the repository.
 
 **Commits still say who wrote them.** One token does the committing, and each
 commit names its author, so `git log` shows the member and there is somebody to
@@ -798,6 +810,20 @@ Three things worth knowing about that design:
 Editing a returned proposal puts it back in the queue automatically. An approved
 one can no longer be edited from there — the file is in the repository, and that
 is what *Contenido* is for.
+
+**On the wall itself**: one 👍 per member per post or comment, which clicking
+again takes back, and every name is a link to that person's page — but only when
+they have published one, so nobody is sent to a 404. Both rules live in one place
+each (`templates/_reaction.html`, `templates/_person.html`) so no screen has to
+remember them.
+
+**Miembros is a directory**, not an admin table: a card per person with their
+photo, username, role, the first line of their bio, somewhere to write to them
+and a link to their page. Admins get the controls — suspend, re-invite, change
+role, erase — inside a *Gestionar* block on each card, closed by default. A
+member's photo shows here even when their public page is unpublished, because
+this side is behind the login; `profiles.member_photo` serves it and the profile
+form says so in plain words.
 
 ## 12. Make Gitea look like the site
 

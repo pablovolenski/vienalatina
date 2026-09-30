@@ -121,6 +121,10 @@ REMOVED_ON_ERASE = {
     ("messages", "author_id"),
     ("blocks", "blocker_id"),
     ("blocks", "blocked_id"),
+    # A reaction is a fact about a person, not about the post: the thread
+    # survives as "Miembro eliminado", the thumbs-up does not survive as
+    # somebody's thumbs-up.
+    ("reactions", "member_id"),
     # A submission is private writing until a moderator approves it, so it goes
     # with the rest of the private writing. The remainder of an approved one is
     # the published post in the site repository, which already carries this
@@ -179,6 +183,7 @@ def erase_member(db: sqlite3.Connection, member_id: int) -> list[str]:
         )
         db.execute("DELETE FROM blocks WHERE blocker_id = ? OR blocked_id = ?",
                    (member_id, member_id))
+        db.execute("DELETE FROM reactions WHERE member_id = ?", (member_id,))
         orphaned += [row["photo_name"] for row in db.execute(
             "SELECT photo_name FROM submissions WHERE author_id = ? AND photo_name IS NOT NULL",
             (member_id,),
@@ -217,7 +222,9 @@ def _load(member_id: int):
 @login_required
 def index():
     rows = get_db().execute(
-        """SELECT m.*, c.display_name AS creator
+        """SELECT m.*, c.display_name AS creator,
+                  (SELECT COUNT(*) FROM threads t
+                    WHERE t.author_id = m.id AND t.deleted_at IS NULL) AS posts
              FROM members m
              LEFT JOIN members c ON c.id = m.created_by
             WHERE m.role != 'tombstone'

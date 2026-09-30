@@ -35,6 +35,11 @@
 	{% if g.member.photo_name %}
 	<p class="muted small">Ya tienes una. Subir otra la reemplaza.</p>
 	{% endif %}
+	<p class="muted small">
+		Tu foto aparece en <a href="{{ url_for('members.index') }}">Miembros</a>,
+		que sólo ven las personas que han entrado. Fuera del sitio sólo se ve si
+		publicas tu página, abajo.
+	</p>
 
 	<label class="check">
 		<input type="checkbox" name="published" {{ 'checked' if g.member.profile_published }}>

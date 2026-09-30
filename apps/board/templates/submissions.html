@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_person.html" import person %}
 {% block title %}Publicaciones{% endblock %}
 
 {% block main %}
@@ -30,7 +31,7 @@
 {% for item in queue %}
 <article class="card">
 	<div class="card__meta">
-		<span>{{ item.author }}</span> · <time>{{ item.created_at }}</time>
+		<span>{{ person(item.author, item.author_login, item.author_published) }}</span> · <time>{{ item.created_at }}</time>
 	</div>
 	<h3 class="card__title">
 		<a href="{{ url_for('submissions.show', submission_id=item.id) }}">{{ item.title }}</a>

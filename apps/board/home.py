@@ -31,6 +31,7 @@ def index():
     db = get_db()
     threads = db.execute(
         """SELECT t.id, t.title, t.body_md, t.created_at, m.display_name AS author,
+                  m.gitea_login AS author_login, m.profile_published AS author_published,
                   (SELECT COUNT(*) FROM comments c
                     WHERE c.thread_id = t.id AND c.deleted_at IS NULL) AS replies
              FROM threads t JOIN members m ON m.id = t.author_id
@@ -41,6 +42,8 @@ def index():
 
     conversations = db.execute(
         """SELECT other.id AS other_id, other.display_name AS other_name,
+                  other.gitea_login AS other_login,
+                  other.profile_published AS other_published,
                   (SELECT COUNT(*) FROM messages msg
                     WHERE msg.conversation_id = c.id AND msg.author_id != mine.member_id
                       AND msg.deleted_at IS NULL
@@ -69,7 +72,9 @@ def index():
     queue = []
     if submissions.may_moderate():
         queue = db.execute(
-            """SELECT s.id, s.title, s.created_at, m.display_name AS author
+            """SELECT s.id, s.title, s.created_at, m.display_name AS author,
+                      m.gitea_login AS author_login,
+                      m.profile_published AS author_published
                  FROM submissions s JOIN members m ON m.id = s.author_id
                 WHERE s.state = 'pending' AND s.author_id != ?
                 ORDER BY s.created_at LIMIT ?""",

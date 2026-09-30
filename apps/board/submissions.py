@@ -70,7 +70,7 @@ def pending_count() -> int:
 def _load(submission_id: int):
     row = get_db().execute(
         """SELECT s.*, m.display_name AS author, m.email AS author_email,
-                  m.gitea_login AS author_login,
+                  m.gitea_login AS author_login, m.profile_published AS author_published,
                   r.display_name AS reviewer
              FROM submissions s
              JOIN members m ON m.id = s.author_id
@@ -127,7 +127,9 @@ def index():
     queue = []
     if may_moderate():
         queue = db.execute(
-            """SELECT s.*, m.display_name AS author
+            """SELECT s.*, m.display_name AS author,
+                      m.gitea_login AS author_login,
+                      m.profile_published AS author_published
                  FROM submissions s JOIN members m ON m.id = s.author_id
                 WHERE s.state = 'pending' AND s.author_id != ?
                 ORDER BY s.created_at""",
@@ -308,18 +310,29 @@ def approve(submission_id: int):
         "image": "",
         "manual_translation": False,
     }
+    # Read the picture before the try, and catch only the error that means what
+    # it says. The first version wrapped everything in `except OSError`, which
+    # also catches PermissionError and every `requests` failure — so a git
+    # server refusing the token was reported as a missing photograph, on a page
+    # displaying that photograph. An except clause wide enough to catch the
+    # network is wide enough to lie.
+    picture = None
+    if row["photo_name"]:
+        try:
+            picture = (uploads.directory() / row["photo_name"]).read_bytes()
+        except FileNotFoundError:
+            current_app.logger.warning("submission %s: %s is not on disk",
+                                       submission_id, row["photo_name"])
+            flash("No se encontró la imagen en el disco. Pide al autor que la "
+                  "vuelva a subir.", "error")
+            return redirect(url_for("submissions.show", submission_id=submission_id))
+
     try:
-        if row["photo_name"]:
-            data = (uploads.directory() / row["photo_name"]).read_bytes()
-            fields["image"] = content.commit_picture(data, row["photo_name"], author)
+        if picture is not None:
+            fields["image"] = content.commit_picture(picture, row["photo_name"], author)
         path = content.publish("post", fields, row["body_md"], author)
     except gitea.GiteaError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("submissions.show", submission_id=submission_id))
-    except OSError:
-        current_app.logger.exception("submission %s: picture missing on disk", submission_id)
-        flash("No se encontró la imagen en el disco. Pide al autor que la vuelva a subir.",
-              "error")
         return redirect(url_for("submissions.show", submission_id=submission_id))
 
     get_db().execute(

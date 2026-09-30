@@ -54,13 +54,17 @@ def load_member() -> None:
     g.member = row
 
 
-def _safe_next(target: str) -> str:
+def safe_next(target: str) -> str:
     """Only ever inside this app.
 
     An absolute or protocol-relative URL here would make the login form an open
     redirect: a crafted link signs somebody in and drops them on a page
     somebody else controls, with the trust of having just arrived from their
     own community site.
+
+    Public rather than private now, because the login form is not the only place
+    that sends somebody back where they came from: any form carrying a `back`
+    field has the same hole, and two copies of this rule is one copy too many.
     """
     prefix = current_app.config["URL_PREFIX"] + "/"
     return target if target.startswith(prefix) else url_for("home.index")
@@ -117,7 +121,7 @@ def login():
     passwords.prune_attempts()
     get_db().execute("UPDATE members SET last_seen_at = datetime('now') WHERE id = ?",
                      (member["id"],))
-    return redirect(_safe_next(target))
+    return redirect(safe_next(target))
 
 
 def invite_url(token: str) -> str:

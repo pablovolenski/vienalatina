@@ -1,0 +1,20 @@
+{# The 👍 button, for a thread or a comment.
+
+   A form rather than a link, because it changes something and a GET that
+   changes something is a thing a prefetching browser will do on its own. It
+   carries where it was pressed so the page does not jump to the top, and the
+   handler puts that through the same open-redirect check as the login form. #}
+{% macro reaction(kind, target_id, state, back) %}
+<form class="reaction" method="post" action="{{ url_for('board.react') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<input type="hidden" name="kind" value="{{ kind }}">
+	<input type="hidden" name="id" value="{{ target_id }}">
+	<input type="hidden" name="back" value="{{ back }}">
+	<button class="reaction__button {{ 'reaction__button--mine' if state and state.mine }}"
+	        type="submit"
+	        aria-label="{{ 'Quitar mi me gusta' if state and state.mine else 'Me gusta' }}">
+		<span aria-hidden="true">👍</span>
+		{% if state and state.count %}<span class="reaction__count">{{ state.count }}</span>{% endif %}
+	</button>
+</form>
+{% endmacro %}

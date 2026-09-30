@@ -397,3 +397,54 @@ def test_erasing_a_reviewer_keeps_the_submission(db, post, owner_id, maria,
     row = only_submission(db)
     assert (row["state"], row["reviewed_by"], row["note"]) == (
         "rejected", None, "Falta el dónde.")
+
+
+# --- the two ways approving can fail, told apart --------------------------
+
+def test_a_refused_token_is_not_reported_as_a_missing_picture(
+        app, db, post, maria, luisa, sign_in, monkeypatch):
+    """The bug in the screenshot. `except OSError` caught PermissionError from
+    the git client and blamed the photograph — on a page that was displaying the
+    photograph. The message has to name the thing that is actually wrong."""
+    sign_in(maria)
+    propose(post, picture=(io.BytesIO(PNG), "feria.png"))
+    row = only_submission(db)
+
+    class Refused:
+        class Response:
+            status_code = 403
+
+            @staticmethod
+            def json():
+                return {}
+
+        def request(self, *args, **kwargs):
+            return self.Response()
+
+    monkeypatch.setattr(gitea, "requests", Refused())
+    sign_in(luisa)
+    response = post(f"/comunidad/publicaciones/{row['id']}/aprobar",
+                    follow_redirects=True)
+
+    body = response.get_data(as_text=True)
+    assert "rechazó el token" in body
+    assert "imagen en el disco" not in body
+    assert only_submission(db)["state"] == "pending"     # nothing was recorded
+    # And the picture is still there, so a second attempt can succeed.
+    assert (Path(app.config["UPLOAD_DIR"]) / row["photo_name"]).exists()
+
+
+def test_a_genuinely_missing_picture_still_says_so(
+        app, repo, db, post, maria, luisa, sign_in):
+    sign_in(maria)
+    propose(post, picture=(io.BytesIO(PNG), "feria.png"))
+    row = only_submission(db)
+    (Path(app.config["UPLOAD_DIR"]) / row["photo_name"]).unlink()
+
+    sign_in(luisa)
+    response = post(f"/comunidad/publicaciones/{row['id']}/aprobar",
+                    follow_redirects=True)
+
+    assert "imagen en el disco" in response.get_data(as_text=True)
+    assert repo.files == {}
+    assert only_submission(db)["state"] == "pending"

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% from "_person.html" import person %}
+{% from "_reaction.html" import reaction %}
 {% block title %}Muro{% endblock %}
 
 {% block main %}
@@ -18,13 +20,16 @@
 	<div class="card__meta">
 		{% if t.pinned %}<span class="tag">Fijado</span>{% endif %}
 		{% if t.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
-		<span>{{ t.author }}</span> · <time>{{ t.created_at }}</time>
+		<span>{{ person(t.author, t.author_login, t.author_published) }}</span> · <time>{{ t.created_at }}</time>
 	</div>
 	<h2 class="card__title">
 		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>
 	</h2>
 	<p class="card__excerpt">{{ excerpt(t.body_md) }}</p>
-	<p class="card__foot">{{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</p>
+	<div class="card__foot">
+		{{ reaction('thread', t.id, reactions.get(t.id), url_for('board.threads', page=page)) }}
+		<span>{{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
+	</div>
 </article>
 {% endfor %}
 

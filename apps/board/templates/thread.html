@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% from "_person.html" import person %}
+{% from "_reaction.html" import reaction %}
 {% from "_attachments.html" import attachments %}
 {% block title %}{{ thread.title }}{% endblock %}
 
@@ -7,7 +9,7 @@
 	<div class="card__meta">
 		{% if thread.pinned %}<span class="tag">Fijado</span>{% endif %}
 		{% if thread.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
-		<span>{{ author }}</span> · <time>{{ thread.created_at }}</time>
+		<span>{{ person(author.display_name, author.gitea_login, author.profile_published) }}</span> · <time>{{ thread.created_at }}</time>
 		{% if thread.edited_at %}<span class="muted small">(editado)</span>{% endif %}
 	</div>
 	<h1 class="card__title">{{ thread.title }}</h1>
@@ -15,6 +17,8 @@
 	{{ attachments(thread_images) }}
 
 	<div class="actions">
+		{{ reaction('thread', thread.id, reactions.get(thread.id),
+		            url_for('board.thread', thread_id=thread.id)) }}
 		{% if may_edit(thread) %}
 		<a class="linkish" href="{{ url_for('board.edit_thread', thread_id=thread.id) }}">Editar</a>
 		{% endif %}
@@ -45,14 +49,16 @@
 <h2 class="section-head">{{ comments|length }} respuesta{{ '' if comments|length == 1 else 's' }}</h2>
 
 {% for c in comments %}
-<article class="card card--comment">
+<article class="card card--comment" id="c{{ c.id }}">
 	<div class="card__meta">
-		<span>{{ c.author }}</span> · <time>{{ c.created_at }}</time>
+		<span>{{ person(c.author, c.author_login, c.author_published) }}</span> · <time>{{ c.created_at }}</time>
 		{% if c.edited_at %}<span class="muted small">(editado)</span>{% endif %}
 	</div>
 	<div class="prose">{{ to_html(c.body_md) }}</div>
 	{{ attachments(comment_images.get(c.id, [])) }}
 	<div class="actions">
+		{{ reaction('comment', c.id, comment_reactions.get(c.id),
+		            url_for('board.thread', thread_id=thread.id) ~ '#c' ~ c.id) }}
 		{% if may_edit(c) %}
 		<a class="linkish" href="{{ url_for('board.edit_comment', comment_id=c.id) }}">Editar</a>
 		{% endif %}

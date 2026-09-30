@@ -6,7 +6,6 @@ import sqlite3
 
 import pytest
 
-from apps.board import gitea
 from apps.board.members import may_create, may_manage
 
 
@@ -352,3 +351,82 @@ def test_erasing_a_member_lets_the_name_be_used_again(
 
     assert db.execute(
         "SELECT 1 FROM members WHERE gitea_login = 'salvador'").fetchone() is not None
+
+
+# --- the directory --------------------------------------------------------
+#
+# Miembros used to be a five-column admin table whose last column held four
+# forms, wrapping on top of each other. It is a directory now: everybody sees
+# the people, admins open a per-card block for the controls. Both halves are
+# asserted, because "the table is gone" is only an improvement if the controls
+# came with it.
+
+def test_everybody_sees_the_people(client, db, make_member, sign_in):
+    maria = make_member("maria")
+    db.execute("UPDATE members SET bio = ? WHERE id = ?",
+               ("Vivo en Ottakring.\nSegunda línea.", maria))
+    sign_in(make_member("otra"))
+
+    body = client.get("/comunidad/miembros").get_data(as_text=True)
+
+    assert "Maria" in body and "maria" in body
+    assert "Vivo en Ottakring." in body
+    assert "Segunda línea." not in body      # the first line only, as a summary
+    assert f'/comunidad/privados/con/{maria}' in body   # somewhere to write from
+
+
+def test_a_plain_member_sees_no_controls_and_no_addresses(client, make_member, sign_in):
+    make_member("maria")
+    sign_in(make_member("otra"))
+
+    body = client.get("/comunidad/miembros").get_data(as_text=True)
+
+    for control in ("Gestionar", "Suspender", "Cambiar rol", "Eliminar",
+                    "Enviar invitación", "maria@example.com"):
+        assert control not in body, control
+
+
+def test_an_admin_keeps_every_control(client, make_member, sign_in):
+    make_member("maria")
+    sign_in(make_member("admina", role="admin"))
+
+    body = client.get("/comunidad/miembros").get_data(as_text=True)
+
+    for control in ("Gestionar", "Suspender", "Cambiar rol", "Enviar invitación",
+                    "maria@example.com"):
+        assert control in body, control
+    assert "Eliminar" not in body            # erasure is the owner's alone
+
+
+def test_a_photo_shows_inside_even_when_the_page_is_not_published(
+        app, client, db, make_member, sign_in):
+    """profiles.photo serves only published pages, which is right for the open
+    internet and wrong for a directory behind the login."""
+    from apps.board import uploads
+    maria = make_member("maria")
+    stored = "foto-abcdefabcdef.png"
+    db.execute("UPDATE members SET photo_name = ?, profile_published = 0 WHERE id = ?",
+               (stored, maria))
+    with app.app_context():
+        uploads.directory().joinpath(stored).write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 32)
+
+    sign_in(make_member("otra"))
+
+    assert stored in client.get("/comunidad/miembros").get_data(as_text=True)
+    assert client.get(f"/comunidad/miembro/foto/{stored}").status_code == 200
+    # …and it is still not public, which is the whole distinction.
+    assert client.get(f"/comunidad/foto/{stored}").status_code == 404
+
+
+def test_the_members_area_photo_needs_a_session(app, client, db, make_member):
+    from apps.board import uploads
+    maria = make_member("maria")
+    stored = "foto-abcdefabcdef.png"
+    db.execute("UPDATE members SET photo_name = ? WHERE id = ?", (stored, maria))
+    with app.app_context():
+        uploads.directory().joinpath(stored).write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    response = client.get(f"/comunidad/miembro/foto/{stored}")
+
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]

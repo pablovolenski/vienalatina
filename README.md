@@ -191,6 +191,11 @@ included. Removing a post is visible to its author, quietly rewriting it is not.
 The same line runs through moderation: a moderator approves or returns a
 proposal, and never rewrites it to publish under somebody else's name.
 
+The wall carries one 👍 per member per post or comment, every name links to that
+person's page when they have published one, and *Miembros* is a directory of
+cards rather than an admin table — the controls are there, folded into each card
+for admins.
+
 Its SQLite database is the only state on the server that git does not hold.
 `scripts/backup-board.sh` takes a consistent snapshot nightly — see
 `docs/server-setup.md` §11.

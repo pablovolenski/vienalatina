@@ -92,8 +92,20 @@ def _published(login: str):
 
 # --- the public page ------------------------------------------------------
 
-@public_bp.route("/<name>")
 @public_bp.route("/<name>/")
+def show_with_slash(name: str):
+    """One canonical address per profile.
+
+    Both spellings have always worked, but `url_for` picked whichever was
+    registered last, so links inside the members area pointed at `/maria/`
+    while everything written by hand said `/maria`. Two URLs for one page is a
+    small thing until a search engine indexes both. This one sends people to
+    the other and nothing renders here.
+    """
+    return redirect(url_for("profiles_public.show", name=name), code=301)
+
+
+@public_bp.route("/<name>")
 def show(name: str):
     """404 for anything that is not a published profile.
 
@@ -131,6 +143,33 @@ def photo(stored_name: str):
     row = get_db().execute(
         """SELECT 1 FROM members
             WHERE photo_name = ? AND profile_published = 1 AND active = 1""",
+        (stored_name,),
+    ).fetchone()
+    if row is None:
+        abort(404)
+    return send_from_directory(uploads.directory(), stored_name)
+
+
+@bp.route("/miembro/foto/<stored_name>")
+@login_required
+def member_photo(stored_name: str):
+    """The same picture, for the people inside.
+
+    `profiles.photo` above serves only photos belonging to a *published* page,
+    which is right for the open internet and wrong for Miembros: somebody who
+    has not published a public page has still chosen a face for the community
+    they joined, and a directory of grey squares is not a directory. So this one
+    is behind the login and asks only that the member is active.
+
+    The profile form says so in as many words, because a picture turning up
+    somewhere its owner did not expect is exactly the surprise a profile form
+    exists to prevent.
+    """
+    if not uploads.STORED_NAME.match(stored_name):
+        abort(404)
+    row = get_db().execute(
+        """SELECT 1 FROM members
+            WHERE photo_name = ? AND active = 1 AND role != 'tombstone'""",
         (stored_name,),
     ).fetchone()
     if row is None:

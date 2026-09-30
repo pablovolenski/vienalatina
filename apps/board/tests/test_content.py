@@ -356,3 +356,76 @@ def test_the_tabs_only_offer_what_this_member_may_open(repo, client, make_member
 
     sign_in(make_member("admina", role="admin"))
     assert "Páginas" in client.get("/comunidad/contenido").get_data(as_text=True)
+
+
+# --- when the git server refuses the token -------------------------------
+#
+# This is the shape of a real outage, and it went undiagnosed for two phases.
+# `_content_request` answered 401/403 with PermissionError, for a caller
+# (tokens.py) that had been deleted — so the editor 500ed and approving a
+# submission blamed a missing photograph. Both are asserted here, from the
+# outside, because both were invisible from the inside.
+
+class RefusingRepo:
+    """Gitea with a token that has no repository scope: 403 to everything."""
+
+    class Response:
+        status_code = 403
+
+        @staticmethod
+        def json():
+            return {}
+
+    def request(self, *args, **kwargs):
+        return self.Response()
+
+
+@pytest.fixture
+def refused(monkeypatch):
+    monkeypatch.setattr(gitea, "requests", RefusingRepo())
+
+
+def test_the_editor_says_what_is_wrong_instead_of_500ing(
+        refused, client, make_member, sign_in):
+    sign_in(make_member("admina", role="admin"))
+
+    for path in ("/comunidad/contenido", "/comunidad/contenido/page"):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        body = response.get_data(as_text=True)
+        assert "CONTENT_TOKEN" in body and "repository" in body, path
+
+
+def test_a_refused_write_does_not_escape_as_a_permission_error(
+        refused, client, post, make_member, sign_in):
+    """PermissionError is an OSError, which is how it ended up being reported as
+    a missing file somewhere else entirely. It must not leave gitea.py."""
+    sign_in(make_member("admina", role="admin"))
+
+    response = post("/comunidad/contenido/post/nuevo",
+                    {"title": "Aviso", "body": "Texto.", "date": "2026-09-25"})
+
+    assert response.status_code == 400          # back to the form, not a 500
+    assert "rechazó el token" in response.get_data(as_text=True)
+
+
+def test_an_unexpected_error_renders_the_site_is_own_page(app, client, make_member,
+                                                          sign_in, monkeypatch):
+    """Flask's default 500 page is in English, has no way back, and says nothing.
+    Ours says something and is logged with the path.
+
+    PROPAGATE_EXCEPTIONS off on purpose: the fixture sets TESTING, which re-raises
+    instead of running the handler, and the handler is the subject here."""
+    app.config["PROPAGATE_EXCEPTIONS"] = False
+    sign_in(make_member("maria"))
+
+    def explode():
+        raise RuntimeError("something nobody anticipated")
+    monkeypatch.setattr("apps.board.board.get_db", explode)
+
+    response = client.get("/comunidad/muro")
+
+    assert response.status_code == 500
+    body = response.get_data(as_text=True)
+    assert "Algo falló de nuestro lado" in body
+    assert "Viena Latina" in body               # the site's chrome, not Flask's

@@ -1,0 +1,13 @@
+{# A member's name, as a link to their page when they have one.
+
+   The rule is in one place because it is easy to get wrong in two directions:
+   a name that never links makes the profiles invisible, and a name that always
+   links sends people to a 404 for everybody who has not published theirs. So
+   every screen calls this, and none of them has to remember. #}
+{% macro person(name, login=None, published=False) %}
+{%- if published and login -%}
+<a class="who-link" href="{{ url_for('profiles_public.show', name=login) }}">{{ name }}</a>
+{%- else -%}
+{{ name }}
+{%- endif -%}
+{% endmacro %}

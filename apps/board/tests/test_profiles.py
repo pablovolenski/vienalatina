@@ -215,3 +215,47 @@ def test_the_form_says_what_publishing_means(client, make_member, sign_in):
     body = client.get("/comunidad/mi-perfil").get_data(as_text=True)
     assert "cualquiera puede verla" in body
     assert "buscadores" in body
+
+
+# --- names as doors -------------------------------------------------------
+#
+# A profile nobody can reach from inside the members area is a profile nobody
+# visits. Every screen renders names through the one macro in
+# templates/_person.html, which links only when there is a page to link to —
+# the rule is in one place because both failures are silent: never linking
+# hides the profiles, always linking sends people to a 404.
+
+def test_a_name_on_the_wall_links_to_a_published_page(client, post, published, sign_in):
+    author = published("maria")
+    sign_in(author)
+    post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
+
+    for url in ("/comunidad/muro", "/comunidad/tema/1", "/comunidad/"):
+        assert 'href="/maria"' in client.get(url).get_data(as_text=True), url
+
+
+def test_a_name_without_a_page_is_not_a_link(client, post, published, sign_in):
+    author = published("maria", profile_published=0)
+    sign_in(author)
+    post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
+
+    for url in ("/comunidad/muro", "/comunidad/tema/1"):
+        body = client.get(url).get_data(as_text=True)
+        assert 'href="/maria"' not in body, url
+        assert "Maria" in body, url          # the name is still there
+
+
+def test_a_comment_and_a_private_message_link_too(client, post, published,
+                                                  make_member, sign_in):
+    maria = published("maria")
+    jose = make_member("jose")
+    sign_in(jose)
+    post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
+    sign_in(maria)
+    post("/comunidad/tema/1/comentar", {"body": "Yo también"})
+    post("/comunidad/privados/con/%d" % jose, {"body": "Hola José"})
+
+    sign_in(jose)
+    assert 'href="/maria"' in client.get("/comunidad/tema/1").get_data(as_text=True)
+    assert 'href="/maria"' in client.get(
+        f"/comunidad/privados/con/{maria}").get_data(as_text=True)

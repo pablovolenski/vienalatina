@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% from "_person.html" import person %}
 {% from "_attachments.html" import attachments %}
 {% block title %}{{ other.display_name }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>{{ other.display_name }}</h1>
+	<h1>{{ person(other.display_name, other.gitea_login, other.profile_published) }}</h1>
 	<a class="linkish" href="{{ url_for('messages.inbox') }}">Volver</a>
 </div>
 
 {% for m in messages %}
 <article class="card card--comment">
 	<div class="card__meta">
-		<span>{{ m.author }}</span> · <time>{{ m.created_at }}</time>
+		<span>{{ person(m.author, m.author_login, m.author_published) }}</span> · <time>{{ m.created_at }}</time>
 	</div>
 	<div class="prose">{{ to_html(m.body_md) }}</div>
 	{{ attachments(images.get(m.id, [])) }}

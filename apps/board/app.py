@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .db import close_db, init_db
@@ -172,6 +172,27 @@ def create_app(overrides: dict | None = None) -> Flask:
     def _too_large(_error):
         return render_template("error.html", code=413,
                                message="El mensaje es demasiado largo."), 413
+
+    @app.errorhandler(500)
+    def _crashed(error):
+        """The page an unexpected exception produces.
+
+        Without this Flask prints its own, in English, with no way back into the
+        site — which is what a stray PermissionError from the git client looked
+        like for two phases: a white page reading "Internal Server Error", giving
+        no hint that the cause was a token scope. The traceback goes to the log
+        with the path beside it, and the member gets the site's own page.
+
+        `original_exception` is what Flask hands the handler; logging it here
+        rather than relying on the default keeps the request path in the same
+        line, which is the difference between a searchable log and a pile of
+        tracebacks.
+        """
+        app.logger.error("Unhandled error at %s: %s", request.path,
+                         getattr(error, "original_exception", error), exc_info=True)
+        return render_template(
+            "error.html", code=500,
+            message="Algo falló de nuestro lado. Ya ha quedado anotado."), 500
 
     init_db(app)
     return app

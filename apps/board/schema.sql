@@ -265,3 +265,30 @@ CREATE INDEX IF NOT EXISTS submissions_queue
   ON submissions(created_at) WHERE state = 'pending';
 CREATE INDEX IF NOT EXISTS submissions_author
   ON submissions(author_id, created_at);
+
+-- A 👍 on a thread or a comment.
+--
+-- Shaped like `attachments`: two nullable parents and a CHECK that exactly one
+-- is set, so a reaction cannot belong to both or to neither, and both parents
+-- keep real foreign keys.
+--
+-- The uniqueness rule — one reaction per member per thing — cannot be a plain
+-- UNIQUE(member_id, thread_id, comment_id), because SQLite treats NULLs as
+-- distinct and every comment reaction would have a NULL thread_id, making every
+-- row unique by accident. Two partial indexes say what is meant instead.
+--
+-- There is one kind of reaction and no notifications. A count and a toggle is
+-- the whole feature: anything more is a second inbox nobody asked for.
+CREATE TABLE IF NOT EXISTS reactions (
+  id          INTEGER PRIMARY KEY,
+  thread_id   INTEGER REFERENCES threads(id),
+  comment_id  INTEGER REFERENCES comments(id),
+  member_id   INTEGER NOT NULL REFERENCES members(id),
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  CHECK ((thread_id IS NOT NULL) + (comment_id IS NOT NULL) = 1)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS reactions_one_per_thread
+  ON reactions(member_id, thread_id) WHERE thread_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS reactions_one_per_comment
+  ON reactions(member_id, comment_id) WHERE comment_id IS NOT NULL;
