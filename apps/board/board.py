@@ -93,9 +93,14 @@ def _comment_or_404(comment_id: int):
     return row
 
 
-@bp.route("/")
+@bp.route("/muro")
 @login_required
 def threads():
+    """The wall. It used to be the root of the members area, and `Inicio` is
+    there now: the first thing after signing in should say what has happened
+    everywhere, not drop somebody into one of the five places it could have
+    happened. Thread URLs are untouched, so nothing anyone has linked to moves.
+    """
     page = max(1, request.args.get("page", 1, type=int))
     rows = get_db().execute(
         """SELECT t.*, m.display_name AS author,

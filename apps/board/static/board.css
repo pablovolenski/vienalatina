@@ -324,3 +324,112 @@ input[type="file"] {
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border-light);
 }
+
+/* One picture rather than a gallery: a proposal carries at most a single
+   image, and it is shown at reading size while it is being reviewed. */
+.attachment {
+	display: block;
+	margin: 0.75rem 0;
+	max-height: 320px;
+	max-width: 100%;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border-light);
+}
+
+/* --- the corner account menu ----------------------------------------- */
+/*
+ * A <details> element, because the Content-Security-Policy has no
+ * 'unsafe-inline' and a menu that needs an onclick="" attribute is a menu the
+ * browser silently refuses to open. The summary is the whole control; the
+ * panel is positioned relative to it.
+ */
+.account { position: relative; }
+.account__name {
+  cursor: pointer;
+  list-style: none;                /* Firefox's default marker */
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+}
+.account__name::-webkit-details-marker { display: none; }
+.account__name::after { content: " ▾"; color: var(--subtle); }
+.account[open] .account__name { color: var(--brand); }
+.account__menu {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  min-width: 13rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+.account__menu a,
+.account__menu button {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  text-decoration: none;
+  color: var(--text);
+}
+.account__menu a:hover,
+.account__menu button:hover { background: var(--surface-soft); }
+.account__menu form { margin: 0; }
+
+/* --- Inicio's panels -------------------------------------------------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+/* Anything the member is expected to act on, rather than read. */
+.panel--attention { border-color: var(--brand); background: var(--brand-softer); }
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.panel__head h2 { margin: 0; font-size: 1.05rem; }
+.panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.panel__row:last-child { border-bottom: none; padding-bottom: 0; }
+
+/* --- where a proposal has got to -------------------------------------- */
+
+.tag--pending  { background: var(--surface-soft); color: var(--muted); }
+.tag--approved { background: var(--brand-soft);   color: var(--brand-dark); }
+.tag--rejected { background: #f7dcdc;             color: var(--danger); }
+
+/* A role picker sitting in a table cell beside the other row actions. */
+.inline-form { display: flex; align-items: center; gap: 0.35rem; margin: 0; }
+.inline-form select { padding: 0.2rem 0.35rem; font-size: 0.85rem; }
+
+/* Present for a screen reader, absent for everybody else — a <select> in a
+   table of actions has no room for a visible label but still needs one. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS members (
   bio           TEXT,
   links         TEXT,          -- JSON array of {label, url}
   photo_name    TEXT,
-  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'user', 'tombstone')),
+  -- 'moderator' arrived with migration 4, which had to rebuild this table:
+  -- SQLite has no DROP CONSTRAINT, so widening a CHECK is never an ALTER.
+  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'moderator',
+                                                 'user', 'tombstone')),
   active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   created_by    INTEGER REFERENCES members(id),
@@ -216,3 +219,49 @@ CREATE TABLE IF NOT EXISTS invites (
 
 CREATE INDEX IF NOT EXISTS invites_open
   ON invites(member_id, purpose) WHERE used_at IS NULL;
+
+-- Public posts a member has proposed, waiting for a moderator.
+--
+-- A draft in SQLite, deliberately not a commit. A commit to the site
+-- repository *is* publication: Gitea's webhook fires Woodpecker, which
+-- translates, builds and deploys within minutes. So nothing written here
+-- reaches git until somebody with the moderator role approves it, and
+-- approval is the only code path that calls gitea.write_file for a
+-- submission.
+--
+-- Moderators and admins do not use this table at all: they write through the
+-- editor in content.py and their post is committed as they save it. The queue
+-- exists for members, which is the whole of the curation policy — fewer posts,
+-- each one read by somebody before the public sees it.
+--
+-- The picture is a column here rather than a row in `attachments`, following
+-- members.photo_name: a submission carries at most one, and giving
+-- `attachments` a fourth possible parent would mean rebuilding that table
+-- again for nothing. It lives in /data/uploads like every other private
+-- picture, and is committed to the repository only on approval.
+CREATE TABLE IF NOT EXISTS submissions (
+  id             INTEGER PRIMARY KEY,
+  author_id      INTEGER NOT NULL REFERENCES members(id),
+  title          TEXT    NOT NULL,
+  body_md        TEXT    NOT NULL,
+  description    TEXT    NOT NULL DEFAULT '',
+  categories     TEXT    NOT NULL DEFAULT '',   -- comma-separated, as content_cache
+  photo_name     TEXT,
+  state          TEXT    NOT NULL DEFAULT 'pending'
+                 CHECK (state IN ('pending', 'approved', 'rejected')),
+  -- Why it was rejected, in the moderator's words, shown to the author. A
+  -- queue that swallows work without saying why is a queue people stop using.
+  note           TEXT,
+  reviewed_by    INTEGER REFERENCES members(id),
+  reviewed_at    TEXT,
+  -- Where it landed in the repository, so the author can be shown that it is
+  -- live rather than merely "approved".
+  published_path TEXT,
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at     TEXT
+);
+
+CREATE INDEX IF NOT EXISTS submissions_queue
+  ON submissions(created_at) WHERE state = 'pending';
+CREATE INDEX IF NOT EXISTS submissions_author
+  ON submissions(author_id, created_at);

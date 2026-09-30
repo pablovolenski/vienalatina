@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Mensajes{% endblock %}
+{% block title %}Muro{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Mensajes</h1>
+	<h1>Muro</h1>
 	<a class="btn" href="{{ url_for('board.new_thread') }}">Escribir</a>
 </div>
 
 {% if not threads %}
 <article class="card">
-	<p class="muted">Todavía no hay mensajes. Escribe el primero.</p>
+	<p class="muted">Todavía no hay nada en el muro. Escribe el primero.</p>
 </article>
 {% endif %}
 

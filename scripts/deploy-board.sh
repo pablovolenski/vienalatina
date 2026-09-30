@@ -11,7 +11,7 @@
 # This script is the whole update, in the order that matters:
 #
 #   git pull                                  # done by you, first
-#   sudo bash scripts/deploy-board.sh
+#   sudo bash scripts/deploy-board.sh         # backs up, builds, restarts
 #
 # It never touches /srv/board/.env. That file holds the secrets and exists only
 # on the server; the repository has .env.example instead, and the two drifting
@@ -73,13 +73,27 @@ if [ -n "$blank" ]; then
   echo
 fi
 
+# A backup before every restart, not only before the ones known to migrate.
+#
+# The app applies numbered migrations at start-up (apps/board/migrations.py), and
+# two of them rebuild a table in place: `attachments`, and `members` — the table
+# your own account is in. Neither can be undone once it has run. Remembering to
+# back up by hand works right up until the deploy that mattered, so it happens
+# here. Skipped with BOARD_SKIP_BACKUP=1 if there is no database yet.
+if [ -z "${BOARD_SKIP_BACKUP:-}" ] && [ -f "${BOARD_DB:-$TARGET/data/board.db}" ]; then
+  echo "==> Backing up first (migrations are irreversible in place)"
+  bash "$REPO/scripts/backup-board.sh"
+fi
+
 echo "==> Restarting"
 cd "$TARGET"
 docker compose up -d --force-recreate
 
-# The schema is applied at start-up with CREATE TABLE IF NOT EXISTS, so a new
-# table arrives with the new code. If the container is not up a few seconds
-# later it died during that, and the log says why.
+# The schema is applied at start-up with CREATE TABLE IF NOT EXISTS and then the
+# numbered migrations run, so a new table and a changed one both arrive with the
+# new code. If the container is not up a few seconds later it died during that,
+# and the log says why — the log line naming each migration applied is the one
+# to read.
 sleep 3
 docker compose ps
 echo

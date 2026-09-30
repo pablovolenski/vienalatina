@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Gestión{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Gestión</h1>
+</div>
+
+<p class="muted">
+	Lo que sólo hace la administración. Todo lo demás — el muro, los privados,
+	las publicaciones — está en las otras secciones y funciona igual para ti que
+	para cualquier miembro.
+</p>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Miembros</h2>
+		<a class="linkish" href="{{ url_for('members.index') }}">Abrir</a>
+	</div>
+	<p class="panel__row">
+		{{ counts.members }} en total · {{ counts.moderators }} pueden moderar
+		{% if counts.suspended %} · {{ counts.suspended }} suspendido{{ '' if counts.suspended == 1 else 's' }}{% endif %}
+	</p>
+	<p class="muted small">
+		Dar de alta, invitar de nuevo, cambiar el rol, suspender y eliminar.
+	</p>
+</section>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Páginas del sitio</h2>
+		<a class="linkish" href="{{ url_for('content.index', collection='page') }}">Abrir</a>
+	</div>
+	<p class="muted small">
+		Acerca de, contacto y las demás páginas fijas de vienalatina.com. Las
+		publicaciones no están aquí: eso es
+		<a href="{{ url_for('submissions.index') }}">Publicaciones</a>, que los
+		moderadores comparten contigo.
+	</p>
+</section>
+
+{% if counts.pending %}
+<section class="panel panel--attention">
+	<div class="panel__head">
+		<h2>Pendiente de revisar</h2>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">Ver</a>
+	</div>
+	<p class="panel__row">{{ counts.pending }} propuesta{{ '' if counts.pending == 1 else 's' }} esperando a un moderador.</p>
+</section>
+{% endif %}
+{% endblock %}

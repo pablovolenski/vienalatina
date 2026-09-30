@@ -1,11 +1,17 @@
 """Members and roles.
 
-Three roles, and the rules between them are short enough to state in full:
+Four roles, and the rules between them are short enough to state in full:
 
 * exactly one **owner**, who creates and removes admins and can hand ownership
   on; nobody can deactivate or demote them, including themselves
-* **admins** create and deactivate users, and moderate the board
-* **users** post, comment, and edit or delete their own writing
+* **admins** create, deactivate and promote members, moderate the board, and
+  publish and edit the static pages of the public site
+* **moderators** approve or reject what members propose for the public site,
+  and publish their own posts without waiting for anybody. They have no power
+  over people: moderating content is not the same authority, and giving one the
+  other is how a curation role turns into a second admin by accident
+* **members** post on the wall, write privately, keep a public profile, and
+  propose posts for the public site
 
 The predicates live as plain functions at the top of this module so they can be
 tested without a request, a session or a browser — and so that reading them
@@ -31,20 +37,33 @@ bp = Blueprint("members", __name__)
 # edges. Checked here so a bad name fails before we create anything anywhere.
 LOGIN_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]{0,38}[A-Za-z0-9])?$")
 
-ROLE_LABELS = {"owner": "Responsable", "admin": "Administrador", "user": "Usuario"}
+# "Miembro" rather than "Usuario" on the screens, while the stored value stays
+# `user`: renaming the value would mean a migration and rewriting every role
+# check for a word nobody types.
+ROLE_LABELS = {"owner": "Responsable", "admin": "Administrador",
+               "moderator": "Moderador", "user": "Miembro"}
+
+# Who may be given which role on the Miembros screen, most trusted first, so
+# the form and the predicates below cannot disagree about the list.
+ASSIGNABLE_ROLES = ("admin", "moderator", "user")
 
 
 def may_create(actor_role: str, target_role: str) -> bool:
     """Who may bring whom in. Admins cannot mint more admins."""
     if target_role == "admin":
         return actor_role == "owner"
-    if target_role == "user":
+    if target_role in ("moderator", "user"):
         return actor_role in ("owner", "admin")
     return False
 
 
 def may_manage(actor_role: str, target_role: str) -> bool:
-    """Deactivate, reactivate, or change the role of an existing member."""
+    """Deactivate, reactivate, or change the role of an existing member.
+
+    A moderator appears nowhere in this function, deliberately: they approve
+    posts and nothing else. Being trusted to judge what the public reads is not
+    the same as being trusted to suspend the person who wrote it.
+    """
     if target_role == "owner":
         return False  # the owner is out of reach of everyone, themselves included
     if target_role == "admin":
@@ -102,7 +121,17 @@ REMOVED_ON_ERASE = {
     ("messages", "author_id"),
     ("blocks", "blocker_id"),
     ("blocks", "blocked_id"),
+    # A submission is private writing until a moderator approves it, so it goes
+    # with the rest of the private writing. The remainder of an approved one is
+    # the published post in the site repository, which already carries this
+    # person's name in the commit and is not ours to rewrite from here.
+    ("submissions", "author_id"),
 }
+
+# Who reviewed somebody else's submission is a fact about that submission, not
+# personal data of the reviewer, so it survives their erasure with the name
+# removed rather than taking the submission down with it.
+CLEARED_ON_ERASE_AFTER = {("submissions", "reviewed_by")}
 
 
 def _conversations_of(member_id: int) -> str:
@@ -150,6 +179,14 @@ def erase_member(db: sqlite3.Connection, member_id: int) -> list[str]:
         )
         db.execute("DELETE FROM blocks WHERE blocker_id = ? OR blocked_id = ?",
                    (member_id, member_id))
+        orphaned += [row["photo_name"] for row in db.execute(
+            "SELECT photo_name FROM submissions WHERE author_id = ? AND photo_name IS NOT NULL",
+            (member_id,),
+        )]
+        db.execute("DELETE FROM submissions WHERE author_id = ?", (member_id,))
+        for table, column in sorted(CLEARED_ON_ERASE_AFTER):
+            db.execute(f"UPDATE {table} SET {column} = NULL WHERE {column} = ?",
+                       (member_id,))
         # Table and column names come from the module constants above, never
         # from a request, so the interpolation is not a place user input can
         # reach.
@@ -184,7 +221,8 @@ def index():
              FROM members m
              LEFT JOIN members c ON c.id = m.created_by
             WHERE m.role != 'tombstone'
-            ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END,
+            ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1
+                                 WHEN 'moderator' THEN 2 ELSE 3 END,
                      m.display_name COLLATE NOCASE"""
     ).fetchall()
     return render_template("members.html", members=rows, labels=ROLE_LABELS)
@@ -319,11 +357,23 @@ def set_active(member_id: int):
 
 
 @bp.route("/miembros/<int:member_id>/rol", methods=["POST"])
-@owner_required
+@admin_required
 def set_role(member_id: int):
+    """Admin-level rather than owner-level, now that there is a role between
+    the two worth handing out routinely.
+
+    Two predicates, both of them: `may_manage` for reaching this person at all,
+    and `may_create` for the role being given — you may only grant a role you
+    could have created somebody with, which keeps "admins cannot mint admins"
+    true here as well without restating it.
+    """
     target = _load(member_id)
     role = request.form.get("role", "")
-    if role not in ("admin", "user") or not may_manage(g.member["role"], target["role"]):
+    if role not in ASSIGNABLE_ROLES:
+        abort(403)
+    if not may_manage(g.member["role"], target["role"]):
+        abort(403)
+    if not may_create(g.member["role"], role):
         abort(403)
     get_db().execute("UPDATE members SET role = ? WHERE id = ?", (role, member_id))
     flash(f"{target['display_name']} ahora es {ROLE_LABELS[role].lower()}.", "ok")

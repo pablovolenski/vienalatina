@@ -48,13 +48,26 @@
 					</form>
 					{% endif %}
 
-					{% if is_owner %}
-						<form method="post" action="{{ url_for('members.set_role', member_id=m.id) }}">
+					{# A toggle worked while there were two roles. With three it has to
+					   be a choice, and the options are the ones this person may
+					   actually grant — the handler checks the same thing. #}
+					{% if is_owner or m.role != 'admin' %}
+						<form class="inline-form" method="post"
+						      action="{{ url_for('members.set_role', member_id=m.id) }}">
 							<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-							<input type="hidden" name="role" value="{{ 'user' if m.role == 'admin' else 'admin' }}">
-							<button class="linkish" type="submit">{{ 'Hacer usuario' if m.role == 'admin' else 'Hacer administrador' }}</button>
+							<label class="sr-only" for="role-{{ m.id }}">Rol de {{ m.display_name }}</label>
+							<select id="role-{{ m.id }}" name="role">
+								<option value="user" {{ 'selected' if m.role == 'user' }}>Miembro</option>
+								<option value="moderator" {{ 'selected' if m.role == 'moderator' }}>Moderador</option>
+								{% if is_owner %}
+								<option value="admin" {{ 'selected' if m.role == 'admin' }}>Administrador</option>
+								{% endif %}
+							</select>
+							<button class="linkish" type="submit">Cambiar rol</button>
 						</form>
+					{% endif %}
 
+					{% if is_owner %}
 						{% if m.role == 'admin' and m.active %}
 						<form method="post" action="{{ url_for('members.transfer', member_id=m.id) }}"
 						      data-confirm="Vas a dejar de ser el responsable y {{ m.display_name }} pasará a serlo. ¿Seguro?">

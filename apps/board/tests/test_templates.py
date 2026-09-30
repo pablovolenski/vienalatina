@@ -21,8 +21,14 @@ def test_no_inline_event_handlers(template):
     """`default-src 'self'` with no 'unsafe-inline' means the browser ignores
     an onsubmit="" attribute without complaining. A delete button written that
     way loses its confirmation dialog and nobody finds out until something is
-    deleted by accident. Use data-confirm, handled in static/board.js."""
-    found = INLINE_HANDLER.findall(template.read_text(encoding="utf-8"))
+    deleted by accident. Use data-confirm, handled in static/board.js.
+
+    Comments stripped first, like the two guards below: base.html explains in a
+    Jinja comment why its account menu is a <details> rather than a button with
+    an onclick, and a guard that fails on its own reasoning gets deleted rather
+    than obeyed."""
+    found = INLINE_HANDLER.findall(
+        JINJA_COMMENT.sub("", template.read_text(encoding="utf-8")))
     assert not found, f"{template.name} has inline handler(s): {found}"
 
 

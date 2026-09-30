@@ -29,15 +29,16 @@
 	</p>
 	{% endif %}
 
-	{% if can_make_admin %}
 	<label for="role">Rol</label>
 	<select id="role" name="role">
-		<option value="user">Usuario</option>
-		<option value="admin">Administrador</option>
+		<option value="user">Miembro — escribe en el muro y propone publicaciones</option>
+		<option value="moderator">Moderador — además aprueba lo que proponen</option>
+		{% if can_make_admin %}
+		<option value="admin">Administrador — además gestiona miembros y páginas</option>
+		{% endif %}
 	</select>
-	{% else %}
-	<input type="hidden" name="role" value="user">
-	<p class="muted small">Los administradores sólo pueden dar de alta usuarios.</p>
+	{% if not can_make_admin %}
+	<p class="muted small">Sólo el responsable puede nombrar administradores.</p>
 	{% endif %}
 
 	<div class="actions">

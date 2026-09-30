@@ -122,7 +122,7 @@ def inbox():
     people = get_db().execute(
         """SELECT m.id, m.display_name FROM members m
             WHERE m.id != :me AND m.active = 1
-              AND m.role IN ('owner', 'admin', 'user')
+              AND m.role != 'tombstone'
               AND m.gitea_login != :ghost
               AND NOT EXISTS (SELECT 1 FROM blocks
                                WHERE (blocker_id = :me AND blocked_id = m.id)
@@ -165,7 +165,7 @@ def talk(member_id: int):
         abort(400)
     other = get_db().execute(
         """SELECT * FROM members
-            WHERE id = ? AND active = 1 AND role IN ('owner', 'admin', 'user')""",
+            WHERE id = ? AND active = 1 AND role != 'tombstone'""",
         (member_id,),
     ).fetchone()
     if other is None:

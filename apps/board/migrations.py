@@ -24,11 +24,30 @@ again, so a correction is a new step.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 
 
 def _columns(db: sqlite3.Connection, table: str) -> set[str]:
     return {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+
+
+def _role_check(db: sqlite3.Connection) -> str:
+    """The CREATE TABLE text of `members` with its comments stripped.
+
+    A CHECK constraint is the one piece of a table no pragma reports, so the
+    only way to ask what roles are allowed is to read the statement back — and
+    sqlite_master stores that statement *verbatim*, comments included. schema.sql
+    explains above the column why 'moderator' needed a rebuild, and searching the
+    raw text would find that sentence and conclude the work was already done.
+    Which is exactly what happened, and what the start-up test caught.
+    """
+    row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'members'"
+    ).fetchone()
+    if row is None:
+        return ""
+    return re.sub(r"--[^\n]*", "", row[0])
 
 
 def _attachments_accept_messages(db: sqlite3.Connection) -> None:
@@ -122,12 +141,78 @@ def _members_get_a_public_page(db: sqlite3.Connection) -> None:
             db.execute(f"ALTER TABLE members ADD COLUMN {column} {definition}")
 
 
+
+def _members_can_moderate(db: sqlite3.Connection) -> None:
+    """Add the `moderator` role, which means rebuilding this table.
+
+    `role` carries `CHECK (role IN ('owner','admin','user','tombstone'))`, and
+    SQLite has no DROP CONSTRAINT, so widening the list is not an ALTER. This is
+    the same documented procedure as step 1 — new table, copy, drop, rename —
+    but on a table eight others point at, which is what makes it worth spelling
+    out:
+
+    * `members` is referenced by threads, comments, conversation_members,
+      messages, blocks, attachments, invites, submissions and by itself
+      (`created_by`). Those clauses say `REFERENCES members`, resolved by name
+      at runtime rather than bound to the table's identity, so after the rename
+      they point at the new table with nothing to update.
+    * The rename only rewrites clauses that name `members_new`, and nothing
+      does, so no other table's schema is touched.
+    * `migrations.apply()` turns foreign keys off *outside* the transaction,
+      which is the only place it works — see the comment there.
+    * The partial unique index enforcing one owner is not carried over by the
+      copy and has to be recreated, or the database quietly loses the rule that
+      stops a second owner existing.
+
+    Checked afterwards with `PRAGMA foreign_key_check`, and by the test that
+    builds a pre-migration database with a row in every referencing table.
+    """
+    if "moderator" in _role_check(db):
+        return
+
+    db.execute("""
+        CREATE TABLE members_new (
+          id            INTEGER PRIMARY KEY,
+          gitea_login   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+          display_name  TEXT    NOT NULL DEFAULT '',
+          email         TEXT    NOT NULL DEFAULT '',
+          password_hash TEXT,
+          profile_published INTEGER NOT NULL DEFAULT 0 CHECK (profile_published IN (0, 1)),
+          bio           TEXT,
+          links         TEXT,
+          photo_name    TEXT,
+          role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'moderator',
+                                                         'user', 'tombstone')),
+          active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+          created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+          created_by    INTEGER REFERENCES members(id),
+          last_seen_at  TEXT
+        )""")
+    db.execute("""
+        INSERT INTO members_new
+            (id, gitea_login, display_name, email, password_hash,
+             profile_published, bio, links, photo_name,
+             role, active, created_at, created_by, last_seen_at)
+        SELECT id, gitea_login, display_name, email, password_hash,
+               profile_published, bio, links, photo_name,
+               role, active, created_at, created_by, last_seen_at
+          FROM members""")
+    db.execute("DROP TABLE members")
+    db.execute("ALTER TABLE members_new RENAME TO members")
+    db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS members_one_owner
+                    ON members(role) WHERE role = 'owner'""")
+
+    broken = db.execute("PRAGMA foreign_key_check").fetchall()
+    if broken:
+        raise RuntimeError(f"migration left dangling references: {broken}")
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
     (1, "attachments can belong to a private message", _attachments_accept_messages),
     (2, "members keep their own password", _members_own_their_passwords),
     (3, "members can have a public page", _members_get_a_public_page),
+    (4, "members can be moderators", _members_can_moderate),
 ]
 
 

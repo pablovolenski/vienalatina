@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar propuesta' if item else 'Proponer una publicación' }}{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>{{ 'Editar propuesta' if item else 'Proponer una publicación' }}</h1>
+</div>
+
+<p class="muted">
+	Esto no es el muro: va a vienalatina.com, en español, y se traduce solo al
+	alemán y al portugués. Un moderador lo lee antes de que salga.
+</p>
+
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('submissions.edit', submission_id=item.id) if item else url_for('submissions.propose') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+	<label for="title">Título</label>
+	<input id="title" name="title" type="text" required maxlength="140"
+	       value="{{ fields.title if fields else '' }}">
+
+	<label for="description">Resumen <span class="muted small">(opcional)</span></label>
+	<input id="description" name="description" type="text" maxlength="300"
+	       value="{{ fields.description if fields else '' }}">
+	<p class="muted small">Una o dos líneas: es lo que se ve en los listados.</p>
+
+	<fieldset class="choices">
+		<legend>Categorías</legend>
+		{% for category in categories %}
+		<label class="choice">
+			<input type="checkbox" name="categories" value="{{ category }}"
+			       {{ 'checked' if fields and category in fields.categories }}>
+			{{ category }}
+		</label>
+		{% endfor %}
+	</fieldset>
+
+	<label for="body">Texto</label>
+	<textarea id="body" name="body" rows="16" required
+	          placeholder="Se puede usar Markdown: **negrita**, ## títulos, listas, enlaces.">{{ fields.body if fields else '' }}</textarea>
+
+	<label for="picture">Imagen <span class="muted small">(opcional)</span></label>
+	<input id="picture" name="picture" type="file" accept="image/*">
+	{% if item and item.photo_name %}
+	<p class="muted small">
+		Ya tiene una imagen. Si eliges otra, la sustituye.
+	</p>
+	{% endif %}
+
+	<div class="actions">
+		<button class="btn" type="submit">{{ 'Guardar' if item else 'Enviar a revisión' }}</button>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">Cancelar</a>
+	</div>
+</form>
+{% endblock %}

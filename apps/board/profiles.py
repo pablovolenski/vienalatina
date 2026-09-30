@@ -85,7 +85,7 @@ def _published(login: str):
         """SELECT * FROM members
             WHERE gitea_login = ? COLLATE NOCASE
               AND profile_published = 1 AND active = 1
-              AND role IN ('owner', 'admin', 'user')""",
+              AND role != 'tombstone'""",
         (login,),
     ).fetchone()
 

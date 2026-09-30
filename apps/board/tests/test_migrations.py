@@ -19,7 +19,37 @@ from apps.board import migrations
 # here as a literal rather than imported: the point is to reproduce what is on
 # the server, and schema.sql has moved on.
 OLD_SCHEMA = """
-CREATE TABLE members (id INTEGER PRIMARY KEY, gitea_login TEXT);
+-- `members` as it shipped, because step 4 rebuilds it and a stub with two
+-- columns would prove nothing about copying the other eleven.
+CREATE TABLE members (
+  id            INTEGER PRIMARY KEY,
+  gitea_login   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+  display_name  TEXT    NOT NULL DEFAULT '',
+  email         TEXT    NOT NULL DEFAULT '',
+  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'user', 'tombstone')),
+  active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  created_by    INTEGER REFERENCES members(id),
+  last_seen_at  TEXT
+);
+CREATE UNIQUE INDEX members_one_owner ON members(role) WHERE role = 'owner';
+-- Three of the eight tables that point at members(id), so the rebuild in step
+-- 4 is checked with real references across it rather than on its own.
+CREATE TABLE conversation_members (
+  conversation_id INTEGER NOT NULL,
+  member_id       INTEGER NOT NULL REFERENCES members(id),
+  PRIMARY KEY (conversation_id, member_id)
+);
+CREATE TABLE blocks (
+  blocker_id INTEGER NOT NULL REFERENCES members(id),
+  blocked_id INTEGER NOT NULL REFERENCES members(id),
+  PRIMARY KEY (blocker_id, blocked_id)
+);
+CREATE TABLE invites (
+  id        INTEGER PRIMARY KEY,
+  member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  purpose   TEXT NOT NULL
+);
 CREATE TABLE threads (id INTEGER PRIMARY KEY, deleted_at TEXT);
 CREATE TABLE comments (id INTEGER PRIMARY KEY, deleted_at TEXT);
 CREATE TABLE messages (id INTEGER PRIMARY KEY, deleted_at TEXT);
@@ -48,7 +78,13 @@ def old_db(tmp_path):
     # and fails on the server.
     db.execute("PRAGMA foreign_keys = ON")
     db.executescript(OLD_SCHEMA)
-    db.execute("INSERT INTO members (id, gitea_login) VALUES (1, 'salvador')")
+    db.execute("INSERT INTO members (id, gitea_login, display_name, email, role) "
+               "VALUES (1, 'salvador', 'Salvador', 's@example.com', 'user')")
+    db.execute("INSERT INTO members (id, gitea_login, display_name, role, created_by) "
+               "VALUES (2, 'pablo', 'Pablo', 'owner', 1)")
+    db.execute("INSERT INTO conversation_members VALUES (1, 1)")
+    db.execute("INSERT INTO blocks VALUES (1, 2)")
+    db.execute("INSERT INTO invites (member_id, purpose) VALUES (1, 'invite')")
     db.execute("INSERT INTO threads (id) VALUES (7)")
     db.execute("INSERT INTO comments (id) VALUES (9)")
     db.execute(
@@ -126,6 +162,72 @@ def test_running_it_twice_changes_nothing(old_db):
         number for number, _, _ in migrations.STEPS)
 
 
+# --- step 4: the moderator role ------------------------------------------
+
+def test_the_role_check_refuses_a_moderator_beforehand(old_db):
+    """The premise, like the CHECK test above. SQLite has no DROP CONSTRAINT,
+    so if this ever stops raising, step 4 can shrink to an ALTER."""
+    with pytest.raises(sqlite3.IntegrityError):
+        old_db.execute("INSERT INTO members (gitea_login, display_name, role) "
+                       "VALUES ('luisa', 'Luisa', 'moderator')")
+
+
+def test_a_moderator_is_accepted_afterwards(old_db):
+    migrations.apply(old_db)
+    old_db.execute("INSERT INTO members (gitea_login, display_name, role) "
+                   "VALUES ('luisa', 'Luisa', 'moderator')")
+    assert old_db.execute(
+        "SELECT role FROM members WHERE gitea_login = 'luisa'").fetchone()["role"] == "moderator"
+
+
+def test_every_member_column_survives_the_rebuild(old_db):
+    """Thirteen columns copied by name. A typo in that list is a member losing
+    their email address, or their password, or their public page."""
+    before = old_db.execute(
+        "SELECT id, gitea_login, display_name, email, role, active, created_by "
+        "FROM members ORDER BY id").fetchall()
+
+    migrations.apply(old_db)
+
+    after = old_db.execute(
+        "SELECT id, gitea_login, display_name, email, role, active, created_by "
+        "FROM members ORDER BY id").fetchall()
+    assert [tuple(row) for row in after] == [tuple(row) for row in before]
+
+
+def test_the_one_owner_rule_survives_the_rebuild(old_db):
+    """The partial unique index is not copied with the rows, so it has to be
+    recreated by hand. Without it the database silently stops being the thing
+    that guarantees one owner, and a bug in a handler becomes two owners."""
+    migrations.apply(old_db)
+    with pytest.raises(sqlite3.IntegrityError):
+        old_db.execute("INSERT INTO members (gitea_login, display_name, role) "
+                       "VALUES ('otro', 'Otro', 'owner')")
+
+
+def test_nothing_pointing_at_a_member_is_left_dangling(old_db):
+    """Dropping and renaming `members` with foreign keys off is the only way to
+    do this, and it is also the way to quietly orphan every row in the eight
+    tables that reference it."""
+    migrations.apply(old_db)
+
+    assert old_db.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert old_db.execute("SELECT COUNT(*) FROM conversation_members").fetchone()[0] == 1
+    assert old_db.execute("SELECT COUNT(*) FROM blocks").fetchone()[0] == 1
+    assert old_db.execute("SELECT COUNT(*) FROM invites").fetchone()[0] == 1
+    # And the references still bite: foreign keys are back on after apply().
+    with pytest.raises(sqlite3.IntegrityError):
+        old_db.execute("INSERT INTO blocks VALUES (1, 999)")
+
+
+def test_foreign_keys_are_back_on_afterwards(old_db):
+    """apply() switches them off outside the transaction and restores them in a
+    finally. A migration that leaves them off makes the whole process run
+    without enforcement until the container next restarts."""
+    migrations.apply(old_db)
+    assert old_db.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+
+
 def test_a_fresh_database_skips_it(app, db):
     """schema.sql already builds the new shape, so the step must find its work
     done and return quietly rather than rebuilding a table it just created."""
@@ -162,6 +264,12 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
         "  CHECK ((thread_id IS NULL) <> (comment_id IS NULL))")
     # …and predates members owning their own passwords.
     old_sql = old_sql.replace("  password_hash TEXT,\n", "")
+    # …and predates the moderator role, so step 4 has a CHECK to widen here too.
+    old_sql = old_sql.replace(
+        "  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'moderator',\n"
+        "                                                 'user', 'tombstone')),",
+        "  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'user', 'tombstone')),")
+    assert "CHECK (role IN ('owner', 'admin', 'user', 'tombstone'))" in old_sql
     old_sql += """
     CREATE TABLE gitea_tokens (
       member_id INTEGER PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
@@ -193,6 +301,14 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
     kept = db.execute("SELECT stored_name, thread_id, bytes FROM attachments").fetchone()
     assert (kept["stored_name"], kept["thread_id"], kept["bytes"]) == (
         "foto-abc123abc123.jpg", 1, 2048)
+
+    # Step 4: the role list is wider, the one-owner rule survived the rebuild,
+    # and nothing that pointed at a member row lost its target.
+    db.execute("INSERT INTO members (gitea_login, display_name, role) "
+               "VALUES ('luisa', 'Luisa', 'moderator')")
+    assert db.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert db.execute(
+        "SELECT name FROM sqlite_master WHERE name = 'members_one_owner'").fetchone()
 
     # And starting again changes nothing, because a container restarts.
     create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",

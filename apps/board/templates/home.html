@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Inicio{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Hola, {{ g.member.display_name }}</h1>
+	<span class="muted small">{{ people }} miembro{{ '' if people == 1 else 's' }} activo{{ '' if people == 1 else 's' }}</span>
+</div>
+
+{# Panels in the order things get acted on: what is waiting for me, then what
+   is waiting for everybody, then what I have sent somewhere. #}
+{% if queue %}
+<section class="panel panel--attention">
+	<div class="panel__head">
+		<h2>Para revisar</h2>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">Ver la cola</a>
+	</div>
+	{% for item in queue %}
+	<p class="panel__row">
+		<a href="{{ url_for('submissions.show', submission_id=item.id) }}">{{ item.title }}</a>
+		<span class="muted small">{{ item.author }} · {{ item.created_at }}</span>
+	</p>
+	{% endfor %}
+</section>
+{% endif %}
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Privados</h2>
+		<a class="linkish" href="{{ url_for('messages.inbox') }}">Todos</a>
+	</div>
+	{% if not conversations %}
+	<p class="muted">Todavía no tienes conversaciones. Escribe a alguien desde Privados.</p>
+	{% endif %}
+	{% for c in conversations %}
+	<p class="panel__row">
+		<a href="{{ url_for('messages.talk', member_id=c.other_id) }}">{{ c.other_name }}</a>
+		{% if c.unread %}<span class="tag">{{ c.unread }}</span>{% endif %}
+		{% if c.last_at %}<span class="muted small">{{ c.last_at }}</span>{% endif %}
+	</p>
+	{% endfor %}
+</section>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Muro</h2>
+		<a class="linkish" href="{{ url_for('board.threads') }}">Todo el muro</a>
+	</div>
+	{% if not threads %}
+	<p class="muted">El muro está vacío. <a href="{{ url_for('board.new_thread') }}">Escribe el primero.</a></p>
+	{% endif %}
+	{% for t in threads %}
+	<p class="panel__row">
+		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>
+		<span class="muted small">{{ t.author }} · {{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
+	</p>
+	{% endfor %}
+</section>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Mis publicaciones</h2>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">Publicaciones</a>
+	</div>
+	{% if not mine %}
+	<p class="muted">
+		{% if may_moderate() %}
+		Puedes publicar directamente en el sitio desde <a href="{{ url_for('content.index') }}">Publicaciones</a>.
+		{% else %}
+		¿Tienes algo que contarle al barrio? <a href="{{ url_for('submissions.propose') }}">Propón una publicación</a>
+		y un moderador la leerá antes de publicarla.
+		{% endif %}
+	</p>
+	{% endif %}
+	{% for item in mine %}
+	<p class="panel__row">
+		<a href="{{ url_for('submissions.show', submission_id=item.id) }}">{{ item.title }}</a>
+		<span class="tag tag--{{ item.state }}">{{ state_labels[item.state] }}</span>
+	</p>
+	{% endfor %}
+</section>
+{% endblock %}

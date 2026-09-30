@@ -45,7 +45,7 @@ def load_member() -> None:
         return
     row = get_db().execute(
         """SELECT * FROM members
-            WHERE id = ? AND active = 1 AND role IN ('owner', 'admin', 'user')""",
+            WHERE id = ? AND active = 1 AND role != 'tombstone'""",
         (member_id,),
     ).fetchone()
     if row is None:
@@ -63,13 +63,13 @@ def _safe_next(target: str) -> str:
     own community site.
     """
     prefix = current_app.config["URL_PREFIX"] + "/"
-    return target if target.startswith(prefix) else url_for("board.threads")
+    return target if target.startswith(prefix) else url_for("home.index")
 
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if g.member is not None:
-        return redirect(url_for("board.threads"))
+        return redirect(url_for("home.index"))
 
     target = request.values.get("next", "")
     if request.method == "GET":
@@ -98,7 +98,7 @@ def login():
     member = get_db().execute(
         """SELECT * FROM members
             WHERE (gitea_login = ? COLLATE NOCASE OR email = ? COLLATE NOCASE)
-              AND role IN ('owner', 'admin', 'user')""",
+              AND role != 'tombstone'""",
         (identifier, identifier),
     ).fetchone()
 
@@ -176,7 +176,7 @@ def recover():
     member = get_db().execute(
         """SELECT * FROM members
             WHERE email = ? COLLATE NOCASE AND active = 1
-              AND role IN ('owner', 'admin', 'user')""",
+              AND role != 'tombstone'""",
         (email,),
     ).fetchone()
 

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }}{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>{{ item.title }}</h1>
+	<a class="linkish" href="{{ url_for('submissions.index') }}">Volver</a>
+</div>
+
+<article class="card">
+	<div class="card__meta">
+		<span class="tag tag--{{ item.state }}">{{ labels[item.state] }}</span>
+		<span>{{ item.author }}</span> · <time>{{ item.created_at }}</time>
+		{% if item.categories %} · <span>{{ item.categories }}</span>{% endif %}
+	</div>
+	{% if item.description %}<p class="muted">{{ item.description }}</p>{% endif %}
+	{% if item.photo_name %}
+	<img class="attachment"
+	     src="{{ url_for('submissions.photo', stored_name=item.photo_name) }}"
+	     alt="Imagen de «{{ item.title }}»">
+	{% endif %}
+	<div class="prose">{{ body_html }}</div>
+</article>
+
+{% if item.state == 'rejected' and item.note %}
+<article class="card">
+	<h2>Motivo de la devolución</h2>
+	<p>{{ item.note }}</p>
+	{% if item.reviewer %}<p class="muted small">— {{ item.reviewer }}, {{ item.reviewed_at }}</p>{% endif %}
+</article>
+{% endif %}
+
+{% if item.state == 'approved' %}
+<p class="muted">
+	Publicado{% if item.reviewer %} por {{ item.reviewer }}{% endif %}{% if item.published_path %} en <span class="mono">{{ item.published_path }}</span>{% endif %}.
+	La traducción al alemán y al portugués tarda un par de minutos.
+</p>
+{% endif %}
+
+{% if can_moderate and item.state != 'approved' %}
+{# Approve and reject are two forms rather than one with a choice: they are not
+   variations of the same action, and the reason is required for only one. #}
+<form class="card" method="post"
+      action="{{ url_for('submissions.approve', submission_id=item.id) }}"
+      data-confirm="Se publicará en vienalatina.com con el nombre de {{ item.author }}. ¿Seguro?">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<p class="muted small">
+		Al aprobar se publica tal cual está, firmado por {{ item.author }} — en el
+		sitio y en el historial del repositorio.
+	</p>
+	<button class="btn" type="submit">Aprobar y publicar</button>
+</form>
+
+<form class="card" method="post" action="{{ url_for('submissions.reject', submission_id=item.id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<label for="note">Devolver con un motivo</label>
+	<textarea id="note" name="note" rows="3"
+	          placeholder="Qué hay que cambiar para que se pueda publicar."></textarea>
+	<button class="linkish" type="submit">Devolver al autor</button>
+</form>
+{% endif %}
+
+{% if mine and item.state != 'approved' %}
+<div class="actions">
+	<a class="btn" href="{{ url_for('submissions.edit', submission_id=item.id) }}">Editar</a>
+	<form method="post" action="{{ url_for('submissions.withdraw', submission_id=item.id) }}"
+	      data-confirm="Se borrará la propuesta. ¿Seguro?">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button class="linkish linkish--danger" type="submit">Retirar</button>
+	</form>
+</div>
+{% endif %}
+{% endblock %}

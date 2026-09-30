@@ -308,3 +308,51 @@ def test_the_preview_renders_markdown_and_escapes_html(repo, editor, post):
     assert "<strong>fuerte</strong>" in page
     assert "<script>alert(1)</script>" not in page
     assert not repo.files      # a preview must not publish anything
+
+
+# --- who may write which collection --------------------------------------
+#
+# One blueprint, two answers. A moderator curates what the public reads, so
+# posts are theirs. The static pages are the site's own structure — "Acerca de",
+# contact — and changing those is an administrator's job. The check lives in
+# _collection_or_404, which every route here calls before doing anything.
+
+def test_a_moderator_may_publish_a_post(repo, db, post, make_member, sign_in):
+    sign_in(make_member("luisa", role="moderator"))
+
+    response = post("/comunidad/contenido/post/nuevo",
+                    {"title": "Aviso", "body": "Texto.", "date": "2026-09-25"})
+
+    assert response.status_code == 302
+    assert list(repo.files) == ["content/post/2026-09-25-aviso.es.md"]
+
+
+def test_a_moderator_may_not_touch_the_static_pages(repo, client, post,
+                                                    make_member, sign_in):
+    sign_in(make_member("luisa", role="moderator"))
+
+    assert client.get("/comunidad/contenido/page").status_code == 403
+    assert client.get("/comunidad/contenido/page/nuevo").status_code == 403
+    assert post("/comunidad/contenido/page/nuevo",
+                {"title": "Acerca de", "body": "Texto."}).status_code == 403
+    assert repo.files == {}
+
+
+def test_a_member_may_not_use_the_editor_at_all(repo, client, post,
+                                                make_member, sign_in):
+    """Their route to the public site is a proposal, which waits for somebody."""
+    sign_in(make_member("maria"))
+
+    for path in ("/comunidad/contenido", "/comunidad/contenido/post/nuevo",
+                 "/comunidad/contenido/page/nuevo"):
+        assert client.get(path).status_code == 403, path
+    assert repo.files == {}
+
+
+def test_the_tabs_only_offer_what_this_member_may_open(repo, client, make_member, sign_in):
+    """A tab that always produces a 403 is worse than no tab."""
+    sign_in(make_member("luisa", role="moderator"))
+    assert "Páginas" not in client.get("/comunidad/contenido").get_data(as_text=True)
+
+    sign_in(make_member("admina", role="admin"))
+    assert "Páginas" in client.get("/comunidad/contenido").get_data(as_text=True)

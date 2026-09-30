@@ -33,7 +33,7 @@ from flask import (Blueprint, abort, current_app, flash, g, redirect,
 from . import gitea
 from .db import get_db
 from .render import to_html
-from .security import admin_required
+from .security import moderator_required
 # One list of accepted formats for the whole app, kept in the module that
 # knows what each one looks like on the wire, so the editor and the board
 # cannot drift apart about what a picture is.
@@ -41,14 +41,19 @@ from .uploads import IMAGE_EXTENSIONS
 
 bp = Blueprint("content", __name__)
 
+# `role` is the floor for writing in this collection, checked by
+# _collection_or_404 rather than by a decorator, because the two collections in
+# one blueprint do not share an answer: a moderator curates what the public
+# reads, and the static pages of the site are not that — they are the site's own
+# structure, and changing "Acerca de" is an administrator's job.
 COLLECTIONS = {
     "post": {
         "label": "Artículos", "singular": "Artículo",
-        "folder": "content/post", "dated": True,
+        "folder": "content/post", "dated": True, "role": "moderator",
     },
     "page": {
         "label": "Páginas", "singular": "Página",
-        "folder": "content/page", "dated": False,
+        "folder": "content/page", "dated": False, "role": "admin",
     },
 }
 
@@ -166,9 +171,22 @@ def listing(collection: str) -> list[dict]:
 # --- form handling -------------------------------------------------------
 
 def _collection_or_404(collection: str) -> dict:
+    """404 for a collection that does not exist, 403 for one this member may not
+    write to. Every route here calls it before doing anything else, which is
+    what makes the per-collection rule real rather than a note in a template."""
     if collection not in COLLECTIONS:
         abort(404)
-    return COLLECTIONS[collection]
+    meta = COLLECTIONS[collection]
+    if meta["role"] == "admin" and g.member["role"] not in ("owner", "admin"):
+        abort(403)
+    return meta
+
+
+def visible_collections() -> dict:
+    """The collections this member may write to, for the tabs. A tab that only
+    ever produces a 403 is worse than no tab."""
+    return {name: meta for name, meta in COLLECTIONS.items()
+            if meta["role"] != "admin" or g.member["role"] in ("owner", "admin")}
 
 
 def _name_or_404(name: str) -> str:
@@ -212,46 +230,70 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
     return fields, body, errors
 
 
-def _upload_image() -> str:
-    """Commit an uploaded picture and return the path the frontmatter uses.
+def commit_picture(data: bytes, filename: str, author=None) -> str:
+    """Commit a picture into the site repository and return the path the
+    frontmatter uses.
 
     Deliberately a second commit rather than part of the post's. Gitea's
     contents API writes one file per request, and batching both into a single
     commit means the lower-level git trees API — noticeably more code to get
     wrong, for a benefit nobody sees beyond one fewer pipeline run.
-    """
-    upload = request.files.get("picture")
-    if not upload or not upload.filename:
-        return ""
 
-    extension = upload.filename.rsplit(".", 1)[-1].lower()
+    Takes bytes rather than an upload so that approving a member's submission
+    can commit the picture it has had on disk since they proposed it, through
+    exactly this code.
+    """
+    extension = filename.rsplit(".", 1)[-1].lower()
     if extension not in IMAGE_EXTENSIONS:
         raise gitea.GiteaError(
             f"Formato de imagen no admitido. Usa: {', '.join(sorted(IMAGE_EXTENSIONS))}."
         )
-
-    data = upload.read()
     maximum = current_app.config["UPLOAD_MAX_BYTES"]
     if len(data) > maximum:
         raise gitea.GiteaError(
             f"La imagen pesa {len(data) // 1024}KB y el máximo es {maximum // 1024}KB."
         )
 
-    stem = slugify(upload.filename.rsplit(".", 1)[0])[:60]
+    stem = slugify(filename.rsplit(".", 1)[0])[:60]
     # A random suffix rather than a counter: two people uploading "foto.jpg"
     # in the same minute must not race for the same path.
     name = f"{stem}-{secrets.token_hex(3)}.{extension}"
     gitea.write_file(f"{UPLOAD_FOLDER}/{name}", data,
                      f"content: subir {name}", gitea.content_token(),
-                     member=g.member)
+                     member=author or g.member)
     return f"/uploads/{name}"
+
+
+def _upload_image() -> str:
+    upload = request.files.get("picture")
+    if not upload or not upload.filename:
+        return ""
+    return commit_picture(upload.read(), upload.filename)
+
+
+def publish(collection: str, fields: dict, body: str, author) -> str:
+    """Write one post or page into the repository and return its path.
+
+    The single place a commit is made from a finished form, shared by the editor
+    and by a moderator approving a submission, so both produce a byte-identical
+    file and the same commit shape. `author` is who wrote it, not who pressed
+    the button: `gitea.write_file` sends author and committer per commit, so an
+    approved submission keeps the member's name in git history.
+    """
+    name = filename_for(collection, fields["title"], fields["date"])
+    path = f"{COLLECTIONS[collection]['folder']}/{name}"
+    document = build_document(frontmatter_for(collection, fields), body)
+    gitea.write_file(path, document.encode("utf-8"),
+                     f"content: publicar «{fields['title']}»",
+                     gitea.content_token(), member=author)
+    return path
 
 
 # --- routes --------------------------------------------------------------
 
 @bp.route("/contenido")
 @bp.route("/contenido/<collection>")
-@admin_required
+@moderator_required
 def index(collection: str = "post"):
     meta = _collection_or_404(collection)
     try:
@@ -260,11 +302,11 @@ def index(collection: str = "post"):
         flash(str(exc), "error")
         items = []
     return render_template("content_list.html", collection=collection, meta=meta,
-                           collections=COLLECTIONS, items=items)
+                           collections=visible_collections(), items=items)
 
 
 @bp.route("/contenido/<collection>/nuevo", methods=["GET", "POST"])
-@admin_required
+@moderator_required
 def new(collection: str):
     meta = _collection_or_404(collection)
     if request.method == "GET":
@@ -280,12 +322,7 @@ def new(collection: str):
         picture = _upload_image()
         if picture:
             fields["image"] = picture
-        name = filename_for(collection, fields["title"], fields["date"])
-        path = f"{meta['folder']}/{name}"
-        document = build_document(frontmatter_for(collection, fields), body)
-        gitea.write_file(path, document.encode("utf-8"),
-                         f"content: publicar «{fields['title']}»",
-                         gitea.content_token(), member=g.member)
+        publish(collection, fields, body, g.member)
     except gitea.GiteaError as exc:
         return _back_to_form(collection, meta, fields, body, [str(exc)], None)
 
@@ -294,7 +331,7 @@ def new(collection: str):
 
 
 @bp.route("/contenido/<collection>/editar/<name>", methods=["GET", "POST"])
-@admin_required
+@moderator_required
 def edit(collection: str, name: str):
     meta = _collection_or_404(collection)
     name = _name_or_404(name)
@@ -348,7 +385,7 @@ def edit(collection: str, name: str):
 
 
 @bp.route("/contenido/<collection>/eliminar/<name>", methods=["POST"])
-@admin_required
+@moderator_required
 def delete(collection: str, name: str):
     meta = _collection_or_404(collection)
     name = _name_or_404(name)
@@ -368,7 +405,7 @@ def delete(collection: str, name: str):
 
 
 @bp.route("/contenido/<collection>/vista-previa", methods=["POST"])
-@admin_required
+@moderator_required
 def preview(collection: str):
     """Rendered on the server and returned as a whole page.
 

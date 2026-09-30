@@ -54,6 +54,23 @@ def admin_required(view):
     return wrapped
 
 
+def moderator_required(view):
+    """Curating the public site. Admins and the owner count as moderators.
+
+    Deliberately separate from admin_required: a moderator decides what the
+    public sees and nothing else. They cannot reach Gestión, cannot create or
+    deactivate anybody, and cannot change a role — moderating content is not
+    power over people.
+    """
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if g.member["role"] not in ("owner", "admin", "moderator"):
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
 def owner_required(view):
     @wraps(view)
     @login_required

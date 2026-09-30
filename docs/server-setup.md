@@ -426,15 +426,22 @@ If `github` is not a remote yet, add it once — see the end of step 8:
 git remote add github https://github.com/pablovolenski/vienalatina.git
 ```
 
-That rebuilds the image, copies the compose file across, restarts, and prints
-the log. It never touches `/srv/board/.env` — that file holds the secrets and
-lives only on the server — but it does compare it against `.env.example` and
-name any setting that has appeared in the repository and is missing from yours.
-New settings are always added by hand.
+That takes a backup, rebuilds the image, copies the compose file across,
+restarts, and prints the log. It never touches `/srv/board/.env` — that file
+holds the secrets and lives only on the server — but it does compare it against
+`.env.example` and name any setting that has appeared in the repository and is
+missing from yours. New settings are always added by hand.
+
+**The backup is part of the deploy now, not a thing to remember.** The app
+applies numbered migrations at start-up and two of them rebuild a table in
+place — `attachments`, and `members`, which holds your own account. Neither can
+be undone afterwards, and "back up first" works reliably until the one deploy
+where it mattered. `BOARD_SKIP_BACKUP=1` skips it if you have just taken one.
 
 The database schema is applied at start-up with `CREATE TABLE IF NOT EXISTS`,
 so a release that adds a table needs no migration step: the table appears when
-the new code does.
+the new code does. Anything that *changes* an existing table is a numbered
+migration instead — §11.11 — and the deploy's log tail names each one it ran.
 
 ### 11.4 Route it through Caddy
 
@@ -481,17 +488,34 @@ has been archiving air" are otherwise the same empty line.
 
 ### 11.6 Who can do what
 
-| | Owner | Admin | User |
-|---|---|---|---|
-| Post, comment, edit own | ✓ | ✓ | ✓ |
-| Delete any post | ✓ | ✓ | — |
-| Edit someone else's post | — | — | — |
-| Pin and close threads | ✓ | ✓ | — |
-| Create users | ✓ | ✓ | — |
-| Create admins | ✓ | — | — |
-| Suspend a user | ✓ | ✓ | — |
-| Suspend an admin | ✓ | — | — |
-| Transfer ownership | ✓ | — | — |
+| | Responsable | Administrador | Moderador | Miembro |
+|---|---|---|---|---|
+| Wall: post, comment, edit own | ✓ | ✓ | ✓ | ✓ |
+| Private messages, own profile | ✓ | ✓ | ✓ | ✓ |
+| Propose a public post | ✓ | ✓ | ✓ | ✓ |
+| Publish a public post directly | ✓ | ✓ | ✓ | — |
+| Approve or return a proposal | ✓ | ✓ | ✓ | — |
+| Edit and delete published posts | ✓ | ✓ | ✓ | — |
+| Static pages of the site | ✓ | ✓ | — | — |
+| Delete any wall post | ✓ | ✓ | — | — |
+| Edit someone else's post | — | — | — | — |
+| Pin and close threads | ✓ | ✓ | — | — |
+| Create members and moderators | ✓ | ✓ | — | — |
+| Change a role (below admin) | ✓ | ✓ | — | — |
+| Create admins, promote to admin | ✓ | — | — | — |
+| Suspend a member or moderator | ✓ | ✓ | — | — |
+| Suspend an admin | ✓ | — | — | — |
+| Transfer ownership, erase a member | ✓ | — | — | — |
+
+**A moderator has no power over people.** They decide what the public reads and
+nothing else: no creating, suspending, promoting or erasing anybody. That line is
+the whole point of having the role — a moderator who could also suspend the
+author of a post they had just returned would be a second kind of administrator.
+
+Admins can appoint moderators; only the owner can appoint admins. That rule lives
+in one place (`may_create` in `apps/board/members.py`) and the role form on
+*Miembros* checks it twice: once for reaching the person, once for the role being
+given.
 
 Nobody edits anyone else's words, administrators included. Taking a post down is
 visible to the person who wrote it; rewriting it is not, and an admin who could
@@ -508,7 +532,11 @@ Members' names, emails and writing are personal data under GDPR.
 
 - **Erasure:** the owner's *Eliminar* removes the member row entirely and
   reassigns their threads and comments to a tombstone shown as "Miembro
-  eliminado", so conversations other people took part in stay readable.
+  eliminado", so conversations other people took part in stay readable. Private
+  messages and unapproved proposals are deleted outright, pictures included. An
+  already-published post stays on the site: what remains of it is a commit in
+  the content repository carrying their name, and rewriting git history from the
+  members area is not something this app does.
 - **Access:** any member can download everything they have written from
   *Descargar mis datos*.
 - **Retention:** soft-deleted posts stay in the database until removed by hand.
@@ -655,7 +683,27 @@ the one case it was never needed for.
 the proof the rebuild kept real rows. Back up first — `scripts/backup-board.sh`
 — as with any migration.
 
-### 11.13 Public profiles at `vienalatina.com/su-nombre`
+**Step 4 rebuilds `members` for the same reason**, to widen the role CHECK so
+`moderator` is a legal value. It is the more delicate of the two: eight tables
+point at `members(id)`, and the procedure drops and renames the table with
+foreign keys off. The clauses in those tables say `REFERENCES members`, resolved
+by name, so they find the new table by themselves — but the partial unique index
+that guarantees one owner is *not* carried over by the copy and has to be
+recreated, and `PRAGMA foreign_key_check` runs before the transaction commits.
+Both are asserted by tests that build a database in the old shape with a row in
+every referencing table.
+
+One trap worth recording, because it cost a debugging session: the allowed roles
+can only be read back out of the `CREATE TABLE` text in `sqlite_master`, and
+SQLite stores that text verbatim — comments included. The comment in `schema.sql`
+that explains why `moderator` needed a rebuild contains the word, so the step's
+"have I already run?" check found it and skipped itself. Comments are stripped
+before the check now.
+
+**Back up before deploying this one in particular**: the table being rebuilt is
+the one your own account is in, and it is irreversible in place.
+
+### 11.12 Public profiles at `vienalatina.com/su-nombre`
 
 A member fills in *Mi perfil* and ticks *Publicar mi página*. Until they do,
 there is no page: `profile_published` starts at 0 and an unpublished profile
@@ -699,6 +747,57 @@ fingerprints its stylesheet, so the app cannot link to it with a stable URL —
 the same problem the Gitea theme has. If the colours change in
 `themes/vienalatina/assets/css/main.css`, change them in
 `apps/board/templates/profile.html` too.
+
+### 11.13 The five sections, and the moderation queue
+
+Signing in lands on **Inicio**, a dashboard of what has happened since the last
+visit. The navigation is the same for everybody except the last entry:
+
+| | Where | Who |
+|---|---|---|
+| **Inicio** | `/comunidad/` | everybody |
+| **Muro** | `/comunidad/muro` | everybody |
+| **Privados** | `/comunidad/privados` | everybody |
+| **Publicaciones** | `/comunidad/publicaciones` | everybody, with two different pages behind it |
+| **Gestión** | `/comunidad/gestion` | admins and the owner |
+
+*Mi perfil*, *Descargar mis datos* and *Salir* are in the menu under the member's
+own name, top right. They are not sections of the site, and while they were in the
+navigation three of the five entries were admin-only — which meant an ordinary
+member signed in to a wall and a member list, with their own profile and their own
+private messages hidden from them. `apps/board/tests/test_navigation.py` asserts
+the navigation per role now, so that cannot come back quietly.
+
+The wall moved from `/comunidad/` to `/comunidad/muro`. Thread addresses did not
+move, so anything linked from a private message still works.
+
+**Publicaciones is the queue.** A member writes a proposal; it lives in the
+`submissions` table and goes nowhere near the site. A moderator or admin reads it
+and either approves it — which commits it to the content repository under the
+member's own name, so `git log` names the writer and not the approver — or returns
+it with a reason the author reads on their own Publicaciones page. Moderators and
+admins do not queue: they write in *Contenido* and their post is committed as they
+save it.
+
+Three things worth knowing about that design:
+
+- **A pending post is not in git at all.** It could not be: a commit to that
+  repository *is* publication, because Gitea's webhook starts the translate →
+  build → deploy pipeline within seconds. There is no draft state on the site.
+- **One publish path.** Approval calls `content.publish`, the same function the
+  editor uses, so an approved proposal is byte-identical to a post written by a
+  moderator and the pipeline cannot tell them apart.
+- **Its picture is private until approval**, served from `/data/uploads` to the
+  author and the moderators only. Approving commits it to the repository and
+  deletes the private copy, so there is one file in one place.
+- **There is no way to promote a wall thread into a proposal**, deliberately.
+  Writing for the public is a separate act from talking to the people you already
+  know, and the site is curated on purpose: fewer posts, each one read by somebody
+  first.
+
+Editing a returned proposal puts it back in the queue automatically. An approved
+one can no longer be edited from there — the file is in the repository, and that
+is what *Contenido* is for.
 
 ## 12. Make Gitea look like the site
 
@@ -816,7 +915,7 @@ belonged to the git server, its logout is POST-only and unreachable from
 another domain, and one click on *Entrar* signed you straight back in. All of
 that followed from delegating identity, and none of it survived taking it back.
 
-### 11.12 When nobody can sign in
+### 11.14 When nobody can sign in
 
 Every path to a first password goes through email: the invitation when a member
 is added, and *¿olvidaste tu contraseña?* afterwards. If the mailbox is down

@@ -16,30 +16,46 @@
 	<div class="site-bar__inner">
 		<a class="site-bar__brand" href="/"><span class="site-bar__brand-text">Viena Latina</span></a>
 		{% if g.member %}
-		<div class="site-bar__account">
-			<span class="who">{{ g.member.display_name }}</span>
-			<form method="post" action="{{ url_for('auth.logout') }}">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<button class="linkish" type="submit">Salir</button>
-			</form>
-		</div>
+		{# <details> rather than a button with a handler: the CSP has no
+		   'unsafe-inline', so a menu that needs onclick="" is a menu that
+		   silently never opens. This one works with the CSS and the HTML
+		   alone. #}
+		<details class="account">
+			<summary class="account__name">{{ g.member.display_name }}</summary>
+			<div class="account__menu">
+				<a href="{{ url_for('profiles.edit') }}">Mi perfil</a>
+				<a href="{{ url_for('members.export') }}">Descargar mis datos</a>
+				<form method="post" action="{{ url_for('auth.logout') }}">
+					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+					<button class="linkish" type="submit">Salir</button>
+				</form>
+			</div>
+		</details>
 		{% endif %}
 	</div>
 
 	{% if g.member %}
 	<nav class="site-bar__pages" aria-label="Secciones">
+		{# Five entries, and four of them are the same for everybody. The role
+		   only decides whether Gestión is there — it used to decide three of
+		   them, which is how an ordinary member ended up signing in to a wall
+		   and a member list with their own profile and their own private
+		   messages hidden from them. Account items are in the corner menu
+		   above, because "Mi perfil" is not a section of the site. #}
 		<ul class="page-nav">
-			<li><a href="{{ url_for('board.threads') }}">Mensajes</a></li>
-			{% if g.member.role in ('owner', 'admin') %}
+			<li><a href="{{ url_for('home.index') }}">Inicio</a></li>
+			<li><a href="{{ url_for('board.threads') }}">Muro</a></li>
 			<li>
-				{# "Mensajes" is the public board, so this cannot be called that.
-				   The badge is only drawn when there is something to see. #}
-				<a href="{{ url_for('messages.inbox') }}">Privados{% set pending = unread_private() %}{% if pending %} <span class="tag">{{ pending }}</span>{% endif %}</a>
+				<a href="{{ url_for('messages.inbox') }}">Privados{% set unread = unread_private() %}{% if unread %} <span class="tag">{{ unread }}</span>{% endif %}</a>
 			</li>
-			<li><a href="{{ url_for('profiles.edit') }}">Mi perfil</a></li>
-			<li><a href="{{ url_for('content.index') }}">Contenido</a></li>
+			<li>
+				{# The badge counts what is waiting for a moderator, so for
+				   anybody else the function returns 0 and nothing is drawn. #}
+				<a href="{{ url_for('submissions.index') }}">Publicaciones{% set waiting = pending_review() %}{% if waiting %} <span class="tag">{{ waiting }}</span>{% endif %}</a>
+			</li>
+			{% if g.member.role in ('owner', 'admin') %}
+			<li><a href="{{ url_for('home.gestion') }}">Gestión</a></li>
 			{% endif %}
-			<li><a href="{{ url_for('members.index') }}">Miembros</a></li>
 		</ul>
 	</nav>
 	{% endif %}
@@ -58,7 +74,7 @@
 
 	<footer class="site-foot">
 		<a href="/">Ir al sitio público</a>
-		{% if g.member %} · <a href="{{ url_for('members.export') }}">Descargar mis datos</a>{% endif %}
+		{% if g.member %} · <a href="{{ url_for('members.index') }}">Miembros</a>{% endif %}
 		<div class="site-foot__legal">Viena Latina © {{ current_year }} · Área privada</div>
 	</footer>
 </div>

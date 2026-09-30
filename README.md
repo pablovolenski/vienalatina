@@ -145,37 +145,51 @@ runtime.
 
 ## Members area
 
-`apps/board/` — a small Flask app at `/comunidad/`, behind Caddy, holding roles
-and an internal message board. Signed-in members only.
+`apps/board/` — a small Flask app at `/comunidad/`, behind Caddy. A member signs
+in once and gets five sections: **Inicio** (a dashboard), **Muro** (the internal
+board), **Privados** (messages between two members), **Publicaciones** (the
+public site, through moderation) and, for admins, **Gestión**.
 
 ```
 apps/board/
-  app.py        factory, config, the CSRF and noindex hooks
-  auth.py       Gitea OAuth2 (confidential client) and the membership gate
-  members.py    roles, provisioning, ownership transfer, GDPR erasure/export
-  board.py      threads and comments
-  content.py    the editor — writes posts to Gitea's contents API
-  gitea.py      the only module that talks to Gitea
-  tokens.py     per-member access tokens, refreshed before they expire
-  render.py     markdown with raw HTML disabled
-  schema.sql    the tables, including the one-owner index
-  tests/        pytest, 97 checks — `python3 -m pytest apps/board/tests`
+  app.py         factory, config, the CSRF and noindex hooks
+  auth.py        the login form, passwords, the membership gate
+  passwords.py   scrypt hashing and the failed-attempt limiter
+  members.py     roles, onboarding, ownership transfer, GDPR erasure/export
+  home.py        Inicio, and Gestión
+  board.py       the wall: threads and comments
+  messages.py    private messages, unread marks, blocking
+  submissions.py what members propose for the public site, and its moderation
+  content.py     the editor — commits posts and pages through Gitea's API
+  profiles.py    public pages at vienalatina.com/<name>
+  uploads.py     pictures: sniffed, renamed, served behind the login
+  invites.py     one-time links for invitations and password resets
+  gitea.py       the only module that talks to Gitea
+  migrations.py  numbered schema steps, keyed on PRAGMA user_version
+  render.py      markdown with raw HTML disabled
+  schema.sql     the tables, including the one-owner index
+  tests/         pytest — `python3 -m pytest apps/board/tests`
 ```
 
-Three things about it are load-bearing and easy to undo by accident:
+Four things about it are load-bearing and easy to undo by accident:
 
-- **A Gitea account is not a membership.** Login succeeds only for an active row
-  in `members`. Drop that check and every account on the instance gets in,
-  starting with the translations bot.
+- **The members area owns its own logins.** A password is a scrypt hash in
+  `members.password_hash`; a NULL hash cannot be signed in with, which is what
+  makes an invitation the only way in for a new member.
 - **One owner, enforced by a partial unique index**, not by application code.
   The owner cannot be suspended or demoted by anyone; stepping down means
   transferring ownership to an admin.
+- **A moderator curates content and has no power over people.** No creating,
+  suspending, promoting or erasing anybody — `may_create` and `may_manage` in
+  `members.py` are the whole rule, and they are tested as plain functions.
 - **`html=False` in `render.py`** is the entire XSS defence, and it works
   because markdown-it then emits only its own tags. Turning it on means owning a
   sanitiser allowlist forever.
 
 Admins can delete anyone's post; **nobody can edit anyone else's**, admins
 included. Removing a post is visible to its author, quietly rewriting it is not.
+The same line runs through moderation: a moderator approves or returns a
+proposal, and never rewrites it to publish under somebody else's name.
 
 Its SQLite database is the only state on the server that git does not hold.
 `scripts/backup-board.sh` takes a consistent snapshot nightly — see
@@ -183,10 +197,16 @@ Its SQLite database is the only state on the server that git does not hold.
 
 ### Writing posts
 
-`/comunidad/contenido/` replaces Decap CMS for admins: a form that commits a
-file through Gitea's contents API, so Woodpecker sees an ordinary push and
-translate → build → deploy runs unchanged. Commits carry the author's own
-account, not a bot's.
+`/comunidad/contenido/` replaces Decap CMS: a form that commits a file through
+Gitea's contents API, so Woodpecker sees an ordinary push and translate → build →
+deploy runs unchanged. Commits name the person who wrote the post, not a bot —
+`write_file` sends an author per commit.
+
+Moderators and admins write there directly. A member writes in
+`/comunidad/publicaciones/` instead, and the proposal waits in SQLite until a
+moderator approves it, which commits it through that same code under the
+member's own name. Nothing a member writes reaches the repository before then,
+because a commit to it *is* publication: the webhook starts the pipeline.
 
 It exists because Decap has no supported way to be themed — its maintainer's
 answer is override its CSS and accept that class names move, or fork it — so

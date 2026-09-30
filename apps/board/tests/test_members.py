@@ -34,6 +34,67 @@ def test_only_the_owner_manages_admins():
     assert not may_manage("admin", "admin")
 
 
+# --- the moderator, who curates content and not people -------------------
+
+def test_admins_and_the_owner_make_moderators():
+    assert may_create("owner", "moderator")
+    assert may_create("admin", "moderator")
+    assert not may_create("moderator", "moderator")
+    assert not may_create("user", "moderator")
+
+
+def test_a_moderator_has_no_power_over_anybody():
+    """The line the whole role rests on. Being trusted to judge what the public
+    reads is not being trusted to suspend the person who wrote it, and a
+    moderator who could do both would be a second kind of admin."""
+    for target in ("owner", "admin", "moderator", "user"):
+        assert not may_manage("moderator", target), target
+        assert not may_create("moderator", target), target
+
+
+def test_an_admin_may_promote_a_member_to_moderator(client, db, post, make_member, sign_in):
+    admin = make_member("admina", role="admin")
+    maria = make_member("maria")
+    sign_in(admin)
+
+    post(f"/comunidad/miembros/{maria}/rol", {"role": "moderator"})
+
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (maria,)).fetchone()["role"] == "moderator"
+
+
+def test_an_admin_still_cannot_mint_an_admin_through_the_role_form(
+        client, db, post, make_member, sign_in):
+    """`set_role` moved from owner-only to admin-level so moderators can be
+    appointed routinely. That must not quietly hand admins the one power the
+    owner keeps."""
+    admin = make_member("admina", role="admin")
+    maria = make_member("maria")
+    sign_in(admin)
+
+    assert post(f"/comunidad/miembros/{maria}/rol", {"role": "admin"}).status_code == 403
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (maria,)).fetchone()["role"] == "user"
+
+
+def test_a_moderator_cannot_change_a_role_at_all(client, db, post, make_member, sign_in):
+    sign_in(make_member("luisa", role="moderator"))
+    maria = make_member("maria")
+
+    assert post(f"/comunidad/miembros/{maria}/rol", {"role": "moderator"}).status_code == 403
+
+
+def test_the_role_form_refuses_a_role_that_is_not_offered(
+        client, db, post, owner_id, make_member, sign_in):
+    """`tombstone` is a real value in the CHECK constraint and would make the
+    member vanish from every listing while keeping their row."""
+    sign_in(owner_id)
+    maria = make_member("maria")
+
+    assert post(f"/comunidad/miembros/{maria}/rol", {"role": "tombstone"}).status_code == 403
+    assert post(f"/comunidad/miembros/{maria}/rol", {"role": "owner"}).status_code == 403
+
+
 # --- the database holds the line ----------------------------------------
 
 def test_a_second_owner_is_impossible(db):
@@ -206,9 +267,10 @@ def test_every_table_pointing_at_members_is_accounted_for(db):
     members.py's erase lists. Otherwise erasure breaks — and it breaks at the
     moment somebody exercises a right they are entitled to, which is the worst
     possible time to find out."""
-    from apps.board.members import (CLEARED_ON_ERASE, REASSIGNED_ON_ERASE,
-                                    REMOVED_ON_ERASE)
-    handled = REASSIGNED_ON_ERASE | CLEARED_ON_ERASE | REMOVED_ON_ERASE
+    from apps.board.members import (CLEARED_ON_ERASE, CLEARED_ON_ERASE_AFTER,
+                                    REASSIGNED_ON_ERASE, REMOVED_ON_ERASE)
+    handled = (REASSIGNED_ON_ERASE | CLEARED_ON_ERASE | CLEARED_ON_ERASE_AFTER
+               | REMOVED_ON_ERASE)
 
     tables = [row["name"] for row in db.execute(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")]
