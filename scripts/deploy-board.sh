@@ -45,10 +45,22 @@ fi
 missing="$(comm -23 \
   <(grep -oE '^[A-Z][A-Z0-9_]*=' "$TARGET/.env.example" | sort -u) \
   <(grep -oE '^[A-Z][A-Z0-9_]*=' "$TARGET/.env"         | sort -u) || true)"
+note_for() {
+  case "${1%=}" in
+    CONTENT_TOKEN)     echo "el editor no puede publicar nada en el sitio" ;;
+    GITEA_ADMIN_TOKEN) echo "sólo para cuentas del servidor de git; NO publica" ;;
+    MAIL_HOST|MAIL_PASSWORD) echo "no se envían invitaciones ni recuperaciones" ;;
+    BOARD_SECRET_KEY)  echo "LA APP NO ARRANCA" ;;
+    *) echo "" ;;
+  esac
+}
+
 if [ -n "$missing" ]; then
   echo
   echo "!! These settings exist in .env.example but not in your .env:"
-  echo "$missing" | sed 's/^/     /'
+  while read -r name; do
+    printf '     %-20s %s\n' "$name" "$(note_for "$name")"
+  done <<< "$missing"
   echo "   Add them to $TARGET/.env and run this again if the feature needs them."
   echo
 fi
@@ -62,13 +74,7 @@ if [ -n "$blank" ]; then
   echo
   echo "!! These are set to nothing in your .env, so their feature is off:"
   while read -r name; do
-    case "$name" in
-      GITEA_ADMIN_TOKEN) note="no se pueden crear cuentas ni cambiar contraseñas" ;;
-      MAIL_HOST|MAIL_PASSWORD) note="no se envían invitaciones ni recuperaciones" ;;
-      BOARD_SECRET_KEY) note="LA APP NO ARRANCA" ;;
-      *) note="" ;;
-    esac
-    printf '     %-20s %s\n' "$name" "$note"
+    printf '     %-20s %s\n' "$name" "$(note_for "$name")"
   done <<< "$blank"
   echo
 fi
@@ -83,6 +89,27 @@ fi
 if [ -z "${BOARD_SKIP_BACKUP:-}" ] && [ -f "${BOARD_DB:-$TARGET/data/board.db}" ]; then
   echo "==> Backing up first (migrations are irreversible in place)"
   bash "$REPO/scripts/backup-board.sh"
+fi
+
+# The mirror image of the check above: settings your .env holds that
+# .env.example no longer documents. Those are what a feature looks like after it
+# is removed — the OAuth client id and secret outlived the login they belonged
+# to by two phases, sitting in a file as live credentials for a flow nothing
+# calls. A commented-out line in the example counts as undocumented, which is
+# how a setting is retired: comment it there, and this names it here.
+#
+# Named, never touched: this script has never written to .env and does not start
+# now. Deleting a line is a decision, and the file may hold something deliberate
+# that the repository does not know about.
+stale="$(comm -13 \
+  <(grep -oE '^[A-Z][A-Z0-9_]*=' "$TARGET/.env.example" | sort -u) \
+  <(grep -oE '^[A-Z][A-Z0-9_]*=' "$TARGET/.env"         | sort -u) || true)"
+if [ -n "$stale" ]; then
+  echo
+  echo "!! Your .env has settings the repository no longer documents:"
+  echo "$stale" | sed 's/^/     /'
+  echo "   Nothing reads them. If one holds a secret, revoke it and delete the line."
+  echo
 fi
 
 echo "==> Restarting"
