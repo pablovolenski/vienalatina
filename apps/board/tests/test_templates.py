@@ -140,3 +140,37 @@ def test_no_message_in_the_code_shows_it_either():
             and "Gitea" in node.value and node.value not in docstrings
         ]
     assert not offenders, "\n".join(offenders)
+
+
+# --- the writing boxes opt in ---------------------------------------------
+
+PROSE_BOXES = {
+    "thread_form.html": "body",
+    "comment_form.html": "body",
+    "thread.html": "body",
+    "conversation.html": "body",
+    "submission_form.html": "body",
+    "content_form.html": "body",
+    "profile_edit.html": "bio",
+}
+
+
+@pytest.mark.parametrize("name,box", sorted(PROSE_BOXES.items()))
+def test_every_prose_box_has_the_markdown_toolbar(name, box):
+    """`data-markdown` is what board.js attaches the toolbar and the preview to.
+    A box that forgets it loses both silently — the page still works, it is just
+    the plain textarea it always was, which nobody files as a bug."""
+    html = (Path(__file__).resolve().parents[1] / "templates" / name).read_text(encoding="utf-8")
+    opening = re.search(rf'<textarea id="{box}"[^>]*>', html)
+    assert opening, f"{name} has no textarea #{box}"
+    assert "data-markdown" in opening.group(0), (
+        f"{name}: #{box} is prose and should carry data-markdown")
+
+
+def test_the_fields_that_are_not_prose_stay_plain():
+    """The links and FAQ boxes are parsed line by line, not rendered. A bold
+    button there would put asterisks into a value, not into writing."""
+    for name, box in (("profile_edit.html", "links"), ("content_form.html", "faq")):
+        html = (Path(__file__).resolve().parents[1] / "templates" / name).read_text(encoding="utf-8")
+        opening = re.search(rf'<textarea id="{box}"[^>]*>', html)
+        assert opening and "data-markdown" not in opening.group(0), name

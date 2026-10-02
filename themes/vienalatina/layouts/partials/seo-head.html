@@ -5,6 +5,20 @@
 {{ $locale := index $localeMap .Language.Lang | default "es_ES" }}
 {{ $desc := "" }}
 {{ if .IsPage }}{{ $desc = .Description | default (.Summary | plainify | truncate 200) }}{{ else }}{{ $desc = .Site.Params.description }}{{ end }}
+{{/* One line, always. A summary pulled out of the body arrives with the line
+     breaks the prose had, and a newline inside og:description is a card that
+     renders raggedly in some readers and truncated in others. */}}
+{{ $desc = trim ($desc | plainify | replaceRE "\\s+" " ") " " }}
+
+{{/* The picture a share card shows. A page's own image when it has one, the
+     site default when it does not — `params.defaultImage` is empty until the
+     logo arrives, and a card with no picture is what happens meanwhile, which is
+     also what happens today. Absolute, because WhatsApp, Signal, Mastodon and
+     Bluesky all fetch it from outside and a relative path means nothing to
+     them. */}}
+{{ $image := "" }}
+{{ with .Params.image }}{{ $image = . | absURL }}
+{{ else }}{{ with .Site.Params.defaultImage }}{{ $image = . | absURL }}{{ end }}{{ end }}
 
 <meta name="description" content="{{ $desc }}">
 
@@ -29,11 +43,19 @@
 {{ range .Translations }}
 {{ with index $localeMap .Language.Lang }}<meta property="og:locale:alternate" content="{{ . }}">{{ end }}
 {{ end }}
-{{ with .Params.image }}<meta property="og:image" content="{{ . | absURL }}">{{ end }}
+{{ with $image }}
+<meta property="og:image" content="{{ . }}">
+<meta property="og:image:alt" content="{{ $.Params.image_alt | default $.Title }}">
+{{ end }}
+<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05-07:00" }}">
+<meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05-07:00" }}">
+{{ with .Params.author }}<meta property="article:author" content="{{ . }}">{{ end }}
+{{ range first 1 (.GetTerms "categories") }}<meta property="article:section" content="{{ .LinkTitle }}">{{ end }}
 
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
 <meta name="twitter:title" content="{{ .Title }}">
 <meta name="twitter:description" content="{{ $desc }}">
+{{ with $image }}<meta name="twitter:image" content="{{ . }}">{{ end }}
 
 {{ $schema := dict
 	"@context" "https://schema.org"
@@ -46,9 +68,22 @@
 	"dateModified" (.Lastmod.Format "2006-01-02T15:04:05-07:00")
 	"author" (dict "@type" "Person" "name" (.Params.author | default .Site.Title))
 	"publisher" (dict "@type" "Organization" "name" .Site.Title "url" .Site.Home.Permalink)
+	"mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
 }}
-{{ with .Params.image }}{{ $schema = merge $schema (dict "image" (. | absURL)) }}{{ end }}
+{{/* The author's own page, when they have published one. An answer engine
+     citing this article can then say who wrote it and point somewhere real —
+     which is the whole reason the byline carries a URL. */}}
+{{ with .Params.author_url }}
+{{ $schema = merge $schema (dict "author" (dict
+	"@type" "Person"
+	"name" ($.Params.author | default $.Site.Title)
+	"url" (. | absURL))) }}
+{{ end }}
+{{ with $image }}{{ $schema = merge $schema (dict "image" .) }}{{ end }}
 <script type="application/ld+json">{{ $schema | jsonify (dict "indent" "  ") | safeJS }}</script>
+
+{{ partial "breadcrumbs-schema.html" . }}
+{{ partial "faq-schema.html" . }}
 
 {{ else if .IsHome }}
 {{/* ---- Home ---- */}}
@@ -58,6 +93,18 @@
 <meta property="og:description" content="{{ $desc }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:locale" content="{{ $locale }}">
+
+{{ $org := dict
+	"@context" "https://schema.org"
+	"@type" "Organization"
+	"name" .Site.Title
+	"url" .Site.Home.Permalink
+	"description" .Site.Params.description
+	"areaServed" (dict "@type" "City" "name" "Wien" "addressCountry" "AT")
+}}
+{{ with .Site.Params.defaultImage }}{{ $org = merge $org (dict "logo" (. | absURL)) }}{{ end }}
+{{ with .Site.Params.sameAs }}{{ $org = merge $org (dict "sameAs" .) }}{{ end }}
+<script type="application/ld+json">{{ $org | jsonify (dict "indent" "  ") | safeJS }}</script>
 
 {{ $posts := first 10 (where .Site.RegularPages "Section" "post") }}
 {{ $blogPost := slice }}
@@ -82,4 +129,46 @@
 }}
 {{ if $blogPost }}{{ $schema = merge $schema (dict "blogPost" $blogPost) }}{{ end }}
 <script type="application/ld+json">{{ $schema | jsonify (dict "indent" "  ") | safeJS }}</script>
+
+{{ else if .IsPage }}
+{{/* ---- A static page: Acerca de, Contacto, their subpages ----
+     This branch did not exist, so a page shared as a bare link — no title card,
+     no picture, nothing for an answer engine to read beyond the prose. It is a
+     document about the organisation rather than an article, hence WebPage
+     rather than BlogPosting, and no author: a page is the site speaking. */}}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ .Site.Title }}">
+<meta property="og:title" content="{{ .Title }}">
+<meta property="og:description" content="{{ $desc }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta property="og:locale" content="{{ $locale }}">
+{{ range .Translations }}
+{{ with index $localeMap .Language.Lang }}<meta property="og:locale:alternate" content="{{ . }}">{{ end }}
+{{ end }}
+{{ with $image }}
+<meta property="og:image" content="{{ . }}">
+<meta property="og:image:alt" content="{{ $.Params.image_alt | default $.Title }}">
+{{ end }}
+
+<meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
+<meta name="twitter:title" content="{{ .Title }}">
+<meta name="twitter:description" content="{{ $desc }}">
+{{ with $image }}<meta name="twitter:image" content="{{ . }}">{{ end }}
+
+{{ $schema := dict
+	"@context" "https://schema.org"
+	"@type" "WebPage"
+	"inLanguage" .Site.Language.LanguageCode
+	"name" .Title
+	"description" $desc
+	"url" .Permalink
+	"dateModified" (.Lastmod.Format "2006-01-02T15:04:05-07:00")
+	"isPartOf" (dict "@type" "WebSite" "name" .Site.Title "url" .Site.Home.Permalink)
+	"publisher" (dict "@type" "Organization" "name" .Site.Title "url" .Site.Home.Permalink)
+}}
+{{ with $image }}{{ $schema = merge $schema (dict "image" .) }}{{ end }}
+<script type="application/ld+json">{{ $schema | jsonify (dict "indent" "  ") | safeJS }}</script>
+
+{{ partial "breadcrumbs-schema.html" . }}
+{{ partial "faq-schema.html" . }}
 {{ end }}

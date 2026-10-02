@@ -12,10 +12,72 @@
 		</nav>
 	</div>
 
+	{{/* The menu is built from the pages themselves, not from a list in
+	     config.yaml. It used to be three names written there, which meant a page
+	     published from the members area never appeared on the site at all — and
+	     that the German and Portuguese menus had to be kept in step by hand.
+	     Built this way, a new page shows up when it is published, with its own
+	     translated title in each language.
+
+	     Two levels: a page with `parent: <basename>` in its frontmatter hangs
+	     under the page with that basename. The basename is the one translate.py
+	     already uses to pair siblings — `acerca` for acerca.es.md, acerca.de.md
+	     and acerca.pt-br.md — so a parent set once holds in all three languages.
+
+	     Only Inicio and Comunidad stay in config.yaml, before and after the
+	     pages, which is what the weight split below is reading. */}}
+	{{ $current := . }}
+	{{/* A dict per page rather than sorting the pages directly: `weight` is
+	     optional, and sorting on a key half of them do not carry puts the rest
+	     in an order nobody chose. Defaulted here, once. */}}
+	{{ $pages := slice }}
+	{{ range where .Site.RegularPages "Section" "page" }}
+	{{ $base := "" }}
+	{{ with .File }}{{ $base = .ContentBaseName }}{{ end }}
+	{{ $pages = $pages | append (dict
+		"title" .LinkTitle
+		"url" .RelPermalink
+		"page" .
+		"base" $base
+		"parent" (.Params.parent | default "")
+		"w" (.Params.weight | default 50)) }}
+	{{ end }}
+	{{ $pages = sort $pages "w" }}
+
 	<nav class="site-bar__pages" id="site-bar-pages" aria-label="Secciones">
 		<ul class="page-nav">
-			{{ $current := . }}
-			{{ range .Site.Menus.main }}
+			{{ range where .Site.Menus.main "Weight" "<" 5 }}
+			<li{{ if $current.IsMenuCurrent "main" . }} class="current-menu-item"{{ end }}>
+				<a href="{{ .URL }}">{{ .Name }}</a>
+			</li>
+			{{ end }}
+
+			{{ range where $pages "parent" "" }}
+			{{ $children := where $pages "parent" .base }}
+			{{/* The class names are the ones main.css already styles — ported
+			     from the WordPress theme, dropdown on hover and on focus-within,
+			     inline on a phone, with a ▾ on anything that has children. There
+			     was no reason to invent a second set. */}}
+			{{ $classes := slice }}
+			{{ if $children }}{{ $classes = $classes | append "menu-item-has-children" }}{{ end }}
+			{{ if eq $current.RelPermalink .url }}{{ $classes = $classes | append "current-menu-item" }}{{ end }}
+			<li{{ with $classes }} class="{{ delimit . " " }}"{{ end }}>
+				<a href="{{ .url }}">{{ .title }}</a>
+				{{ with $children }}
+				{{/* Opens on hover and on focus — CSS only, so it works with a
+				     keyboard and needs no script. */}}
+				<ul class="sub-menu">
+					{{ range . }}
+					<li{{ if eq $current.RelPermalink .url }} class="current-menu-item"{{ end }}>
+						<a href="{{ .url }}">{{ .title }}</a>
+					</li>
+					{{ end }}
+				</ul>
+				{{ end }}
+			</li>
+			{{ end }}
+
+			{{ range where .Site.Menus.main "Weight" ">=" 5 }}
 			<li{{ if $current.IsMenuCurrent "main" . }} class="current-menu-item"{{ end }}>
 				<a href="{{ .URL }}">{{ .Name }}</a>
 			</li>

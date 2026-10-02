@@ -668,6 +668,24 @@ the conversation would lose its shape; a two-party exchange has no such
 remainder. This does destroy the other person's copy — the uncomfortable half
 of the choice, and deliberate.
 
+### 11.10b The members' bar on the public site
+
+A signed-in member sees a slim bar above the public header on vienalatina.com,
+with the same five sections the members area has. The public pages are files on
+disk and get cached, so the bar is drawn in the browser:
+`themes/vienalatina/assets/js/memberbar.js` asks `/comunidad/sesion.json` who is
+reading, and that endpoint is the only thing that decides anything — a visitor
+gets `{"signed_in": false}` and the answer is `Cache-Control: no-store`.
+
+**The hint cookie is why this is not a request per page view.** Signing in also
+sets `vl_sesion=1`, readable by scripts, holding nothing but the digit 1; without
+it the script makes no request at all, so a stranger reading one article costs
+the app nothing. It is never trusted: the session cookie stays `HttpOnly` and
+signed, and forging the hint earns a reply saying you are not signed in.
+
+*Comunidad* is in the public menu in all three languages, signed in or not,
+because somebody who has an account needs to find the door.
+
 ### 11.11 Schema changes: `PRAGMA user_version`
 
 `schema.sql` is all `CREATE TABLE IF NOT EXISTS`, which handles exactly one
@@ -838,6 +856,68 @@ role, erase — inside a *Gestionar* block on each card, closed by default. A
 member's photo shows here even when their public page is unpublished, because
 this side is behind the login; `profiles.member_photo` serves it and the profile
 form says so in plain words.
+
+### 11.15 The public menu is built from the pages
+
+It used to be three names per language in `config.yaml`, which meant a page
+published through *Contenido* never appeared on the site, and that the German and
+Portuguese menus had to be edited by hand to match. `partials/header.html` now
+builds it from the pages themselves, so a page shows up when it is published,
+with its own translated title.
+
+Two fields in the editor decide where it goes:
+
+- **`parent`** — another page's basename (`acerca` for `acerca.es.md`), which puts
+  this page in the submenu under that one. The basename is what `translate.py`
+  uses to pair siblings, so a parent chosen once holds in all three languages.
+- **`weight`** — the order, lower first, 50 by default.
+
+**URLs do not change.** A subpage is still `/page/<slug>/`; only the menu nests,
+so nothing in the Caddyfile, the pipeline or the editor's filename rules has to
+learn about folders. The dropdown is the one the theme already had, ported from
+WordPress: hover and `:focus-within`, inline on a phone, no script.
+
+Only *Inicio* and *Comunidad* remain in `config.yaml`. Weight under 5 puts a menu
+entry before the pages, 5 or more after them.
+
+### 11.16 Sharing, SEO and answer engines
+
+`partials/seo-head.html` was already emitting hreflang, Open Graph, a Twitter
+card and `BlogPosting` for articles. What it now also does:
+
+- **Static pages get all of it** — they had none, so *Acerca de* shared as a bare
+  link. `WebPage` schema, Open Graph, the card
+- **`og:image` with an alt**, from the post's own picture or `params.defaultImage`
+  as a fallback. That param is empty: fill it in when there is a logo, and every
+  link shared on WhatsApp, Signal, Mastodon or Bluesky starts carrying a picture
+- **`Organization`** on the home, with `areaServed: Wien` and a `sameAs` list
+  ready for social profiles — this is how a search or answer engine knows the
+  Instagram account and this site are one body
+- **`BreadcrumbList`** on every post and page, and the author's profile URL in the
+  article's structured data
+- **Optional `FAQPage`**: `pregunta|respuesta` per line in the editor, rendered at
+  the foot of the page *and* described in the schema. Current guidance for
+  generative engines puts a short factual answer to a concrete question at the
+  top of what gets quoted, and this is the cheapest way to write one
+- `llms.txt` lists the static pages as well as the articles
+
+The translation pipeline carries all of it: `image_alt` joins the translated
+keys, and `faq` is translated line by line with each half handled separately so
+the `|` survives.
+
+### 11.17 Writing boxes
+
+Every box where somebody writes prose — the wall, a comment, a private message, a
+proposal, the editor, a profile bio — carries a markdown toolbar and a *Vista
+previa*, opted in with `data-markdown` and attached by `static/board.js`. The
+preview POSTs to `/comunidad/previsualizar`, which renders with `render.to_html`:
+the same function the board and the site use, so the preview cannot promise
+something publishing will not deliver. A markdown parser in the browser would be
+a second opinion about what somebody's text means.
+
+Choosing a picture shows a thumbnail with its name and size before anything is
+uploaded. That is the one reason `blob:` is in the `img-src` policy — a handle to
+bytes already in the page, which reaches no network.
 
 ## 12. Make Gitea look like the site
 

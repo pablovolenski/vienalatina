@@ -516,3 +516,86 @@ def test_a_page_carries_no_byline(repo, editor, post):
     path, = repo.files
     front = yaml.safe_load(repo.files[path].decode().split("---")[1])
     assert "author" not in front
+
+
+# --- where a page sits in the public menu --------------------------------
+#
+# The menu used to be three names in config.yaml, so a page published here never
+# appeared on the site and the three languages had to be kept in step by hand.
+# It is built from the pages now, which makes these two fields the whole of the
+# navigation: `parent` nests a page under another, `weight` orders them.
+
+def test_a_page_records_where_it_goes_in_the_menu(repo, editor, post):
+    import yaml
+    post("/comunidad/contenido/page/nuevo",
+         {"title": "Estatutos", "body": "Texto.", "parent": "acerca", "weight": "10"})
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert front["parent"] == "acerca"
+    assert front["weight"] == 10
+
+
+def test_a_top_level_page_carries_no_parent_line(repo, editor, post):
+    """Rather than `parent: ""`, which is a line somebody has to decide whether
+    to worry about."""
+    import yaml
+    post("/comunidad/contenido/page/nuevo", {"title": "Contacto", "body": "Texto."})
+
+    path, = repo.files
+    assert "parent" not in yaml.safe_load(repo.files[path].decode().split("---")[1])
+
+
+def test_a_parent_that_is_not_a_basename_is_dropped(repo, editor, post):
+    """It arrives from a select, so anything else is somebody crafting a
+    request — and a parent with a slash in it would be a path, not a page."""
+    import yaml
+    post("/comunidad/contenido/page/nuevo",
+         {"title": "Estatutos", "body": "Texto.", "parent": "../../etc/passwd"})
+
+    path, = repo.files
+    assert "parent" not in yaml.safe_load(repo.files[path].decode().split("---")[1])
+
+
+def test_a_page_keeps_its_place_when_edited(repo, editor, post, client):
+    repo.files["content/page/acerca.es.md"] = (
+        "---\ntitle: Acerca\nlang: es\n---\n\nTexto.\n").encode("utf-8")
+    repo.files["content/page/estatutos.es.md"] = (
+        "---\ntitle: Estatutos\nlang: es\nparent: acerca\nweight: 10\n---\n\nTexto.\n"
+    ).encode("utf-8")
+
+    body = client.get("/comunidad/contenido/page/editar/estatutos.es.md").get_data(as_text=True)
+    assert 'value="acerca" selected' in body or 'value="acerca"  selected' in body
+    assert 'value="10"' in body
+
+
+def test_the_parent_select_never_offers_the_page_itself(repo, editor, client):
+    repo.files["content/page/acerca.es.md"] = (
+        "---\ntitle: Acerca\nlang: es\n---\n\nTexto.\n").encode("utf-8")
+    repo.files["content/page/contacto.es.md"] = (
+        "---\ntitle: Contacto\nlang: es\n---\n\nTexto.\n").encode("utf-8")
+
+    body = client.get("/comunidad/contenido/page/editar/acerca.es.md").get_data(as_text=True)
+
+    assert 'value="contacto"' in body
+    assert 'value="acerca"' not in body
+
+
+def test_a_post_has_no_menu_fields(repo, editor, client):
+    """Articles are dated and listed, never in the menu."""
+    body = client.get("/comunidad/contenido/post/nuevo").get_data(as_text=True)
+    assert 'name="parent"' not in body
+    assert 'name="weight"' not in body
+
+
+def test_a_parent_that_has_been_deleted_is_kept_and_named(repo, editor, client):
+    """Otherwise the next save would quietly promote the page to the top of the
+    menu, and nobody would connect that to having deleted another page."""
+    repo.files["content/page/estatutos.es.md"] = (
+        "---\ntitle: Estatutos\nlang: es\nparent: borrada\n---\n\nTexto.\n"
+    ).encode("utf-8")
+
+    body = client.get("/comunidad/contenido/page/editar/estatutos.es.md").get_data(as_text=True)
+
+    assert 'value="borrada" selected' in body
+    assert "no encontrada" in body

@@ -3715,3 +3715,104 @@ a.notif-card__message:hover {
   .site-bar__inner { padding: 8px 12px; }
   .site-bar__btn { padding: 7px 12px; font-size: 0.82rem; }
 }
+
+/* --- preguntas frecuentes ---------------------------------------------- */
+/*
+ * Rendered from the `faq` frontmatter, and described by FAQPage structured data
+ * — which is why it has to be visible: schema for something a reader cannot see
+ * is what search engines penalise.
+ */
+.faq {
+  margin: 40px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-light, #e0cec8);
+}
+
+.faq h2 {
+  font-size: 1.15rem;
+  margin: 0 0 16px;
+}
+
+.faq dl {
+  margin: 0;
+}
+
+.faq dt {
+  font-weight: 700;
+  margin-top: 16px;
+}
+
+.faq dd {
+  margin: 4px 0 0;
+  color: var(--muted, #5c3d37);
+  line-height: 1.55;
+}
+
+/* --- the members' bar -------------------------------------------------- */
+/*
+ * Drawn by assets/js/memberbar.js when somebody is signed in, above everything
+ * else. Deliberately in the brand colour and deliberately not subtle: its whole
+ * job is to answer "am I signed in, and where is the rest of it" from any page
+ * on the public site.
+ */
+.member-bar {
+  background: var(--brand, #c0391c);
+  color: #fff;
+  font-size: 0.86rem;
+}
+
+.member-bar__inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.member-bar__links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.member-bar a,
+.member-bar__out {
+  color: #fff;
+  text-decoration: none;
+  opacity: 0.92;
+}
+
+.member-bar a:hover,
+.member-bar__out:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.member-bar__account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-bar__name {
+  font-weight: 700;
+}
+
+.member-bar form {
+  margin: 0;
+}
+
+/* A button that reads as part of the bar rather than as a form control. */
+.member-bar__out {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}

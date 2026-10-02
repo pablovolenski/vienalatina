@@ -13,16 +13,21 @@ page is the only way to reach anything.
 
 from __future__ import annotations
 
-from flask import Blueprint, g, render_template
+from flask import Blueprint, g, jsonify, render_template, request, url_for
 
 from . import submissions
 from .db import TOMBSTONE_LOGIN, get_db
-from .render import excerpt
-from .security import admin_required, login_required
+from .render import excerpt, to_html
+from .security import admin_required, csrf_token, login_required
 
 bp = Blueprint("home", __name__)
 
 RECENT = 5
+
+# The longest text the preview will render. The forms themselves cap what can be
+# saved; this is only here so a crafted request cannot ask for a megabyte of
+# markdown to be parsed on every keystroke.
+BODY_MAX = 100_000
 
 
 @bp.route("/")
@@ -90,6 +95,73 @@ def index():
     return render_template("home.html", threads=threads, conversations=conversations,
                            mine=mine, queue=queue, people=people, excerpt=excerpt,
                            state_labels=submissions.STATE_LABELS)
+
+
+@bp.route("/sesion.json")
+def session_state():
+    """Who is signed in, for the bar the public site draws.
+
+    vienalatina.com is files on disk; it cannot know who is reading it, and
+    baking the answer into those files would mean caching one member's name for
+    the next visitor. So the browser asks here instead, and this is the only
+    place that decides — including which sections to offer, read from the same
+    rule the navigation uses, so the two cannot drift.
+
+    Three properties worth stating, because each is a way this leaks:
+
+    * **A visitor gets `{"signed_in": false}` and nothing else.** No names, no
+      counts, no hint about who else exists.
+    * **`no-store`.** A cached answer is somebody else's name on a shared
+      machine, or a bar that stays after signing out.
+    * **No badge counts.** They would need queries on every public page view,
+      for a number nobody can act on until they are inside anyway.
+    """
+    if g.member is None:
+        return _no_store(jsonify({"signed_in": False}))
+
+    sections = [
+        {"label": "Inicio", "url": url_for("home.index")},
+        {"label": "Muro", "url": url_for("board.threads")},
+        {"label": "Privados", "url": url_for("messages.inbox")},
+        {"label": "Publicaciones", "url": url_for("submissions.index")},
+    ]
+    if g.member["role"] in ("owner", "admin"):
+        sections.append({"label": "Gestión", "url": url_for("home.gestion")})
+
+    return _no_store(jsonify({
+        "signed_in": True,
+        "name": g.member["display_name"] or g.member["gitea_login"],
+        "sections": sections,
+        "profile": url_for("profiles.edit"),
+        "logout": url_for("auth.logout"),
+        # Signing out is a POST, so the bar needs the token to render a real
+        # form. Handing it to a script on our own pages gives nothing away: a
+        # page on another origin cannot read this response — no CORS header
+        # allows it — and the session cookie is SameSite=Lax, so it is not sent
+        # with a cross-site POST in the first place.
+        "csrf": csrf_token(),
+    }))
+
+
+def _no_store(response):
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.route("/previsualizar", methods=["POST"])
+@login_required
+def preview():
+    """Render markdown the way the site will, for the Vista previa button.
+
+    A round trip rather than a markdown parser in the browser, deliberately. The
+    preview has to agree with what gets published, and the only way to guarantee
+    that is to render it with the same function — `render.to_html`, with raw HTML
+    disabled, which is the whole of the XSS defence here. A second parser in
+    JavaScript would be a second opinion about what somebody's text means, and
+    the two would disagree the first time anybody wrote something unusual.
+    """
+    body = request.form.get("body", "")[:BODY_MAX]
+    return _no_store(jsonify({"html": to_html(body)}))
 
 
 @bp.route("/gestion")

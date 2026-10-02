@@ -81,7 +81,7 @@
       action="{{ url_for('board.comment', thread_id=thread.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<label for="body">Responder</label>
-	<textarea id="body" name="body" rows="5" required
+	<textarea id="body" data-markdown name="body" rows="5" required
 	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
 
 	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>

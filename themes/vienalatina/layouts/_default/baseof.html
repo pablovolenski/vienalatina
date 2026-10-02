@@ -11,6 +11,11 @@
 	{{ range .AlternativeOutputFormats -}}
 	<link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink | safeURL }}">
 	{{ end -}}
+	{{/* The members' bar, drawn in the browser because these pages are files on
+	     disk and get cached. It makes no request at all unless the reader has a
+	     session — see the comment at the top of the file. */}}
+	{{ $bar := resources.Get "js/memberbar.js" | minify | fingerprint }}
+	<script src="{{ $bar.RelPermalink }}" integrity="{{ $bar.Data.Integrity }}" defer></script>
 </head>
 <body>
 

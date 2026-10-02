@@ -60,7 +60,14 @@ CONTENT_DIR = REPO_ROOT / "content"
 # Frontmatter strings translated alongside the body. Note `categories` is
 # deliberately absent: the taxonomy terms stay Spanish in every language, or
 # Hugo would fork the taxonomy per language.
-TRANSLATED_KEYS = ("title", "description")
+TRANSLATED_KEYS = ("title", "description", "image_alt")
+
+# `faq` is a list of "question|answer" lines, so it cannot go through the loop
+# above: str() on a list would translate the brackets. Each half is translated
+# separately and rejoined, because the separator has to survive — a translator
+# handed "¿Dónde es?|En la plaza" is free to move or drop that bar, and a line
+# without it is dropped on the way out.
+FAQ_KEY = "faq"
 
 BOT_NAME = "vienalatina-translations"
 BOT_EMAIL = "translations@vienalatina.com"
@@ -220,6 +227,20 @@ def orphaned_siblings() -> list[Path]:
     return orphans
 
 
+def translate_faq(entries, src_lang: str, tgt: str, provider) -> list[str]:
+    """Translate each half of each `question|answer` line, keeping the bar."""
+    out = []
+    for entry in entries or []:
+        question, separator, answer = str(entry).partition("|")
+        if not separator:
+            continue
+        out.append("{}|{}".format(
+            translate_text(question.strip(), src_lang, tgt, provider),
+            translate_text(answer.strip(), src_lang, tgt, provider),
+        ))
+    return out
+
+
 def translate_file(source: Path, basename: str, src_lang: str, provider) -> list[Path]:
     fm, body = split_frontmatter(source.read_text(encoding="utf-8"))
     written: list[Path] = []
@@ -237,6 +258,8 @@ def translate_file(source: Path, basename: str, src_lang: str, provider) -> list
         for key in TRANSLATED_KEYS:
             if fm.get(key):
                 new_fm[key] = translate_text(str(fm[key]), src_lang, tgt, provider)
+        if fm.get(FAQ_KEY):
+            new_fm[FAQ_KEY] = translate_faq(fm[FAQ_KEY], src_lang, tgt, provider)
         new_fm["lang"] = tgt
         new_fm["translated_from"] = src_lang
         new_fm["manual_translation"] = False

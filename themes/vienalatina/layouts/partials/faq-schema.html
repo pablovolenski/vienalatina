@@ -1,0 +1,29 @@
+{{/* FAQPage — the single highest-value thing a community page can carry for an
+     answer engine, because a question with a short factual answer is exactly the
+     shape those engines quote.
+
+     Written in the editor as one `pregunta|respuesta` per line, the same shape
+     the profile links field uses, and parsed here: a line without a separator is
+     dropped rather than half-rendered. The questions are also shown on the page
+     by single.html — schema describing something a visitor cannot see is the
+     kind of thing search engines penalise, and rightly. */}}
+{{ $entries := slice }}
+{{ range .Params.faq }}
+{{ $parts := split . "|" }}
+{{ if ge (len $parts) 2 }}
+{{ $question := trim (index $parts 0) " " }}
+{{ $answer := trim (delimit (after 1 $parts) "|") " " }}
+{{ if and $question $answer }}
+{{ $entries = $entries | append (dict
+	"@type" "Question"
+	"name" $question
+	"acceptedAnswer" (dict "@type" "Answer" "text" $answer)) }}
+{{ end }}
+{{ end }}
+{{ end }}
+{{ with $entries }}
+<script type="application/ld+json">{{ (dict
+	"@context" "https://schema.org"
+	"@type" "FAQPage"
+	"mainEntity" .) | jsonify (dict "indent" "  ") | safeJS }}</script>
+{{ end }}

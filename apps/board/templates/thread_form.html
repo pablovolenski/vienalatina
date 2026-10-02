@@ -12,7 +12,7 @@
 	       value="{{ thread.title if thread else '' }}">
 
 	<label for="body">Mensaje</label>
-	<textarea id="body" name="body" rows="14" required
+	<textarea id="body" data-markdown name="body" rows="14" required
 	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces.">{{ thread.body_md if thread else '' }}</textarea>
 
 	{# Only when writing, not when editing: the edit route does not read files,

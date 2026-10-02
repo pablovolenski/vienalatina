@@ -148,8 +148,13 @@ def create_app(overrides: dict | None = None) -> Flask:
         # pointing at another site will not load — which for a private board is
         # the right answer anyway, since an external image is a request that
         # tells someone else who read the thread and when.
+        #
+        # `blob:` is in img-src for one thing only: the thumbnail of a picture
+        # somebody has just chosen and not yet uploaded. A blob URL is a handle
+        # to bytes already in this page; it reaches no network and cannot be
+        # pointed at another site.
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; img-src 'self' data:; frame-ancestors 'none'"
+            "default-src 'self'; img-src 'self' data: blob:; frame-ancestors 'none'"
         )
         return response
 

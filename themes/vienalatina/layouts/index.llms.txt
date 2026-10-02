@@ -6,6 +6,11 @@ Site home: {{ .Site.Home.Permalink }}
 
 This site publishes in Spanish. Every article has server-rendered German (/de/) and Brazilian Portuguese (/pt-br/) translations, linked via hreflang.
 
+## About this site
+
+{{ range where .Site.RegularPages "Section" "page" -}}
+- [{{ .Title }}]({{ .Permalink }}): {{ .Description | default (.Summary | plainify | truncate 200) }}
+{{ end }}
 ## Recent articles
 
 {{ range first 50 (where .Site.RegularPages "Section" "post") -}}

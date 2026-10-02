@@ -151,3 +151,68 @@ def test_a_plain_member_is_offered_neither(client, make_member, sign_in):
 
     assert "/comunidad/contenido" not in body
     assert "Ya publicado" not in body
+
+
+# --- the strip the public site draws --------------------------------------
+#
+# vienalatina.com is files on disk, so the bar is drawn by a script that asks
+# this app who is reading. That makes this endpoint the whole privacy surface:
+# it is the only thing on the public side that knows anything about anybody.
+
+def test_a_visitor_is_told_nothing(client):
+    response = client.get("/comunidad/sesion.json")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"signed_in": False}
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_a_member_gets_their_name_and_their_sections(client, make_member, sign_in):
+    sign_in(make_member("maria"))
+
+    state = client.get("/comunidad/sesion.json").get_json()
+
+    assert state["signed_in"] is True
+    assert state["name"] == "Maria"
+    assert [s["label"] for s in state["sections"]] == [
+        "Inicio", "Muro", "Privados", "Publicaciones"]
+    assert state["csrf"]                       # the bar renders a real logout form
+
+
+def test_the_sections_follow_the_same_rule_as_the_navigation(
+        client, make_member, sign_in):
+    """Two places listing the sections would drift the first time one changed;
+    the navigation and this endpoint have to agree about Gestión."""
+    sign_in(make_member("admina", role="admin"))
+    labels = [s["label"] for s in client.get("/comunidad/sesion.json").get_json()["sections"]]
+    assert "Gestión" in labels
+
+    sign_in(make_member("luisa", role="moderator"))
+    labels = [s["label"] for s in client.get("/comunidad/sesion.json").get_json()["sections"]]
+    assert "Gestión" not in labels
+
+
+def test_the_answer_is_never_cached(client, make_member, sign_in):
+    """A cached answer is somebody else's name on a shared machine, or a bar
+    that stays up after signing out."""
+    sign_in(make_member("maria"))
+    assert client.get("/comunidad/sesion.json").headers["Cache-Control"] == "no-store"
+
+
+def test_signing_in_sets_the_hint_and_signing_out_clears_it(client, db, post, make_member):
+    """The hint is what keeps a stranger reading one article from costing a
+    request to this app on every page view."""
+    from apps.board import passwords
+    member_id = make_member("maria")
+    db.execute("UPDATE members SET password_hash = ? WHERE id = ?",
+               (passwords.hash_password("una-contraseña-larga"), member_id))
+
+    signed_in = post("/comunidad/login",
+                     {"identifier": "maria", "password": "una-contraseña-larga"})
+    cookie = signed_in.headers.get_all("Set-Cookie")
+    assert any("vl_sesion=1" in header for header in cookie)
+    assert any("HttpOnly" not in header for header in cookie if "vl_sesion" in header)
+
+    signed_out = post("/comunidad/logout")
+    assert any("vl_sesion=;" in header or "vl_sesion=\"\"" in header
+               for header in signed_out.headers.get_all("Set-Cookie"))

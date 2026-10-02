@@ -37,6 +37,34 @@
 	<input id="date" name="date" type="date" required value="{{ f.date or today }}">
 	{% endif %}
 
+	{% if collection == 'page' %}
+	{# Where this page sits in the public menu. The menu is built from the pages
+	   themselves, so a page published here appears on the site by itself —
+	   choosing a parent puts it in the submenu under that page instead of on the
+	   top row. The choice is made once and holds in the three languages. #}
+	<label for="parent">En el menú</label>
+	{% set names = parents | map(attribute='base') | list %}
+	<select id="parent" name="parent">
+		<option value="">En la barra principal</option>
+		{% if f.parent and f.parent not in names %}
+		{# The page it hung under has been deleted, or the git server could not be
+		   reached to list them. Either way the relationship is kept and said out
+		   loud, rather than dropped silently by the next save. #}
+		<option value="{{ f.parent }}" selected>Dentro de «{{ f.parent }}» (no encontrada)</option>
+		{% endif %}
+		{% for other in parents %}
+		<option value="{{ other.base }}" {{ 'selected' if f.parent == other.base }}>
+			Dentro de «{{ other.title }}»
+		</option>
+		{% endfor %}
+	</select>
+
+	<label for="weight">Orden</label>
+	<input id="weight" name="weight" type="number" min="0" max="999"
+	       value="{{ f.weight or 50 }}">
+	<p class="muted small">Menor número, más a la izquierda. 50 si da igual.</p>
+	{% endif %}
+
 	{% if collection == 'post' %}
 	<fieldset class="fieldset">
 		<legend>Categorías</legend>
@@ -51,6 +79,11 @@
 
 	<label for="description">Resumen</label>
 	<textarea id="description" name="description" rows="2">{{ f.description or '' }}</textarea>
+	<p class="muted small">
+		Una o dos frases que se entiendan solas: es lo que aparece en los
+		listados, en WhatsApp al compartir el enlace y lo que citan los
+		buscadores. Mejor concreta («El sábado 12 en Ottakring») que general.
+	</p>
 
 	<label for="picture">Imagen destacada</label>
 	{% if f.image %}
@@ -58,11 +91,27 @@
 	<input type="hidden" name="image" value="{{ f.image }}">
 	{% endif %}
 	<input id="picture" name="picture" type="file" accept="image/*">
+
+	<label for="image_alt">Texto alternativo de la imagen</label>
+	<input id="image_alt" name="image_alt" maxlength="200" value="{{ f.image_alt or '' }}">
+	<p class="muted small">
+		Qué se ve en la foto, en una frase. Lo lee quien no puede ver la imagen y
+		lo leen también los buscadores.
+	</p>
 	{% endif %}
 
 	<label for="body">Cuerpo</label>
-	<textarea id="body" name="body" rows="18" required
+	<textarea id="body" data-markdown name="body" rows="18" required
 	          placeholder="Markdown: **negrita**, ## títulos, listas, [enlaces](https://…).">{{ body }}</textarea>
+
+	<label for="faq">Preguntas frecuentes <span class="muted small">(opcional)</span></label>
+	<textarea id="faq" name="faq" rows="5"
+	          placeholder="¿Dónde es?|En la plaza de Ottakring, junto al mercado.">{{ f.faq or '' }}</textarea>
+	<p class="muted small">
+		Una por línea, con el formato <span class="mono">pregunta|respuesta</span>.
+		Se muestran al final de la página y son lo que mejor citan los buscadores
+		y los asistentes de IA: pregunta concreta, respuesta corta y verificable.
+	</p>
 
 	<label class="check">
 		<input type="checkbox" name="manual_translation" {{ 'checked' if f.manual_translation }}>

@@ -32,17 +32,22 @@ languages:
     weight: 1
     params:
       description: "Comunidad latinoamericana en Viena — turismo, cultura, gastronomía, comunidad y comercio."
+    # Only the two ends of the menu live here. Everything between them is built
+    # from the pages themselves by partials/header.html — so a page published
+    # from the members area appears on the site, with its own translated title,
+    # instead of needing three edits in this file. Weight decides the side:
+    # under 5 goes before the pages, 5 or more after them.
     menus:
       main:
         - name: "Inicio"
           url: "/"
           weight: 1
-        - name: "Acerca"
-          url: "/page/acerca/"
-          weight: 2
-        - name: "Contacto"
-          url: "/page/contacto/"
-          weight: 3
+        # The way into the members area, in the menu for everybody: somebody who
+        # has an account needs to find the door, and somebody who does not should
+        # at least see that there is one.
+        - name: "Comunidad"
+          url: "/comunidad/"
+          weight: 9
   de:
     languageCode: "de"
     languageName: "Deutsch"
@@ -54,12 +59,9 @@ languages:
         - name: "Start"
           url: "/de/"
           weight: 1
-        - name: "Über uns"
-          url: "/de/page/acerca/"
-          weight: 2
-        - name: "Kontakt"
-          url: "/de/page/contacto/"
-          weight: 3
+        - name: "Community"
+          url: "/comunidad/"
+          weight: 9
   pt-br:
     languageCode: "pt-BR"
     languageName: "Português (Brasil)"
@@ -71,14 +73,23 @@ languages:
         - name: "Início"
           url: "/pt-br/"
           weight: 1
-        - name: "Sobre"
-          url: "/pt-br/page/acerca/"
-          weight: 2
-        - name: "Contato"
-          url: "/pt-br/page/contacto/"
-          weight: 3
+        - name: "Comunidade"
+          url: "/comunidad/"
+          weight: 9
 
 params:
+  # The picture a share card falls back on when a post or page has none, and the
+  # organisation's logo in the structured data. One path — /uploads/algo.png —
+  # and WhatsApp, Signal, Mastodon and Bluesky all start showing an image. Left
+  # empty until there is a logo to put here; a link then shares as title and
+  # description, which is what happens today.
+  defaultImage: ""
+
+  # The organisation's profiles elsewhere, for `sameAs` in the Organization
+  # schema: it is how a search or answer engine knows the Instagram account and
+  # this site are the same body. One URL per line when they exist.
+  sameAs: []
+
   # og:locale values per language slug (ported from theme/inc/seo.php).
   localeMap:
     es: "es_ES"

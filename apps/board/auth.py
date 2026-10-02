@@ -121,7 +121,40 @@ def login():
     passwords.prune_attempts()
     get_db().execute("UPDATE members SET last_seen_at = datetime('now') WHERE id = ?",
                      (member["id"],))
-    return redirect(safe_next(target))
+    return remember_session(redirect(safe_next(target)))
+
+
+# --- the hint the public site reads --------------------------------------
+#
+# The static pages on vienalatina.com are files on disk; nothing there knows who
+# is looking. The members' bar is therefore drawn by a script that asks this app
+# — and asking on every page view, for every stranger who ever lands on the
+# site, to be told they are nobody, is a request per page for nothing.
+#
+# So sign-in also sets this: a second cookie holding the digit 1, readable by
+# that script, saying only "somebody signed in on this browser once". Without it
+# the script makes no request at all. It is a hint and never a credential: the
+# real session cookie stays HttpOnly and signed, and `sesion.json` decides
+# everything. Somebody who sets this by hand gets a bar that says they are not
+# signed in.
+SESSION_HINT = "vl_sesion"
+
+
+def remember_session(response):
+    response.set_cookie(
+        SESSION_HINT, "1",
+        max_age=60 * 60 * 24 * 30,
+        secure=current_app.config["SESSION_COOKIE_SECURE"],
+        httponly=False,          # the whole point: a script has to read it
+        samesite="Lax",
+        path="/",                # including the static site, which is why it exists
+    )
+    return response
+
+
+def forget_session(response):
+    response.delete_cookie(SESSION_HINT, path="/")
+    return response
 
 
 def invite_url(token: str) -> str:
@@ -207,4 +240,4 @@ def logout():
     """
     session.clear()
     flash("Has cerrado sesión.", "ok")
-    return redirect(url_for("auth.login"))
+    return forget_session(redirect(url_for("auth.login")))

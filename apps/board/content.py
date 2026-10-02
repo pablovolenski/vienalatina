@@ -76,6 +76,10 @@ SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.es\.md$")
 # link somewhere else.
 AUTHOR_URL = re.compile(r"^/[A-Za-z0-9][A-Za-z0-9._-]{0,38}$")
 
+# A page's basename, as it appears in acerca.es.md — which is what another page
+# names when it hangs under it.
+PAGE_BASENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
+
 
 # --- the contract with translate.py --------------------------------------
 
@@ -114,6 +118,17 @@ def frontmatter_for(collection: str, form: dict) -> dict:
         fields["date"] = form["date"]
     fields["lang"] = "es"
     fields["manual_translation"] = form["manual_translation"]
+    if collection == "page":
+        # Only written when set, so a page that sits at the top of the menu has
+        # no `parent: ""` line for somebody to wonder about later.
+        if form.get("parent"):
+            fields["parent"] = form["parent"]
+        if form.get("weight"):
+            fields["weight"] = form["weight"]
+    if form.get("faq"):
+        fields["faq"] = form["faq"]
+    if form.get("image_alt"):
+        fields["image_alt"] = form["image_alt"]
     if collection == "post":
         if form["categories"]:
             fields["categories"] = form["categories"]
@@ -237,6 +252,26 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
     # editing it, so saving a correction must not re-sign the post. Checked on
     # the way back in because a hidden field is only a convention — the URL has
     # to be a path on this site and nothing else.
+    # A page's place in the menu. `parent` is another page's basename — the one
+    # translate.py uses to pair siblings, so a parent chosen once holds in all
+    # three languages — and the menu is built from these, not from a list in
+    # config.yaml that nobody remembers to edit.
+    parent = request.form.get("parent", "").strip()
+    if parent and not PAGE_BASENAME.match(parent):
+        parent = ""
+    try:
+        weight = max(0, min(999, int(request.form.get("weight", "") or 50)))
+    except ValueError:
+        weight = 50
+
+    # Questions and answers, one `pregunta|respuesta` per line — the same shape
+    # the profile links field uses, and parsed the same way: a line without a
+    # separator is dropped rather than published half-formed. They are rendered
+    # on the page and as FAQPage structured data, which is the shape an answer
+    # engine quotes most readily.
+    faq = clean_faq(request.form.get("faq", ""))
+    image_alt = request.form.get("image_alt", "").strip()[:200]
+
     author = request.form.get("author", "").strip()[:80]
     author_url = request.form.get("author_url", "").strip()
     if author_url and not AUTHOR_URL.match(author_url):
@@ -257,6 +292,8 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         "image": image,
         "manual_translation": request.form.get("manual_translation") == "on",
         "author": author, "author_url": author_url,
+        "parent": parent, "weight": weight,
+        "faq": faq, "image_alt": image_alt,
     }
     return fields, body, errors
 
@@ -293,6 +330,27 @@ def commit_picture(data: bytes, filename: str, author=None) -> str:
                      f"content: subir {name}", gitea.content_token(),
                      member=author or g.member)
     return f"/uploads/{name}"
+
+
+def clean_faq(raw: str) -> list[str]:
+    """`pregunta|respuesta` per line, kept only when both halves are there.
+
+    Stored as the lines themselves rather than as a list of dicts: the template
+    and the schema both split on the first separator, and a YAML list of strings
+    survives translate.py's `dict(fm)` copy unchanged, which a nested structure
+    would too but less legibly in a diff.
+    """
+    entries = []
+    for line in raw.splitlines():
+        question, separator, answer = line.strip().partition("|")
+        if not separator:
+            continue
+        question, answer = question.strip(), answer.strip()
+        if question and answer:
+            entries.append(f"{question[:200]}|{answer[:600]}")
+        if len(entries) >= 10:
+            break
+    return entries
 
 
 def _upload_image() -> str:
@@ -378,7 +436,8 @@ def new(collection: str):
     if request.method == "GET":
         return render_template("content_form.html", collection=collection, meta=meta,
                                categories=CATEGORIES, item=None, fields=None,
-                               body="", today=date_type.today().isoformat())
+                               body="", today=date_type.today().isoformat(),
+                               parents=possible_parents(collection))
 
     fields, body, errors = _read_form(collection)
     if errors:
@@ -429,11 +488,16 @@ def edit(collection: str, name: str):
             # people's words, applied to the byline.
             "author": fm.get("author", ""),
             "author_url": fm.get("author_url", ""),
+            "parent": fm.get("parent", ""),
+            "weight": fm.get("weight", ""),
+            "faq": "\n".join(fm.get("faq") or []),
+            "image_alt": fm.get("image_alt", ""),
         }
         return render_template("content_form.html", collection=collection, meta=meta,
                                categories=CATEGORIES, item={"name": name, "sha": sha},
                                fields=fields, body=body,
-                               today=date_type.today().isoformat())
+                               today=date_type.today().isoformat(),
+                               parents=possible_parents(collection, name))
 
     fields, body, errors = _read_form(collection)
     sha = request.form.get("sha", "")
@@ -493,7 +557,26 @@ def preview(collection: str):
     return render_template("content_form.html", collection=collection, meta=meta,
                            categories=CATEGORIES, item=item, fields=fields, body=body,
                            today=date_type.today().isoformat(),
+                           parents=possible_parents(collection,
+                                                    item["name"] if item else ""),
                            preview_html=to_html(body))
+
+
+def possible_parents(collection: str, exclude: str = "") -> list[dict]:
+    """The pages a page may hang under, for the select in the form.
+
+    Only pages have a parent, and a page cannot be its own. A failure to reach
+    the git server returns an empty list rather than an error: not being able to
+    offer the choice is no reason to refuse to open the form.
+    """
+    if collection != "page":
+        return []
+    try:
+        items = listing("page")
+    except gitea.GiteaError:
+        return []
+    return [{"base": item["name"].removesuffix(".es.md"), "title": item["title"]}
+            for item in items if item["name"] != exclude]
 
 
 def _back_to_form(collection, meta, fields, body, errors, item):
@@ -501,4 +584,6 @@ def _back_to_form(collection, meta, fields, body, errors, item):
         flash(message, "error")
     return render_template("content_form.html", collection=collection, meta=meta,
                            categories=CATEGORIES, item=item, fields=fields, body=body,
-                           today=date_type.today().isoformat()), 400
+                           today=date_type.today().isoformat(),
+                           parents=possible_parents(collection,
+                                                    item["name"] if item else "")), 400

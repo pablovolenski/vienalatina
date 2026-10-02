@@ -540,3 +540,60 @@ input[type="file"] {
 }
 .person-card__actions form { margin: 0; }
 .person-card__actions p { margin: 0; }
+
+/* --- the writing boxes ------------------------------------------------- */
+
+.md-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-bottom: 0.35rem;
+}
+.md-bar__button {
+	min-width: 2rem;
+	padding: 0.25rem 0.5rem;
+	border: 1px solid var(--border-light);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--muted);
+	font-size: 0.85rem;
+	cursor: pointer;
+	line-height: 1.4;
+}
+.md-bar__button:hover { border-color: var(--brand); color: var(--brand-dark); }
+.md-bar__button--wide { margin-left: auto; }
+
+.md-preview {
+	margin: 0.5rem 0 1rem;
+	padding: 0.85rem 1rem;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface-soft);
+	line-height: 1.6;
+}
+.md-preview :first-child { margin-top: 0; }
+.md-preview :last-child { margin-bottom: 0; }
+.md-preview img { max-width: 100%; border-radius: var(--radius-sm); }
+
+/* What you just chose, before it is uploaded. */
+.file-strip {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin: 0.5rem 0 0;
+}
+.file-strip__item { margin: 0; width: 120px; }
+.file-strip__item img {
+	display: block;
+	width: 120px;
+	height: 90px;
+	object-fit: cover;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border-light);
+}
+.file-strip__item figcaption {
+	margin-top: 0.2rem;
+	font-size: 0.72rem;
+	color: var(--subtle);
+	overflow-wrap: anywhere;
+}

@@ -48,6 +48,25 @@
 			{{ .Content }}
 		</div>
 
+		{{/* Questions and answers, written in the editor as one
+		     `pregunta|respuesta` per line. Rendered here as well as in the
+		     FAQPage schema: structured data describing something a visitor
+		     cannot see is exactly what search engines penalise. */}}
+		{{ with .Params.faq }}
+		<section class="faq">
+			<h2>Preguntas frecuentes</h2>
+			<dl>
+				{{ range . }}
+				{{ $parts := split . "|" }}
+				{{ if ge (len $parts) 2 }}
+				<dt>{{ trim (index $parts 0) " " }}</dt>
+				<dd>{{ trim (delimit (after 1 $parts) "|") " " }}</dd>
+				{{ end }}
+				{{ end }}
+			</dl>
+		</section>
+		{{ end }}
+
 		<a class="back-link" href="{{ .Site.Home.Permalink }}">
 			← Volver al inicio
 		</a>

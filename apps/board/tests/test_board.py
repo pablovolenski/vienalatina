@@ -108,3 +108,40 @@ def test_the_cooldown_stops_a_double_submit(app, client, post, make_member, sign
     post("/comunidad/nuevo", {"title": "Segundo", "body": "Dos"})
     count = db.execute("SELECT COUNT(*) AS n FROM threads").fetchone()["n"]
     assert count == 1
+
+
+# --- the preview behind the Vista previa button ---------------------------
+#
+# A round trip rather than a markdown parser in the browser: the preview has to
+# agree with what gets published, and the only way to guarantee that is to
+# render it with the same function the board and the site use.
+
+def test_the_preview_renders_the_same_markdown_the_board_does(post, make_member, sign_in):
+    sign_in(make_member("maria"))
+
+    response = post("/comunidad/previsualizar", {"body": "**hola** y _adiós_"})
+
+    assert response.status_code == 200
+    assert response.get_json()["html"] == "<p><strong>hola</strong> y <em>adiós</em></p>\n"
+
+
+def test_the_preview_drops_html_exactly_as_the_board_does(post, make_member, sign_in):
+    """`html=False` in render.py is the whole XSS defence. A preview that
+    rendered raw HTML would be a hole in the members area and a lie about what
+    posting is going to do."""
+    sign_in(make_member("maria"))
+
+    html = post("/comunidad/previsualizar",
+                {"body": "<script>alert(1)</script>"}).get_json()["html"]
+
+    assert "<script>" not in html
+
+
+def test_the_preview_needs_a_session(client):
+    assert client.post("/comunidad/previsualizar", data={"body": "hola"}).status_code in (302, 400)
+
+
+def test_the_preview_is_never_cached(post, make_member, sign_in):
+    sign_in(make_member("maria"))
+    response = post("/comunidad/previsualizar", {"body": "hola"})
+    assert response.headers["Cache-Control"] == "no-store"

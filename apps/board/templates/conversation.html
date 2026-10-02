@@ -42,7 +42,7 @@
       action="{{ url_for('messages.talk', member_id=other.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<label for="body">Mensaje</label>
-	<textarea id="body" name="body" rows="4" autofocus
+	<textarea id="body" data-markdown name="body" rows="4" autofocus
 	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
 
 	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
