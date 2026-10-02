@@ -48,11 +48,13 @@ bp = Blueprint("content", __name__)
 # structure, and changing "Acerca de" is an administrator's job.
 COLLECTIONS = {
     "post": {
-        "label": "Artículos", "singular": "Artículo",
+        "label": "Artículos", "singular": "Artículo", "new_label": "Nuevo artículo",
         "folder": "content/post", "dated": True, "role": "moderator",
     },
     "page": {
-        "label": "Páginas", "singular": "Página",
+        # `new_label` spelled out rather than "Nuevo " + the singular: Spanish
+        # gives the article a gender, and the button read "Nuevo página".
+        "label": "Páginas", "singular": "Página", "new_label": "Nueva página",
         "folder": "content/page", "dated": False, "role": "admin",
     },
 }
@@ -68,6 +70,11 @@ BODY_MAX = 100_000
 # Without it, `../../` in a filename would let the editor read and overwrite any
 # file in the repository — the pipeline and the Caddyfile included.
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.es\.md$")
+
+# A byline links to a profile on this site or to nothing. Same shape as a
+# username, with the leading slash, so no form can turn an author link into a
+# link somewhere else.
+AUTHOR_URL = re.compile(r"^/[A-Za-z0-9][A-Za-z0-9._-]{0,38}$")
 
 
 # --- the contract with translate.py --------------------------------------
@@ -114,6 +121,19 @@ def frontmatter_for(collection: str, form: dict) -> dict:
             fields["description"] = form["description"]
         if form["image"]:
             fields["image"] = form["image"]
+        # Who wrote it, for the page rather than for git. The commit has named
+        # the author since the editor was built; the article did not, so a
+        # reader could not tell whose it was or click through to them.
+        #
+        # `author_url` is only ever set when that member has published their
+        # page — a byline linking to a 404 is worse than a byline that does not
+        # link. translate.py copies both into the German and Portuguese
+        # siblings by itself: it carries the whole frontmatter and translates
+        # only title and description, and a name is not translated.
+        if form.get("author"):
+            fields["author"] = form["author"]
+        if form.get("author_url"):
+            fields["author_url"] = form["author_url"]
     return fields
 
 
@@ -211,6 +231,16 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
             errors.append("La fecha debe tener el formato AAAA-MM-DD.")
 
     categories = [c for c in request.form.getlist("categories") if c in CATEGORIES]
+
+    # Carried through the form as hidden fields, the way the date and the image
+    # path are: they belong to the document being edited, not to whoever is
+    # editing it, so saving a correction must not re-sign the post. Checked on
+    # the way back in because a hidden field is only a convention — the URL has
+    # to be a path on this site and nothing else.
+    author = request.form.get("author", "").strip()[:80]
+    author_url = request.form.get("author_url", "").strip()
+    if author_url and not AUTHOR_URL.match(author_url):
+        author_url = ""
     image = request.form.get("image", "").strip()
     if image and not re.match(r"^/uploads/[A-Za-z0-9._-]+$", image):
         errors.append("La imagen no es válida.")
@@ -226,6 +256,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         "description": request.form.get("description", "").strip(),
         "image": image,
         "manual_translation": request.form.get("manual_translation") == "on",
+        "author": author, "author_url": author_url,
     }
     return fields, body, errors
 
@@ -271,6 +302,40 @@ def _upload_image() -> str:
     return commit_picture(upload.read(), upload.filename)
 
 
+def _field(row, name, default=None):
+    """One lookup that works on a sqlite3.Row and on a plain dict.
+
+    They disagree about what a missing key is — IndexError for one, KeyError for
+    the other — and `approve` hands this a dict built from a row, so both arrive
+    here.
+    """
+    try:
+        return row[name]
+    except (KeyError, IndexError):
+        return default
+
+
+def byline(author) -> dict:
+    """The two frontmatter keys naming a writer, from their member row.
+
+    Takes the row (or the plain dict `submissions.approve` builds from one), so
+    that a post published through the editor and a proposal approved by somebody
+    else produce the same two keys from the same code — and in the second case
+    they name the member, not the moderator who pressed the button.
+    """
+    if author is None:
+        return {}
+    login = _field(author, "gitea_login", "")
+    name = _field(author, "display_name", "") or login
+    if not name:
+        return {}
+    published = _field(author, "profile_published", 0)
+    return {
+        "author": name,
+        "author_url": f"/{login}" if published and login else "",
+    }
+
+
 def publish(collection: str, fields: dict, body: str, author) -> str:
     """Write one post or page into the repository and return its path.
 
@@ -280,6 +345,7 @@ def publish(collection: str, fields: dict, body: str, author) -> str:
     the button: `gitea.write_file` sends author and committer per commit, so an
     approved submission keeps the member's name in git history.
     """
+    fields = dict(fields, **byline(author))
     name = filename_for(collection, fields["title"], fields["date"])
     path = f"{COLLECTIONS[collection]['folder']}/{name}"
     document = build_document(frontmatter_for(collection, fields), body)
@@ -357,6 +423,12 @@ def edit(collection: str, name: str):
             "description": fm.get("description", ""),
             "image": fm.get("image", ""),
             "manual_translation": bool(fm.get("manual_translation")),
+            # Carried through the form untouched. Correcting a typo in somebody
+            # else's post must not re-sign it with the name of whoever is
+            # fixing it — the same rule the board has about editing other
+            # people's words, applied to the byline.
+            "author": fm.get("author", ""),
+            "author_url": fm.get("author_url", ""),
         }
         return render_template("content_form.html", collection=collection, meta=meta,
                                categories=CATEGORIES, item={"name": name, "sha": sha},
@@ -373,6 +445,8 @@ def edit(collection: str, name: str):
         picture = _upload_image()
         if picture:
             fields["image"] = picture
+        # Deliberately not through publish(): that stamps the byline of whoever
+        # is publishing, and an edit keeps the author the file already names.
         document = build_document(frontmatter_for(collection, fields), body)
         gitea.write_file(path, document.encode("utf-8"),
                          f"content: actualizar «{fields['title']}»",

@@ -773,6 +773,12 @@ visit. The navigation is the same for everybody except the last entry:
 | **Publicaciones** | `/comunidad/publicaciones` | everybody, with two different pages behind it |
 | **Gestión** | `/comunidad/gestion` | admins and the owner |
 
+Gestión holds three things: Miembros, the published **Artículos**, and the
+site's static **Páginas**. A moderator cannot open it, so their route to the
+published articles is the *Ya publicado* link on Publicaciones — the only one
+they have, which is why it sits beside the button rather than inside a
+paragraph.
+
 *Mi perfil*, *Descargar mis datos* and *Salir* are in the menu under the member's
 own name, top right. They are not sections of the site, and while they were in the
 navigation three of the five entries were admin-only — which meant an ordinary
@@ -810,6 +816,14 @@ Three things worth knowing about that design:
 Editing a returned proposal puts it back in the queue automatically. An approved
 one can no longer be edited from there — the file is in the repository, and that
 is what *Contenido* is for.
+
+**Published posts carry a byline.** The editor writes `author` into the
+frontmatter, and `author_url` only when that member has published their own page
+— so the article says *por Fulana* and the name links through when there is
+somewhere to go. `scripts/translate.py` copies both into the German and
+Portuguese siblings by itself: it carries the whole frontmatter and translates
+only the title and the description. Editing a post keeps the author it already
+had, so correcting somebody's typo never re-signs their article.
 
 **On the wall itself**: one 👍 per member per post or comment, which clicking
 again takes back, and every name is a link to that person's page — but only when

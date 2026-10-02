@@ -4,9 +4,7 @@
 {% block main %}
 <div class="feed-head">
 	<h1>Contenido</h1>
-	<a class="btn" href="{{ url_for('content.new', collection=collection) }}">
-		Nuevo {{ meta.singular|lower }}
-	</a>
+	<a class="btn" href="{{ url_for('content.new', collection=collection) }}">{{ meta.new_label }}</a>
 </div>
 
 <nav class="tabs" aria-label="Tipo de contenido">
@@ -34,14 +32,22 @@
 			</td>
 			{% if meta.dated %}<td>{{ item.date }}</td>{% endif %}
 			<td>{{ item.categories }}</td>
-			<td class="actions actions--row">
-				<a class="linkish" href="{{ url_for('content.edit', collection=collection, name=item.name) }}">Editar</a>
-				<form method="post"
-				      action="{{ url_for('content.delete', collection=collection, name=item.name) }}"
-				      data-confirm="Se eliminará «{{ item.title }}» del sitio público. ¿Seguro?">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<button class="linkish linkish--danger" type="submit">Eliminar</button>
-				</form>
+			{# The flex row goes INSIDE the cell, never on it. `.actions` is
+			   display:flex, and a <td> told to be a flex container stops being a
+			   table cell: it leaves the row's layout and draws its bottom border
+			   at its own height, so the columns' lines no longer meet. The page
+			   still renders, which is why this survived two rounds of looking at
+			   it. test_templates.py now fails if it comes back. #}
+			<td>
+				<div class="actions actions--row">
+					<a class="linkish" href="{{ url_for('content.edit', collection=collection, name=item.name) }}">Editar</a>
+					<form method="post"
+					      action="{{ url_for('content.delete', collection=collection, name=item.name) }}"
+					      data-confirm="Se eliminará «{{ item.title }}» del sitio público. ¿Seguro?">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<button class="linkish linkish--danger" type="submit">Eliminar</button>
+					</form>
+				</div>
 			</td>
 		</tr>
 	{% endfor %}

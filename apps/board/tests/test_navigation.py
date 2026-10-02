@@ -116,3 +116,38 @@ def test_signed_out_visitors_get_no_navigation(client):
     body = client.get("/comunidad/login").get_data(as_text=True)
     for label in list(SECTIONS) + list(ADMIN_ONLY):
         assert f'>{label}<' not in body, label
+
+
+# --- reaching the published articles --------------------------------------
+#
+# The screen worked and nothing linked to it: Gestión offered only the static
+# pages, and the Artículos tab exists only once you are already on that screen.
+# A moderator, who cannot open Gestión at all, had no route to it.
+
+def test_an_admin_reaches_the_articles_from_gestion(client, make_member, sign_in):
+    sign_in(make_member("admina", role="admin"))
+
+    body = client.get("/comunidad/gestion").get_data(as_text=True)
+
+    assert "/comunidad/contenido/post" in body
+    assert "Artículos publicados" in body
+
+
+def test_a_moderator_reaches_them_from_publicaciones(client, make_member, sign_in):
+    """Their only way in, so it is a link in the heading rather than a clause in
+    a paragraph."""
+    sign_in(make_member("luisa", role="moderator"))
+
+    body = client.get("/comunidad/publicaciones").get_data(as_text=True)
+
+    assert "/comunidad/contenido/post" in body
+    assert "Ya publicado" in body
+
+
+def test_a_plain_member_is_offered_neither(client, make_member, sign_in):
+    sign_in(make_member("maria"))
+
+    body = client.get("/comunidad/publicaciones").get_data(as_text=True)
+
+    assert "/comunidad/contenido" not in body
+    assert "Ya publicado" not in body

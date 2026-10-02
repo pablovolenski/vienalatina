@@ -429,3 +429,90 @@ def test_an_unexpected_error_renders_the_site_is_own_page(app, client, make_memb
     body = response.get_data(as_text=True)
     assert "Algo falló de nuestro lado" in body
     assert "Viena Latina" in body               # the site's chrome, not Flask's
+
+
+# --- the byline ----------------------------------------------------------
+#
+# The commit has named the author since the editor was built; the page did not,
+# so a reader could not tell whose article they were reading. These check the
+# three places it can go wrong: publishing, approving somebody else's proposal,
+# and editing — where re-signing the post with the editor's name would be worse
+# than having no byline at all.
+
+def test_a_published_post_names_its_author(repo, db, post, make_member, sign_in):
+    import yaml
+    author = make_member("luisa", role="moderator")
+    db.execute("UPDATE members SET display_name = ?, profile_published = 1 WHERE id = ?",
+               ("Luisa Fernández", author))
+    sign_in(author)
+
+    publish(post)
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert front["author"] == "Luisa Fernández"
+    assert front["author_url"] == "/luisa"
+
+
+def test_without_a_published_page_the_byline_does_not_link(
+        repo, db, post, make_member, sign_in):
+    import yaml
+    author = make_member("luisa", role="moderator")
+    db.execute("UPDATE members SET profile_published = 0 WHERE id = ?", (author,))
+    sign_in(author)
+
+    publish(post)
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert front["author"] == "Luisa"
+    assert "author_url" not in front       # a byline linking to a 404 is worse
+
+
+def test_editing_a_post_keeps_the_author_it_already_had(
+        repo, editor, post, client):
+    """The one that matters. An admin fixing a typo in somebody's article must
+    not end up signing it — the same rule the board has about editing other
+    people's words."""
+    import yaml
+    repo.files["content/post/2026-09-25-de-otro.es.md"] = (
+        "---\ntitle: De otro\ndate: 2026-09-25\nlang: es\n"
+        "manual_translation: false\nauthor: Salvador Dalí\nauthor_url: /salvador\n"
+        "---\n\nTexto.\n").encode("utf-8")
+
+    page = client.get("/comunidad/contenido/post/editar/2026-09-25-de-otro.es.md")
+    body = page.get_data(as_text=True)
+    assert 'name="author" value="Salvador Dalí"' in body
+    assert 'name="author_url" value="/salvador"' in body
+
+    post("/comunidad/contenido/post/editar/2026-09-25-de-otro.es.md",
+         {"title": "De otro", "body": "Texto corregido.", "date": "2026-09-25",
+          "sha": repo._sha(repo.files["content/post/2026-09-25-de-otro.es.md"]),
+          "author": "Salvador Dalí", "author_url": "/salvador"})
+
+    front = yaml.safe_load(
+        repo.files["content/post/2026-09-25-de-otro.es.md"].decode().split("---")[1])
+    assert front["author"] == "Salvador Dalí"
+    assert front["author_url"] == "/salvador"
+
+
+def test_an_author_url_cannot_point_off_the_site(repo, editor, post):
+    """It arrives as a hidden field, which is a convention and not a promise."""
+    import yaml
+    post("/comunidad/contenido/post/nuevo",
+         {"title": "Aviso", "body": "Texto.", "date": "2026-09-25",
+          "author": "Alguien", "author_url": "https://ejemplo.invalid/premio"})
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert "author_url" not in front
+
+
+def test_a_page_carries_no_byline(repo, editor, post):
+    """Acerca de and Contacto are the site speaking, not a person."""
+    import yaml
+    post("/comunidad/contenido/page/nuevo", {"title": "Acerca de", "body": "Texto."})
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert "author" not in front

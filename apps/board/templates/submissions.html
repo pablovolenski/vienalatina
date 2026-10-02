@@ -6,7 +6,13 @@
 <div class="feed-head">
 	<h1>Publicaciones</h1>
 	{% if can_moderate %}
-	<a class="btn" href="{{ url_for('content.new', collection='post') }}">Publicar</a>
+	{# A moderator cannot open Gestión, so this is their only route to what is
+	   already on the site. It was a clause inside a paragraph below, which is
+	   the same as not being there. #}
+	<div class="feed-head__actions">
+		<a class="linkish" href="{{ url_for('content.index', collection='post') }}">Ya publicado</a>
+		<a class="btn" href="{{ url_for('content.new', collection='post') }}">Publicar</a>
+	</div>
 	{% else %}
 	<a class="btn" href="{{ url_for('submissions.propose') }}">Proponer</a>
 	{% endif %}
@@ -16,7 +22,6 @@
 	{% if can_moderate %}
 	Lo que publicas aquí sale al sitio en cuanto lo guardas. Lo que proponen los
 	miembros espera en esta cola hasta que tú u otro moderador lo apruebe.
-	<a href="{{ url_for('content.index') }}">Ver lo ya publicado</a>.
 	{% else %}
 	Esto va a vienalatina.com, donde lo lee cualquiera. Un moderador lo lee
 	primero: si hace falta cambiar algo te lo devuelve con el motivo.

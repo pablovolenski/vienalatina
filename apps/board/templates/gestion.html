@@ -28,6 +28,18 @@
 
 <section class="panel">
 	<div class="panel__head">
+		<h2>Artículos publicados</h2>
+		<a class="linkish" href="{{ url_for('content.index', collection='post') }}">Abrir</a>
+	</div>
+	<p class="muted small">
+		Lo que ya está en vienalatina.com: editar, corregir o retirar. Para
+		publicar algo nuevo, o para revisar lo que proponen los miembros, está
+		<a href="{{ url_for('submissions.index') }}">Publicaciones</a>.
+	</p>
+</section>
+
+<section class="panel">
+	<div class="panel__head">
 		<h2>Páginas del sitio</h2>
 		<a class="linkish" href="{{ url_for('content.index', collection='page') }}">Abrir</a>
 	</div>

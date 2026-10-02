@@ -298,7 +298,11 @@ def approve(submission_id: int):
         return redirect(url_for("submissions.index"))
 
     author = {"display_name": row["author"], "email": row["author_email"],
-              "gitea_login": row["author_login"]}
+              "gitea_login": row["author_login"],
+              # For the byline on the published page: it links to their profile
+              # only if they have one, so an approved post never carries a link
+              # to a 404.
+              "profile_published": row["author_published"]}
     fields = {
         "title": row["title"],
         # The day it is published, not the day it was written: Hugo sorts by

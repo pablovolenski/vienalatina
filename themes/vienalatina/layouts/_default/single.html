@@ -13,6 +13,23 @@
 					<time datetime="{{ .Date.Format "2006-01-02T15:04:05-07:00" }}">
 						{{ .Date.Format "2 Jan 2006" }}
 					</time>
+					{{/* Who wrote it. The members area writes `author` into the
+					     frontmatter when it publishes, and `author_url` only when
+					     that person has published their own page — so the name is
+					     a link when there is somewhere to go and plain text when
+					     there is not. Posts written before this, and anything
+					     migrated from WordPress, simply have neither and show
+					     nothing. */}}
+					{{ with .Params.author }}
+					<span class="article-card__by">
+						por
+						{{ with $.Params.author_url }}
+						<a href="{{ . | relURL }}">{{ $.Params.author }}</a>
+						{{ else }}
+						{{ . }}
+						{{ end }}
+					</span>
+					{{ end }}
 				</div>
 			</div>
 		</header>

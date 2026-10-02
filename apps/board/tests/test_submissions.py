@@ -448,3 +448,24 @@ def test_a_genuinely_missing_picture_still_says_so(
     assert "imagen en el disco" in response.get_data(as_text=True)
     assert repo.files == {}
     assert only_submission(db)["state"] == "pending"
+
+
+def test_an_approved_post_is_signed_by_the_member_not_the_moderator(
+        repo, db, post, maria, luisa, sign_in):
+    """Both halves of attribution now: the commit names María, and so does the
+    page — `author` in the frontmatter, with a link only if she has published
+    her profile."""
+    import yaml
+    db.execute("UPDATE members SET profile_published = 1 WHERE id = ?", (maria,))
+    sign_in(maria)
+    propose(post)
+    submission_id = only_submission(db)["id"]
+
+    sign_in(luisa)
+    post(f"/comunidad/publicaciones/{submission_id}/aprobar")
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert front["author"] == "Maria"
+    assert front["author_url"] == "/maria"
+    assert repo.authors == [{"name": "Maria", "email": "maria@example.com"}]

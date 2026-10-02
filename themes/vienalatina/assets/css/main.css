@@ -1090,6 +1090,18 @@ a.group-pill:hover {
   letter-spacing: 0.06em;
 }
 
+/* The byline on an article. It sits in the same meta row as the category and
+   the date, so it inherits their colour and size; only the link needs saying. */
+.article-card__by a {
+  color: var(--brand-dark, #9a2a0f);
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+
+.article-card__by a:hover {
+  border-bottom-style: solid;
+}
+
 .article-card__title {
   margin: 0 0 10px;
   font-size: 1.35rem;

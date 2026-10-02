@@ -112,6 +112,9 @@ button, input, select, textarea { font: inherit; }
   margin-bottom: 1.5rem;
 }
 .feed-head h1 { margin: 0; }
+/* Two things on the right of a heading — a link and a button — kept on one
+   line and aligned to each other rather than to the heading's baseline. */
+.feed-head__actions { display: flex; align-items: center; gap: 1rem; }
 
 .card {
   background: var(--surface);

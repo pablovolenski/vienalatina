@@ -53,6 +53,24 @@ def test_no_inline_style_blocks(template):
 
 
 @pytest.mark.parametrize("template", TEMPLATES, ids=lambda p: p.name)
+def test_no_table_cell_is_told_to_be_a_flex_container(template):
+    """`.actions` is display:flex, and a <td> given it stops being a table cell.
+
+    It leaves the row's layout, so its bottom border is drawn at its own content
+    height rather than the row's and the columns' rules no longer meet. Nothing
+    errors, nothing logs, the page just looks subtly broken — which is how it
+    survived two rounds of somebody looking straight at it. The flex row belongs
+    in a <div> inside the cell.
+    """
+    html = JINJA_COMMENT.sub("", template.read_text(encoding="utf-8"))
+    offenders = re.findall(r"<td[^>]*class=[\"'][^\"']*\bactions\b[^\"']*[\"']", html)
+    assert not offenders, (
+        f"{template.name} puts a flex class on a <td>: {offenders}. "
+        "Wrap the buttons in <div class=\"actions\"> inside the cell instead."
+    )
+
+
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda p: p.name)
 def test_every_post_form_carries_a_csrf_token(template):
     """The hook in app.py rejects a POST without one, so a form that forgets it
     is a button that always fails — and fails with a 400 that reads like the

@@ -20,8 +20,14 @@
 	<input type="hidden" name="sha" value="{{ item.sha }}">
 	<input type="hidden" name="name" value="{{ item.name }}">
 	{% endif %}
+	{# The byline travels with the document, like the date and the image path.
+	   An edit keeps whoever wrote it; only publishing sets it. #}
+	{% if f and f.author %}
+	<input type="hidden" name="author" value="{{ f.author }}">
+	<input type="hidden" name="author_url" value="{{ f.author_url or '' }}">
+	{% endif %}
 
-	<h1>{{ 'Editar' if item else 'Nuevo' }} {{ meta.singular|lower }}</h1>
+	<h1>{{ ('Editar ' ~ meta.singular|lower) if item else meta.new_label }}</h1>
 
 	<label for="title">Título</label>
 	<input id="title" name="title" maxlength="140" required value="{{ f.title or '' }}">
