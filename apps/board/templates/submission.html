@@ -11,7 +11,7 @@
 <article class="card">
 	<div class="card__meta">
 		<span class="tag tag--{{ item.state }}">{{ labels[item.state] }}</span>
-		<span>{{ person(item.author, item.author_login, item.author_published) }}</span> · <time>{{ item.created_at }}</time>
+		<span>{{ person(item.author, item.author_login) }}</span> · <time>{{ item.created_at }}</time>
 		{% if item.categories %} · <span>{{ item.categories }}</span>{% endif %}
 	</div>
 	{% if item.description %}<p class="muted">{{ item.description }}</p>{% endif %}

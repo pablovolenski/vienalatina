@@ -672,12 +672,35 @@ Limits: 4 images per message, and `BOARD_UPLOAD_MAX_BYTES` (8MB by default)
 each. Adding a picture to a post *after* publishing it means posting a reply —
 editing changes the words, and leaves the pictures alone.
 
-### 11.10 Private messages (`/comunidad/privados/`)
+### 11.10 Private messages (on each person's page)
 
-An inbox between two members: conversations, unread badges, photos, blocking.
+Between two members: conversations, unread badges, photos, blocking.
 Deliberately not live chat — that needs a connection held open per signed-in
 member, which gunicorn's sync workers cannot do, and it would be the first
 thing on this box with a real scaling limit.
+
+**There is no inbox.** You write to somebody by opening their page —
+`/comunidad/miembro/<usuario>`, reached from *Miembros* or from their name
+anywhere on the wall — and the whole conversation with them is on it, under
+their photo and bio, with the write box at the foot. One place per person
+rather than a mailbox listing people.
+
+Three consequences worth knowing:
+
+* **The unread badge is on *Miembros***, and repeated on the card of whoever
+  wrote. Those cards are sorted so that anybody with something unread is at the
+  top of the grid — without that, the person waiting for an answer is wherever
+  the alphabet put them.
+* **Opening the page marks it read.** There is no second step any more, so
+  there is no moment where the messages are on screen and still counted unread.
+* **The old addresses redirect.** `/comunidad/privados` goes to the directory
+  and `/comunidad/privados/con/<id>` to that person's page; the POST that sends
+  a message is still `/comunidad/privados/con/<id>`, which is why the two look
+  alike in the logs.
+
+A member's own page carries no conversation and no box: it is there so they can
+see what the others see, and their own private messages are each on the page of
+the person they had them with.
 
 **Blocking is symmetric.** One block stops messages in both directions, and
 either person can only remove their own. A block that silenced just the blocked
@@ -693,7 +716,7 @@ of the choice, and deliberate.
 ### 11.10b The members' bar on the public site
 
 A signed-in member sees a slim bar above the public header on vienalatina.com,
-with the same five sections the members area has. The public pages are files on
+with the same sections the members area has. The public pages are files on
 disk and get cached, so the bar is drawn in the browser:
 `themes/vienalatina/assets/js/memberbar.js` asks `/comunidad/sesion.json` who is
 reading, and that endpoint is the only thing that decides anything — a visitor
@@ -800,7 +823,7 @@ the same problem the Gitea theme has. If the colours change in
 `themes/vienalatina/assets/css/main.css`, change them in
 `apps/board/templates/profile.html` too.
 
-### 11.13 The five sections, and the moderation queue
+### 11.13 The six sections, and the moderation queue
 
 Signing in lands on **Inicio**, a dashboard of what has happened since the last
 visit. The navigation is the same for everybody except the last entry:
@@ -809,19 +832,26 @@ visit. The navigation is the same for everybody except the last entry:
 |---|---|---|
 | **Inicio** | `/comunidad/` | everybody |
 | **Muro** | `/comunidad/muro` | everybody |
-| **Privados** | `/comunidad/privados` | everybody |
+| **Miembros** | `/comunidad/miembros` | everybody |
 | **Publicaciones** | `/comunidad/publicaciones` | everybody, with two different pages behind it |
+| **Calendario** | `/comunidad/calendario` | everybody; admins add events |
 | **Gestión** | `/comunidad/gestion` | admins and the owner |
 
-Gestión holds three things: Miembros, the published **Artículos**, and the
-site's static **Páginas**. A moderator cannot open it, so their route to the
-published articles is the *Ya publicado* link on Publicaciones — the only one
-they have, which is why it sits beside the button rather than inside a
+**Miembros replaced Privados**, which was a list of conversations. The people
+are the section now — a grid of faces and names — and each person's page holds
+their profile, the private conversation with them, and (for an admin) the
+controls for that one person. §11.10 has the mechanics. The unread badge moved
+to this entry with the messages.
+
+Gestión holds Miembros' *Dar de alta*, the published **Artículos**, the site's
+static **Páginas** and **Marca**. A moderator cannot open it, so their route to
+the published articles is the *Ya publicado* link on Publicaciones — the only
+one they have, which is why it sits beside the button rather than inside a
 paragraph.
 
 *Mi perfil*, *Descargar mis datos* and *Salir* are in the menu under the member's
 own name, top right. They are not sections of the site, and while they were in the
-navigation three of the five entries were admin-only — which meant an ordinary
+navigation three of the entries were admin-only — which meant an ordinary
 member signed in to a wall and a member list, with their own profile and their own
 private messages hidden from them. `apps/board/tests/test_navigation.py` asserts
 the navigation per role now, so that cannot come back quietly.
@@ -866,18 +896,21 @@ only the title and the description. Editing a post keeps the author it already
 had, so correcting somebody's typo never re-signs their article.
 
 **On the wall itself**: one 👍 per member per post or comment, which clicking
-again takes back, and every name is a link to that person's page — but only when
-they have published one, so nobody is sent to a 404. Both rules live in one place
-each (`templates/_reaction.html`, `templates/_person.html`) so no screen has to
+again takes back, and every name is a link to that person's page inside the
+members area — which exists for everybody, published page or not. The one name
+that is not a link is *Miembro eliminado*, the tombstone an erased member's
+writing is reassigned to. Both rules live in one place each
+(`templates/_reaction.html`, `templates/_person.html`) so no screen has to
 remember them.
 
-**Miembros is a directory**, not an admin table: a card per person with their
-photo, username, role, the first line of their bio, somewhere to write to them
-and a link to their page. Admins get the controls — suspend, re-invite, change
-role, erase — inside a *Gestionar* block on each card, closed by default. A
-member's photo shows here even when their public page is unpublished, because
-this side is behind the login; `profiles.member_photo` serves it and the profile
-form says so in plain words.
+**Miembros is a directory of faces and names**: a card per person with their
+photo, username and role, and the whole card is a link to their page. Everything
+about one person is on that page — their bio and links, the private conversation
+with them, and, for an admin, the controls (suspend, re-invite, change role,
+erase) inside a *Gestionar* block, closed by default. A member's photo shows
+here even when their public page is unpublished, because this side is behind the
+login; `profiles.member_photo` serves it and the profile form says so in plain
+words.
 
 ### 11.15 The public menu is built from the pages
 

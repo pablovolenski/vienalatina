@@ -180,19 +180,26 @@ def test_erasing_a_member_keeps_their_threads_readable(app, db, post, owner_id, 
     assert row["display_name"] == "Miembro eliminado"
 
 
-def test_the_member_list_renders_for_each_role(client, db, owner_id, make_member, sign_in):
-    """Every role takes a different branch through members.html — the owner
-    sees transfer and erase, an admin sees suspend, a user sees neither — so
-    each one is rendered here rather than trusted."""
+def test_the_member_page_renders_for_each_role(client, db, owner_id, make_member, sign_in):
+    """Every role takes a different branch through member.html — the owner sees
+    transfer and erase, an admin sees suspend, a plain member sees neither — so
+    each one is rendered here rather than trusted.
+
+    These controls used to be on the cards in the directory and are on the
+    person's page now, which is what this looks at. The owner's branch needs an
+    admin to transfer to, so the page opened is the admin's.
+    """
     admin_id = make_member("admina", role="admin")
-    user_id = make_member("usuaria")
 
     for member_id, expected in ((owner_id, "Transferir titularidad"),
                                 (admin_id, "Suspender"),
-                                (user_id, None)):
+                                (make_member("usuaria"), None)):
         sign_in(member_id)
-        body = client.get("/comunidad/miembros").get_data(as_text=True)
-        assert "usuaria" in body
+        # Never your own page: nobody manages themselves, so the block is not
+        # drawn there and the test would pass for the wrong reason.
+        who = "usuaria" if member_id == admin_id else "admina"
+        body = client.get(f"/comunidad/miembro/{who}").get_data(as_text=True)
+        assert who.title() in body
         if expected:
             assert expected in body
         else:
@@ -353,15 +360,16 @@ def test_erasing_a_member_lets_the_name_be_used_again(
         "SELECT 1 FROM members WHERE gitea_login = 'salvador'").fetchone() is not None
 
 
-# --- the directory --------------------------------------------------------
+# --- the directory and the page -------------------------------------------
 #
 # Miembros used to be a five-column admin table whose last column held four
-# forms, wrapping on top of each other. It is a directory now: everybody sees
-# the people, admins open a per-card block for the controls. Both halves are
-# asserted, because "the table is gone" is only an improvement if the controls
-# came with it.
+# forms, wrapping on top of each other; then it was cards, each carrying a bio,
+# some links and a fold-out admin block. It is faces and names now, and
+# everything about one person — their profile, the conversation with them, and
+# the controls — is on their own page. Both halves are asserted, because "the
+# cards are simpler" is only an improvement if nothing was lost on the way.
 
-def test_everybody_sees_the_people(client, db, make_member, sign_in):
+def test_the_directory_is_faces_and_names(client, db, make_member, sign_in):
     maria = make_member("maria")
     db.execute("UPDATE members SET bio = ? WHERE id = ?",
                ("Vivo en Ottakring.\nSegunda línea.", maria))
@@ -370,32 +378,56 @@ def test_everybody_sees_the_people(client, db, make_member, sign_in):
     body = client.get("/comunidad/miembros").get_data(as_text=True)
 
     assert "Maria" in body and "maria" in body
+    assert "/comunidad/miembro/maria" in body    # the card is the way in
+    # The bio is on their page. A grid whose job is to let you find one person
+    # should not be four lines of reading each.
+    assert "Vivo en Ottakring." not in body
+
+
+def test_their_page_is_who_they_are_and_where_you_write(client, db, make_member, sign_in):
+    maria = make_member("maria")
+    db.execute("UPDATE members SET bio = ?, links = ? WHERE id = ?",
+               ("Vivo en Ottakring.", '[{"label": "Mi web", "url": "https://ejemplo.at"}]',
+                maria))
+    sign_in(make_member("otra"))
+
+    body = client.get("/comunidad/miembro/maria").get_data(as_text=True)
+
     assert "Vivo en Ottakring." in body
-    assert "Segunda línea." not in body      # the first line only, as a summary
-    assert f'/comunidad/privados/con/{maria}' in body   # somewhere to write from
+    assert 'href="https://ejemplo.at"' in body and 'rel="nofollow noopener"' in body
+    assert f'action="/comunidad/privados/con/{maria}"' in body   # the write box
+    assert "No ha publicado una página pública." in body
 
 
 def test_a_plain_member_sees_no_controls_and_no_addresses(client, make_member, sign_in):
     make_member("maria")
     sign_in(make_member("otra"))
 
-    body = client.get("/comunidad/miembros").get_data(as_text=True)
-
-    for control in ("Gestionar", "Suspender", "Cambiar rol", "Eliminar",
-                    "Enviar invitación", "maria@example.com"):
-        assert control not in body, control
+    for url in ("/comunidad/miembros", "/comunidad/miembro/maria"):
+        body = client.get(url).get_data(as_text=True)
+        for control in ("Gestionar", "Suspender", "Cambiar rol", "Eliminar",
+                        "Enviar invitación", "maria@example.com"):
+            assert control not in body, f"{control} in {url}"
 
 
 def test_an_admin_keeps_every_control(client, make_member, sign_in):
     make_member("maria")
     sign_in(make_member("admina", role="admin"))
 
-    body = client.get("/comunidad/miembros").get_data(as_text=True)
+    body = client.get("/comunidad/miembro/maria").get_data(as_text=True)
 
     for control in ("Gestionar", "Suspender", "Cambiar rol", "Enviar invitación",
                     "maria@example.com"):
         assert control in body, control
     assert "Eliminar" not in body            # erasure is the owner's alone
+
+    # And none of it leaks back onto the directory, which is where it was.
+    # Asserted on the forms rather than the words: the grid's footnote says in
+    # so many words that the controls are under «Gestionar» on each page, which
+    # is the sentence that sends an admin to the right place.
+    grid = client.get("/comunidad/miembros").get_data(as_text=True)
+    assert "/estado" not in grid and "/rol" not in grid
+    assert "maria@example.com" not in grid
 
 
 def test_a_photo_shows_inside_even_when_the_page_is_not_published(
@@ -430,3 +462,18 @@ def test_the_members_area_photo_needs_a_session(app, client, db, make_member):
 
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
+
+
+def test_a_moderator_gets_no_controls_either(client, make_member, sign_in):
+    """A moderator curates content, not people. The block is hidden from them
+    and the routes refuse them, which is the half that matters."""
+    maria = make_member("maria")
+    sign_in(make_member("luisa", role="moderator"))
+
+    body = client.get("/comunidad/miembro/maria").get_data(as_text=True)
+    assert "Gestionar" not in body
+
+    assert client.get("/comunidad/miembros/nuevo").status_code == 403
+    assert client.post(f"/comunidad/miembros/{maria}/estado",
+                       data={"csrf_token": "token-for-tests", "active": "0"}
+                       ).status_code == 403

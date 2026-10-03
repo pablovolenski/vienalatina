@@ -122,7 +122,7 @@ def session_state():
     sections = [
         {"label": "Inicio", "url": url_for("home.index")},
         {"label": "Muro", "url": url_for("board.threads")},
-        {"label": "Privados", "url": url_for("messages.inbox")},
+        {"label": "Miembros", "url": url_for("members.index")},
         {"label": "Publicaciones", "url": url_for("submissions.index")},
         {"label": "Calendario", "url": url_for("events.month")},
     ]

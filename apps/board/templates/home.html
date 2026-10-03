@@ -19,7 +19,7 @@
 	{% for item in queue %}
 	<p class="panel__row">
 		<a href="{{ url_for('submissions.show', submission_id=item.id) }}">{{ item.title }}</a>
-		<span class="muted small">{{ person(item.author, item.author_login, item.author_published) }} · {{ item.created_at }}</span>
+		<span class="muted small">{{ person(item.author, item.author_login) }} · {{ item.created_at }}</span>
 	</p>
 	{% endfor %}
 </section>
@@ -28,14 +28,14 @@
 <section class="panel">
 	<div class="panel__head">
 		<h2>Privados</h2>
-		<a class="linkish" href="{{ url_for('messages.inbox') }}">Todos</a>
+		<a class="linkish" href="{{ url_for('members.index') }}">Miembros</a>
 	</div>
 	{% if not conversations %}
-	<p class="muted">Todavía no tienes conversaciones. Escribe a alguien desde Privados.</p>
+	<p class="muted">Todavía no tienes conversaciones. Abre la ficha de alguien en Miembros y escríbele.</p>
 	{% endif %}
 	{% for c in conversations %}
 	<p class="panel__row">
-		<a href="{{ url_for('messages.talk', member_id=c.other_id) }}">{{ c.other_name }}</a>
+		<a href="{{ url_for('members.show', login=c.other_login) }}">{{ c.other_name }}</a>
 		{% if c.unread %}<span class="tag">{{ c.unread }}</span>{% endif %}
 		{% if c.last_at %}<span class="muted small">{{ c.last_at }}</span>{% endif %}
 	</p>
@@ -53,7 +53,7 @@
 	{% for t in threads %}
 	<p class="panel__row">
 		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>
-		<span class="muted small">{{ person(t.author, t.author_login, t.author_published) }} · {{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
+		<span class="muted small">{{ person(t.author, t.author_login) }} · {{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
 	</p>
 	{% endfor %}
 </section>

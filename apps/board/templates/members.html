@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-{% from "_person.html" import person %}
 {% block title %}Miembros{% endblock %}
 
 {% set me = g.member %}
-{% set is_owner = me.role == 'owner' %}
 {% set is_admin = me.role in ('owner', 'admin') %}
 
 {% block main %}
@@ -14,15 +12,20 @@
 	{% endif %}
 </div>
 
-{# People, not rows. This was a five-column table whose last column held four
-   forms, which is how the actions ended up wrapping on top of each other in a
-   column two inches wide. A card has room for a face and somewhere to write
-   from, and the admin controls fold away into a <details> so that the page is
-   a directory first and a control panel second. #}
+<p class="muted">
+	Abre la ficha de alguien para escribirle en privado y leer lo que os habéis
+	escrito. Los mensajes privados viven en la ficha de cada persona; no hay
+	bandeja aparte.
+</p>
+
+{# Faces and names, and the whole card is the link. This was a page of cards
+   each carrying a bio, a couple of links and a fold-out admin panel — four
+   things to read per person, on a page whose job is to let you find one. All of
+   that is on the person's own page now. #}
 <ul class="people">
 	{% for m in members %}
 	<li class="person-card {{ '' if m.active else 'person-card--off' }}">
-		<div class="person-card__head">
+		<a class="person-card__link" href="{{ url_for('members.show', login=m.gitea_login) }}">
 			{% if m.photo_name %}
 			<img class="person-card__photo"
 			     src="{{ url_for('profiles.member_photo', stored_name=m.photo_name) }}"
@@ -35,96 +38,26 @@
 			</span>
 			{% endif %}
 
-			<div class="person-card__who">
-				<h2 class="person-card__name">
-					{{ person(m.display_name, m.gitea_login, m.profile_published) }}
+			<span class="person-card__who">
+				<span class="person-card__name">
+					{{ m.display_name }}
 					{% if m.id == me.id %}<span class="muted small">(tú)</span>{% endif %}
-				</h2>
+					{% if m.unread %}
+					{# Who wrote, not just that somebody did — and the cards are
+					   sorted so this one is at the top of the page. #}
+					<span class="tag" aria-label="{{ m.unread }} sin leer">{{ m.unread }}</span>
+					{% endif %}
+				</span>
 				{# The username is shown to everyone: it is not a secret, it is
 				   their address — vienalatina.com/<usuario> — and somebody
 				   looking for a person's page needs to know how it is spelled.
-				   The email stays inside the admin block. #}
-				<p class="muted small">
+				   The email stays on their page, inside the admin block. #}
+				<span class="muted small">
 					<span class="mono">{{ m.gitea_login }}</span> · {{ labels[m.role] }}
 					{% if not m.active %} · Suspendido{% endif %}
-					{% if m.posts %} · {{ m.posts }} en el muro{% endif %}
-				</p>
-			</div>
-		</div>
-
-		{% if m.bio %}<p class="person-card__bio">{{ m.bio.split('\n')[0][:160] }}</p>{% endif %}
-
-		<div class="person-card__foot">
-			{% if m.id != me.id and m.active %}
-			<a class="linkish" href="{{ url_for('messages.talk', member_id=m.id) }}">Escribir</a>
-			{% endif %}
-			{% if m.profile_published %}
-			<a class="linkish" href="{{ url_for('profiles_public.show', name=m.gitea_login) }}">Su página</a>
-			{% elif m.id == me.id %}
-			<a class="linkish" href="{{ url_for('profiles.edit') }}">Editar mi perfil</a>
-			{% endif %}
-		</div>
-
-		{% if is_admin and m.role != 'owner' %}
-		{# A <details>, not a script: the CSP has no 'unsafe-inline'. Closed by
-		   default, so the directory reads as a directory. #}
-		<details class="person-card__admin">
-			<summary>Gestionar</summary>
-			<div class="person-card__actions">
-				<form method="post" action="{{ url_for('members.set_active', member_id=m.id) }}">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<input type="hidden" name="active" value="{{ 0 if m.active else 1 }}">
-					<button class="linkish" type="submit">{{ 'Suspender' if m.active else 'Reactivar' }}</button>
-				</form>
-
-				{# Any admin can re-send, not just the owner: the usual reason
-				   somebody needs this is that the admin who added them made the
-				   account by hand, and waiting for the owner defeats the point.
-				   Hidden without an address, because the handler would refuse. #}
-				{% if m.email and m.active %}
-				<form method="post" action="{{ url_for('members.invite', member_id=m.id) }}"
-				      data-confirm="Se enviará un enlace nuevo a {{ m.email }} y el anterior dejará de servir. ¿Seguro?">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<button class="linkish" type="submit">Enviar invitación</button>
-				</form>
-				{% endif %}
-
-				{% if is_owner or m.role != 'admin' %}
-				<form class="inline-form" method="post"
-				      action="{{ url_for('members.set_role', member_id=m.id) }}">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<label class="sr-only" for="role-{{ m.id }}">Rol de {{ m.display_name }}</label>
-					<select id="role-{{ m.id }}" name="role">
-						<option value="user" {{ 'selected' if m.role == 'user' }}>Miembro</option>
-						<option value="moderator" {{ 'selected' if m.role == 'moderator' }}>Moderador</option>
-						{% if is_owner %}
-						<option value="admin" {{ 'selected' if m.role == 'admin' }}>Administrador</option>
-						{% endif %}
-					</select>
-					<button class="linkish" type="submit">Cambiar rol</button>
-				</form>
-				{% endif %}
-
-				{% if is_owner %}
-					{% if m.role == 'admin' and m.active %}
-					<form method="post" action="{{ url_for('members.transfer', member_id=m.id) }}"
-					      data-confirm="Vas a dejar de ser el responsable y {{ m.display_name }} pasará a serlo. ¿Seguro?">
-						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-						<button class="linkish" type="submit">Transferir titularidad</button>
-					</form>
-					{% endif %}
-
-					<form method="post" action="{{ url_for('members.erase', member_id=m.id) }}"
-					      data-confirm="Se borrarán sus datos personales. Sus mensajes quedarán como «Miembro eliminado». ¿Seguro?">
-						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-						<button class="linkish linkish--danger" type="submit">Eliminar</button>
-					</form>
-				{% endif %}
-
-				{% if m.email %}<p class="muted small">{{ m.email }}</p>{% endif %}
-			</div>
-		</details>
-		{% endif %}
+				</span>
+			</span>
+		</a>
 	</li>
 	{% endfor %}
 </ul>
@@ -132,9 +65,9 @@
 {% if is_admin %}
 <p class="muted small">
 	Hay un solo responsable. El responsable da de alta administradores; los
-	administradores dan de alta miembros y moderadores. Nadie puede suspender ni
-	degradar al responsable: para dejar el cargo hay que transferirlo a un
-	administrador.
+	administradores dan de alta miembros y moderadores. Suspender, cambiar el rol,
+	reenviar la invitación y eliminar están en la ficha de cada persona, bajo
+	«Gestionar».
 </p>
 {% endif %}
 {% endblock %}

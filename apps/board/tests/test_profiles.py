@@ -219,30 +219,67 @@ def test_the_form_says_what_publishing_means(client, make_member, sign_in):
 
 # --- names as doors -------------------------------------------------------
 #
-# A profile nobody can reach from inside the members area is a profile nobody
-# visits. Every screen renders names through the one macro in
-# templates/_person.html, which links only when there is a page to link to —
-# the rule is in one place because both failures are silent: never linking
-# hides the profiles, always linking sends people to a 404.
+# Every screen renders names through the one macro in templates/_person.html,
+# and it used to link to somebody's *public* page, only when they had published
+# one — so most names on the wall were plain text and there was no way to get
+# from a post to writing to its author. It links inside now, to
+# /comunidad/miembro/<usuario>, which exists for every member; their public page
+# is linked from there when they have one.
+#
+# The rule is in one place because both failures are silent: never linking
+# hides the people, always linking sends somebody to a 404.
 
-def test_a_name_on_the_wall_links_to_a_published_page(client, post, published, sign_in):
+def test_a_name_on_the_wall_links_to_their_page_inside(client, post, published, sign_in):
     author = published("maria")
     sign_in(author)
     post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
 
     for url in ("/comunidad/muro", "/comunidad/tema/1", "/comunidad/"):
-        assert 'href="/maria"' in client.get(url).get_data(as_text=True), url
+        assert ('href="/comunidad/miembro/maria"'
+                in client.get(url).get_data(as_text=True)), url
 
 
-def test_a_name_without_a_page_is_not_a_link(client, post, published, sign_in):
+def test_a_name_links_even_without_a_public_page(client, post, published, sign_in):
+    """The change this phase makes. Somebody who has published nothing is still
+    somebody you can reach — and their page says in as many words that there is
+    no public one."""
     author = published("maria", profile_published=0)
     sign_in(author)
     post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
 
     for url in ("/comunidad/muro", "/comunidad/tema/1"):
         body = client.get(url).get_data(as_text=True)
-        assert 'href="/maria"' not in body, url
-        assert "Maria" in body, url          # the name is still there
+        assert 'href="/comunidad/miembro/maria"' in body, url
+        assert 'href="/maria"' not in body, url     # their public page is not there
+
+    page = client.get("/comunidad/miembro/maria").get_data(as_text=True)
+    assert 'href="/maria"' not in page
+
+
+def test_their_page_links_out_to_the_public_one_when_there_is_one(
+        client, published, make_member, sign_in):
+    published("maria")
+    sign_in(make_member("jose"))
+
+    assert 'href="/maria"' in client.get("/comunidad/miembro/maria").get_data(as_text=True)
+
+
+def test_an_erased_members_name_is_not_a_link(client, post, owner_id,
+                                              make_member, sign_in):
+    """The one name with no page behind it. An erased member's writing is
+    reassigned to the tombstone, which is not a person and has nothing to
+    show — and `members.show` 404s for it, so a link there would be a dead
+    end on the wall."""
+    maria = make_member("maria")
+    sign_in(maria)
+    post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
+
+    sign_in(owner_id)
+    post(f"/comunidad/miembros/{maria}/eliminar")
+
+    body = client.get("/comunidad/muro").get_data(as_text=True)
+    assert "Miembro eliminado" in body
+    assert "/comunidad/miembro/__removed__" not in body
 
 
 def test_a_comment_and_a_private_message_link_too(client, post, published,
@@ -256,6 +293,6 @@ def test_a_comment_and_a_private_message_link_too(client, post, published,
     post("/comunidad/privados/con/%d" % jose, {"body": "Hola José"})
 
     sign_in(jose)
-    assert 'href="/maria"' in client.get("/comunidad/tema/1").get_data(as_text=True)
-    assert 'href="/maria"' in client.get(
-        f"/comunidad/privados/con/{maria}").get_data(as_text=True)
+    link = 'href="/comunidad/miembro/maria"'
+    assert link in client.get("/comunidad/tema/1").get_data(as_text=True)
+    assert link in client.get("/comunidad/miembro/maria").get_data(as_text=True)

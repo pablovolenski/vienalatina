@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from flask import Flask, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .db import close_db, init_db
+from .db import TOMBSTONE_LOGIN, close_db, init_db
 from .security import check_csrf, csrf_token
 
 URL_PREFIX = "/comunidad"
@@ -114,6 +114,9 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.teardown_appcontext(close_db)
     app.jinja_env.globals["csrf_token"] = csrf_token
     app.jinja_env.globals["url_prefix"] = URL_PREFIX
+    # For _person.html: the one login with no page behind it. A literal in the
+    # template would be the same string written twice, in two languages.
+    app.jinja_env.globals["tombstone_login"] = TOMBSTONE_LOGIN
 
     @app.context_processor
     def _year():

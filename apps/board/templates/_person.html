@@ -1,12 +1,20 @@
-{# A member's name, as a link to their page when they have one.
+{# A member's name, as a link to their page inside the members area.
 
-   The rule is in one place because it is easy to get wrong in two directions:
-   a name that never links makes the profiles invisible, and a name that always
-   links sends people to a 404 for everybody who has not published theirs. So
-   every screen calls this, and none of them has to remember. #}
-{% macro person(name, login=None, published=False) %}
-{%- if published and login -%}
-<a class="who-link" href="{{ url_for('profiles_public.show', name=login) }}">{{ name }}</a>
+   It used to link to their *public* page, and only when they had published one
+   — which meant most names on the wall were plain text, and there was no way to
+   get from somebody's post to writing to them. Every template that calls this
+   is behind the login, so the link now goes to /comunidad/miembro/<usuario>,
+   which exists for every member: who they are, what the two of you have written
+   each other, and a link out to their public page when they have published one.
+
+   The rule stays in one place because it is easy to get wrong in two
+   directions: a name that never links makes the people invisible, and a name
+   that always links sends somebody to a 404. The one name with no page is the
+   tombstone that an erased member's writing is reassigned to — it is not a
+   person and has nothing to show. #}
+{% macro person(name, login=None) %}
+{%- if login and login != tombstone_login -%}
+<a class="who-link" href="{{ url_for('members.show', login=login) }}">{{ name }}</a>
 {%- else -%}
 {{ name }}
 {%- endif -%}

@@ -27,8 +27,9 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import auth, invites, mail, profiles, uploads
+from . import auth, invites, mail, messages, profiles, uploads
 from .db import TOMBSTONE_LOGIN, get_db
+from .render import to_html
 from .security import admin_required, login_required, owner_required
 
 bp = Blueprint("members", __name__)
@@ -224,21 +225,89 @@ def _load(member_id: int):
     return row
 
 
+def _page(target) -> str:
+    """Back to the person whose page the button was on.
+
+    The admin controls used to sit on the cards, so every one of them sent the
+    admin back to the directory. They are on the person's page now, and landing
+    on the page you just changed — with the flash above it — is the difference
+    between seeing that it worked and going to look for it.
+    """
+    return url_for("members.show", login=target["gitea_login"])
+
+
 @bp.route("/miembros")
 @login_required
 def index():
+    """The directory, and the way into every private conversation.
+
+    Faces and names, and nothing else on a card: this is a section of the site
+    now, not an admin screen, and everything about one person — their page,
+    their messages, and the admin controls — is on their own page one click
+    away.
+
+    **Sorted by who wrote to you, first.** That is what makes a directory work
+    as the entrance to private messages: without it, the person waiting for an
+    answer is wherever the alphabet put them. The role order comes second, so a
+    page with nothing unread looks exactly as it did before.
+    """
     rows = get_db().execute(
-        """SELECT m.*, c.display_name AS creator,
-                  (SELECT COUNT(*) FROM threads t
-                    WHERE t.author_id = m.id AND t.deleted_at IS NULL) AS posts
+        f"""SELECT m.*, c.display_name AS creator,
+                   (SELECT COUNT(*) FROM threads t
+                     WHERE t.author_id = m.id AND t.deleted_at IS NULL) AS posts,
+                   ({messages.unread_sql()}) AS unread
              FROM members m
              LEFT JOIN members c ON c.id = m.created_by
             WHERE m.role != 'tombstone'
-            ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1
+            ORDER BY CASE WHEN unread > 0 THEN 0 ELSE 1 END,
+                     CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1
                                  WHEN 'moderator' THEN 2 ELSE 3 END,
-                     m.display_name COLLATE NOCASE"""
+                     m.display_name COLLATE NOCASE""",
+        {"me": g.member["id"]},
     ).fetchall()
     return render_template("members.html", members=rows, labels=ROLE_LABELS)
+
+
+@bp.route("/miembro/<login>")
+@login_required
+def show(login: str):
+    """One person: who they are, and everything between you and them.
+
+    Keyed on the login rather than the row id so the address matches the public
+    one — `/comunidad/miembro/maria` beside `vienalatina.com/maria` — and so a
+    link written by hand is guessable.
+
+    Suspended members are shown rather than hidden: they are in the directory,
+    an admin needs to reach their controls to reactivate them, and a page that
+    404s for somebody visible one click earlier is its own small mystery. What
+    they do not get is a write box — see the template.
+    """
+    member = get_db().execute(
+        """SELECT m.*, c.display_name AS creator FROM members m
+             LEFT JOIN members c ON c.id = m.created_by
+            WHERE m.gitea_login = ? COLLATE NOCASE AND m.role != 'tombstone'""",
+        (login,),
+    ).fetchone()
+    if member is None:
+        abort(404)
+
+    mine = member["id"] == g.member["id"]
+    # Nothing to read, nothing to mark read, and no conversation with yourself.
+    talk = ({"messages": [], "images": {}, "blocked": False} if mine
+            else messages.history(member["id"]))
+    try:
+        links = json.loads(member["links"] or "[]")
+    except ValueError:
+        # A profile whose links column is unreadable still has a page. Half a
+        # page with a traceback in the log is better than none with one on
+        # screen.
+        links = []
+
+    return render_template(
+        "member.html", member=member, labels=ROLE_LABELS, is_me=mine,
+        messages=talk["messages"], images=talk["images"], blocked=talk["blocked"],
+        links=links, bio_html=to_html(member["bio"] or ""), to_html=to_html,
+    )
 
 
 @bp.route("/miembros/nuevo", methods=["GET", "POST"])
@@ -338,7 +407,7 @@ def invite(member_id: int):
     target = _load(member_id)
     if not target["email"]:
         flash(f"{target['display_name']} no tiene correo. Añádelo primero.", "error")
-        return redirect(url_for("members.index"))
+        return redirect(_page(target))
     if not target["active"] or target["role"] == "tombstone":
         abort(403)
 
@@ -351,10 +420,10 @@ def invite(member_id: int):
         # did not work.
         current_app.logger.warning("Invite mail to %s failed: %s", target["email"], exc)
         flash(f"No se pudo enviar el correo. Pásale este enlace: {link}", "error")
-        return redirect(url_for("members.index"))
+        return redirect(_page(target))
 
     flash(f"Invitación enviada a {target['email']}.", "ok")
-    return redirect(url_for("members.index"))
+    return redirect(_page(target))
 
 
 @bp.route("/miembros/<int:member_id>/estado", methods=["POST"])
@@ -366,7 +435,7 @@ def set_active(member_id: int):
     active = 1 if request.form.get("active") == "1" else 0
     get_db().execute("UPDATE members SET active = ? WHERE id = ?", (active, member_id))
     flash(f"{target['display_name']}: acceso {'restaurado' if active else 'suspendido'}.", "ok")
-    return redirect(url_for("members.index"))
+    return redirect(_page(target))
 
 
 @bp.route("/miembros/<int:member_id>/rol", methods=["POST"])
@@ -390,7 +459,7 @@ def set_role(member_id: int):
         abort(403)
     get_db().execute("UPDATE members SET role = ? WHERE id = ?", (role, member_id))
     flash(f"{target['display_name']} ahora es {ROLE_LABELS[role].lower()}.", "ok")
-    return redirect(url_for("members.index"))
+    return redirect(_page(target))
 
 
 @bp.route("/miembros/<int:member_id>/transferir", methods=["POST"])
@@ -399,10 +468,10 @@ def transfer(member_id: int):
     target = _load(member_id)
     if target["role"] != "admin" or not target["active"]:
         flash("Solo puedes transferir la titularidad a un administrador activo.", "error")
-        return redirect(url_for("members.index"))
+        return redirect(_page(target))
     transfer_ownership(get_db(), g.member["id"], target["id"])
     flash(f"{target['display_name']} es ahora el responsable. Tú eres administrador.", "ok")
-    return redirect(url_for("members.index"))
+    return redirect(_page(target))
 
 
 @bp.route("/miembros/<int:member_id>/eliminar", methods=["POST"])

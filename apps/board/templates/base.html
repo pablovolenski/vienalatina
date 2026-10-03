@@ -36,17 +36,23 @@
 
 	{% if g.member %}
 	<nav class="site-bar__pages" aria-label="Secciones">
-		{# Five entries, and four of them are the same for everybody. The role
+		{# Six entries, and five of them are the same for everybody. The role
 		   only decides whether Gestión is there — it used to decide three of
 		   them, which is how an ordinary member ended up signing in to a wall
 		   and a member list with their own profile and their own private
 		   messages hidden from them. Account items are in the corner menu
-		   above, because "Mi perfil" is not a section of the site. #}
+		   above, because "Mi perfil" is not a section of the site.
+
+		   *Privados* used to be here, holding a list of conversations. The
+		   people are the section now and the messages live on each person's
+		   page, so the unread badge hangs on Miembros: it is the only thing
+		   left that tells a member somebody wrote to them, which is why it is
+		   also repeated on the card of whoever wrote. #}
 		<ul class="page-nav">
 			<li><a href="{{ url_for('home.index') }}">Inicio</a></li>
 			<li><a href="{{ url_for('board.threads') }}">Muro</a></li>
 			<li>
-				<a href="{{ url_for('messages.inbox') }}">Privados{% set unread = unread_private() %}{% if unread %} <span class="tag">{{ unread }}</span>{% endif %}</a>
+				<a href="{{ url_for('members.index') }}">Miembros{% set unread = unread_private() %}{% if unread %} <span class="tag">{{ unread }}</span>{% endif %}</a>
 			</li>
 			<li>
 				{# The badge counts what is waiting for a moderator, so for
@@ -75,7 +81,6 @@
 
 	<footer class="site-foot">
 		<a href="/">Ir al sitio público</a>
-		{% if g.member %} · <a href="{{ url_for('members.index') }}">Miembros</a>{% endif %}
 		<div class="site-foot__legal">Viena Latina © {{ current_year }} · Área privada</div>
 	</footer>
 </div>

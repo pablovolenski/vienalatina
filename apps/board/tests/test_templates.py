@@ -148,7 +148,7 @@ PROSE_BOXES = {
     "thread_form.html": "body",
     "comment_form.html": "body",
     "thread.html": "body",
-    "conversation.html": "body",
+    "member.html": "body",
     "submission_form.html": "body",
     "content_form.html": "body",
     "profile_edit.html": "bio",

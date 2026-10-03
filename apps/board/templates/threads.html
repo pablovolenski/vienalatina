@@ -20,7 +20,7 @@
 	<div class="card__meta">
 		{% if t.pinned %}<span class="tag">Fijado</span>{% endif %}
 		{% if t.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
-		<span>{{ person(t.author, t.author_login, t.author_published) }}</span> · <time>{{ t.created_at }}</time>
+		<span>{{ person(t.author, t.author_login) }}</span> · <time>{{ t.created_at }}</time>
 	</div>
 	<h2 class="card__title">
 		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>

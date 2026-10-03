@@ -1,0 +1,204 @@
+{# One person's page inside the members area.
+
+   Three things in one place, in the order somebody actually wants them: who
+   this is, what you have said to each other, and — for an admin — what can be
+   done about them. It replaces two screens, `conversation.html` and the
+   `<details>` block that used to be on every card in the directory.
+
+   The private half is the reason this page exists and the reason it is behind
+   the login. Their *public* page is a separate thing they publish themselves,
+   linked below when they have. #}
+{% extends "base.html" %}
+{% from "_person.html" import person %}
+{% from "_attachments.html" import attachments %}
+{% block title %}{{ member.display_name }}{% endblock %}
+
+{% set me = g.member %}
+{% set is_owner = me.role == 'owner' %}
+{% set is_admin = me.role in ('owner', 'admin') %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>{{ member.display_name }}{% if is_me %} <span class="muted small">(tú)</span>{% endif %}</h1>
+	<a class="linkish" href="{{ url_for('members.index') }}">Todos los miembros</a>
+</div>
+
+<section class="card person-head">
+	{% if member.photo_name %}
+	<img class="person-head__photo"
+	     src="{{ url_for('profiles.member_photo', stored_name=member.photo_name) }}"
+	     alt="">
+	{% else %}
+	<span class="person-head__photo person-head__photo--none" aria-hidden="true">
+		{{ member.display_name[:1]|upper }}
+	</span>
+	{% endif %}
+
+	<div class="person-head__who">
+		<p class="muted small">
+			<span class="mono">{{ member.gitea_login }}</span> · {{ labels[member.role] }}
+			{% if not member.active %} · Suspendido{% endif %}
+		</p>
+
+		{% if member.bio %}<div class="prose">{{ bio_html }}</div>{% endif %}
+
+		{% if links %}
+		<ul class="person-head__links">
+			{% for link in links %}
+			{# nofollow noopener as on the public page: these are addresses a
+			   member typed, and this page is no safer a place to vouch for them. #}
+			<li><a href="{{ link.url }}" rel="nofollow noopener">{{ link.label or link.url }}</a></li>
+			{% endfor %}
+		</ul>
+		{% endif %}
+
+		<p class="person-head__foot">
+			{% if member.profile_published %}
+			<a class="linkish" href="{{ url_for('profiles_public.show', name=member.gitea_login) }}">Su página pública</a>
+			{% elif is_me %}
+			<a class="linkish" href="{{ url_for('profiles.edit') }}">Editar mi perfil</a>
+			{% else %}
+			<span class="muted small">No ha publicado una página pública.</span>
+			{% endif %}
+		</p>
+	</div>
+</section>
+
+{% if is_me %}
+{# No conversation with yourself, and nothing to mark read. Your own private
+   messages are each on the page of the person you had them with, which is the
+   whole arrangement. #}
+<p class="muted">
+	Esta es tu ficha, tal como la ven los demás. Para escribir a alguien, abre su
+	ficha desde <a href="{{ url_for('members.index') }}">Miembros</a>.
+</p>
+{% else %}
+
+<h2 class="section-title">Conversación privada</h2>
+<p class="muted small">
+	Sólo vosotros dos podéis leer esto.
+</p>
+
+{% for m in messages %}
+<article class="card card--comment">
+	<div class="card__meta">
+		<span>{{ person(m.author, m.author_login) }}</span> · <time>{{ m.created_at }}</time>
+	</div>
+	<div class="prose">{{ to_html(m.body_md) }}</div>
+	{{ attachments(images.get(m.id, [])) }}
+</article>
+{% else %}
+<p class="muted">Todavía no os habéis escrito. Empieza abajo.</p>
+{% endfor %}
+
+<span id="final"></span>
+
+{% if blocked %}
+<p class="muted">
+	Hay un bloqueo entre vosotros, así que ninguno de los dos puede escribir.
+</p>
+<form method="post" action="{{ url_for('messages.unblock', member_id=member.id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<button class="linkish" type="submit">Quitar mi bloqueo</button>
+</form>
+<p class="muted small">
+	Si el bloqueo lo puso la otra persona, esto no lo quita.
+</p>
+{% elif not member.active %}
+{# The handler refuses a message to a suspended member, so the box is not drawn
+   for one. Said plainly rather than left as a missing form. #}
+<p class="muted">
+	{{ member.display_name }} tiene el acceso suspendido y no puede recibir mensajes.
+</p>
+{% else %}
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('messages.talk', member_id=member.id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<label for="body">Mensaje</label>
+	<textarea id="body" data-markdown name="body" rows="4"
+	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
+
+	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
+	<input id="pictures" name="pictures" type="file" multiple accept="image/*">
+
+	<button class="btn" type="submit">Enviar</button>
+</form>
+
+<details class="person-block">
+	<summary>Bloquear a {{ member.display_name }}</summary>
+	<p class="muted small">
+		Un bloqueo va en los dos sentidos: ninguno de los dos podrá escribir al
+		otro. Lo puedes quitar cuando quieras, pero sólo el tuyo.
+	</p>
+	<form method="post" action="{{ url_for('messages.block', member_id=member.id) }}"
+	      data-confirm="Ninguno de los dos podrá escribir al otro. ¿Seguro?">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button class="linkish linkish--danger" type="submit">Bloquear</button>
+	</form>
+</details>
+{% endif %}
+{% endif %}
+
+{% if is_admin and member.role != 'owner' and not is_me %}
+{# Moved here from the directory cards. A <details>, not a script: the CSP has
+   no 'unsafe-inline'. Every button is still checked in its handler — this block
+   being hidden from a moderator is a courtesy, not the rule. #}
+<details class="person-card__admin">
+	<summary>Gestionar</summary>
+	<div class="person-card__actions">
+		<form method="post" action="{{ url_for('members.set_active', member_id=member.id) }}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<input type="hidden" name="active" value="{{ 0 if member.active else 1 }}">
+			<button class="linkish" type="submit">{{ 'Suspender' if member.active else 'Reactivar' }}</button>
+		</form>
+
+		{# Any admin can re-send, not just the owner: the usual reason somebody
+		   needs this is that the admin who added them made the account by hand,
+		   and waiting for the owner defeats the point. Hidden without an
+		   address, because the handler would refuse. #}
+		{% if member.email and member.active %}
+		<form method="post" action="{{ url_for('members.invite', member_id=member.id) }}"
+		      data-confirm="Se enviará un enlace nuevo a {{ member.email }} y el anterior dejará de servir. ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button class="linkish" type="submit">Enviar invitación</button>
+		</form>
+		{% endif %}
+
+		{% if is_owner or member.role != 'admin' %}
+		<form class="inline-form" method="post"
+		      action="{{ url_for('members.set_role', member_id=member.id) }}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<label class="sr-only" for="role">Rol de {{ member.display_name }}</label>
+			<select id="role" name="role">
+				<option value="user" {{ 'selected' if member.role == 'user' }}>Miembro</option>
+				<option value="moderator" {{ 'selected' if member.role == 'moderator' }}>Moderador</option>
+				{% if is_owner %}
+				<option value="admin" {{ 'selected' if member.role == 'admin' }}>Administrador</option>
+				{% endif %}
+			</select>
+			<button class="linkish" type="submit">Cambiar rol</button>
+		</form>
+		{% endif %}
+
+		{% if is_owner %}
+			{% if member.role == 'admin' and member.active %}
+			<form method="post" action="{{ url_for('members.transfer', member_id=member.id) }}"
+			      data-confirm="Vas a dejar de ser el responsable y {{ member.display_name }} pasará a serlo. ¿Seguro?">
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+				<button class="linkish" type="submit">Transferir titularidad</button>
+			</form>
+			{% endif %}
+
+			<form method="post" action="{{ url_for('members.erase', member_id=member.id) }}"
+			      data-confirm="Se borrarán sus datos personales. Sus mensajes quedarán como «Miembro eliminado». ¿Seguro?">
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+				<button class="linkish linkish--danger" type="submit">Eliminar</button>
+			</form>
+		{% endif %}
+
+		{% if member.email %}<p class="muted small">{{ member.email }}</p>{% endif %}
+		{% if member.creator %}<p class="muted small">Dado de alta por {{ member.creator }}.</p>{% endif %}
+	</div>
+</details>
+{% endif %}
+{% endblock %}

@@ -1,7 +1,7 @@
 """What each role can see and reach.
 
 This file exists because of a bug that no other test in this suite could have
-caught: *Privados*, *Mi perfil* and *Contenido* were all inside one
+caught: private messages, *Mi perfil* and *Contenido* were all inside one
 `{% if g.member.role in ('owner', 'admin') %}` block in base.html, so an
 ordinary member signed in to a wall and a member list and nothing else. Every
 feature worked. Every test passed. Most of the members area was simply invisible
@@ -21,7 +21,7 @@ import pytest
 SECTIONS = {
     "Inicio": "/comunidad/",
     "Muro": "/comunidad/muro",
-    "Privados": "/comunidad/privados",
+    "Miembros": "/comunidad/miembros",
     "Publicaciones": "/comunidad/publicaciones",
     "Calendario": "/comunidad/calendario",
 }
@@ -39,7 +39,7 @@ def nav(client, sign_in):
 
 
 @pytest.mark.parametrize("role", ["user", "moderator"])
-def test_a_member_sees_the_four_shared_sections(role, nav, make_member):
+def test_a_member_sees_the_five_shared_sections(role, nav, make_member):
     """The regression. Not one of these may depend on a role again."""
     body = nav(make_member("maria", role=role))
     for label in SECTIONS:
@@ -176,7 +176,7 @@ def test_a_member_gets_their_name_and_their_sections(client, make_member, sign_i
     assert state["signed_in"] is True
     assert state["name"] == "Maria"
     assert [s["label"] for s in state["sections"]] == [
-        "Inicio", "Muro", "Privados", "Publicaciones", "Calendario"]
+        "Inicio", "Muro", "Miembros", "Publicaciones", "Calendario"]
     assert state["csrf"]                       # the bar renders a real logout form
 
 

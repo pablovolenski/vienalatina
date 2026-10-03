@@ -15,14 +15,16 @@
 <section class="panel">
 	<div class="panel__head">
 		<h2>Miembros</h2>
-		<a class="linkish" href="{{ url_for('members.index') }}">Abrir</a>
+		<a class="linkish" href="{{ url_for('members.new') }}">Dar de alta</a>
 	</div>
 	<p class="panel__row">
 		{{ counts.members }} en total · {{ counts.moderators }} pueden moderar
 		{% if counts.suspended %} · {{ counts.suspended }} suspendido{{ '' if counts.suspended == 1 else 's' }}{% endif %}
 	</p>
 	<p class="muted small">
-		Dar de alta, invitar de nuevo, cambiar el rol, suspender y eliminar.
+		El directorio está en <a href="{{ url_for('members.index') }}">Miembros</a>,
+		que ahora es una sección como las demás. Invitar de nuevo, cambiar el rol,
+		suspender y eliminar están en la ficha de cada persona.
 	</p>
 </section>
 

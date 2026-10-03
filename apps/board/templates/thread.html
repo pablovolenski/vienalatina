@@ -9,7 +9,7 @@
 	<div class="card__meta">
 		{% if thread.pinned %}<span class="tag">Fijado</span>{% endif %}
 		{% if thread.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
-		<span>{{ person(author.display_name, author.gitea_login, author.profile_published) }}</span> · <time>{{ thread.created_at }}</time>
+		<span>{{ person(author.display_name, author.gitea_login) }}</span> · <time>{{ thread.created_at }}</time>
 		{% if thread.edited_at %}<span class="muted small">(editado)</span>{% endif %}
 	</div>
 	<h1 class="card__title">{{ thread.title }}</h1>
@@ -51,7 +51,7 @@
 {% for c in comments %}
 <article class="card card--comment" id="c{{ c.id }}">
 	<div class="card__meta">
-		<span>{{ person(c.author, c.author_login, c.author_published) }}</span> · <time>{{ c.created_at }}</time>
+		<span>{{ person(c.author, c.author_login) }}</span> · <time>{{ c.created_at }}</time>
 		{% if c.edited_at %}<span class="muted small">(editado)</span>{% endif %}
 	</div>
 	<div class="prose">{{ to_html(c.body_md) }}</div>
