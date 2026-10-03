@@ -221,6 +221,16 @@ textarea { resize: vertical; line-height: 1.55; }
 }
 .btn:hover { background: var(--brand-dark); }
 
+/* A button sitting straight in a card, rather than in an .actions row, still
+ * needs air above it. Five of them did not have any — the one under the "escribir
+ * a" picker was flush against the select — because the space every other form
+ * has comes from .actions, not from the button.
+ *
+ * Matching .actions' own margin so the two look the same, and a direct-child
+ * selector so a button inside .actions is never given both: it is a child of the
+ * row, not of the card. */
+.card > .btn { margin-top: 1.25rem; }
+
 .linkish {
   background: none;
   border: 0;
