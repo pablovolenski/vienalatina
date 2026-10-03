@@ -8,13 +8,33 @@
 	<meta name="robots" content="noindex, nofollow">
 	<title>{% block title %}Comunidad{% endblock %} — Viena Latina</title>
 	<link rel="stylesheet" href="{{ url_for('static', filename='board.css') }}">
+	{% block brand_css %}
+	{# After board.css, so the admin's colours win, and cache-busted by when
+	   they were saved. A generated file rather than an inline <style> because
+	   the CSP has no 'unsafe-inline' — an inline block would simply not apply,
+	   without a word in the console. The Marca screen overrides this block
+	   with nothing, so custom CSS that breaks the page cannot hide the page
+	   that undoes it. #}
+	<link rel="stylesheet" href="{{ url_for('brand.stylesheet_file') }}?v={{ brand.stamp }}">
+	{% endblock %}
+	{% if brand.favicon_name %}
+	<link rel="icon" type="image/png"
+	      href="{{ url_for('brand.picture', stored_name=brand.favicon_name) }}?v={{ brand.stamp }}">
+	{% endif %}
 	<script src="{{ url_for('static', filename='board.js') }}" defer></script>
 </head>
 <body>
 
 <header class="site-bar">
 	<div class="site-bar__inner">
-		<a class="site-bar__brand" href="/"><span class="site-bar__brand-text">Viena Latina</span></a>
+		<a class="site-bar__brand" href="/">
+			{% if brand.logo_name %}
+			<img class="site-bar__logo" alt="Viena Latina"
+			     src="{{ url_for('brand.picture', stored_name=brand.logo_name) }}?v={{ brand.stamp }}">
+			{% else %}
+			<span class="site-bar__brand-text">Viena Latina</span>
+			{% endif %}
+		</a>
 		{% if g.member %}
 		{# <details> rather than a button with a handler: the CSP has no
 		   'unsafe-inline', so a menu that needs onclick="" is a menu that

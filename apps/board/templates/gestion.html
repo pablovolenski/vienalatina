@@ -53,6 +53,21 @@
 	</p>
 </section>
 
+<section class="panel">
+	<div class="panel__head">
+		<h2>Marca</h2>
+		<a class="linkish" href="{{ url_for('brand.edit') }}">Abrir</a>
+	</div>
+	{% if brand.updated_at and not brand.published_at %}
+	<p class="panel__row">Hay cambios guardados que no han llegado al sitio público.</p>
+	{% endif %}
+	<p class="muted small">
+		Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
+		sitio. Con un apartado avanzado para quien sepa CSS, y un botón para
+		volver a lo de fábrica.
+	</p>
+</section>
+
 {% if counts.pending %}
 <section class="panel panel--attention">
 	<div class="panel__head">

@@ -733,3 +733,74 @@ input[type="file"] {
 	.cal__number { display: inline-block; margin-right: 0.5rem; }
 	.cal__add { display: inline; }
 }
+
+/* --- Gestión → Marca ---------------------------------------------------- */
+
+/* Constrained in height rather than width: a wordmark is wide and a square
+   icon is not, and both have to sit in a bar 56px tall without pushing it
+   open. An admin who wants it bigger has the custom CSS box, and the
+   placeholder in that box is this very rule. */
+.site-bar__logo { display: block; max-height: 36px; max-width: 240px; width: auto; }
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1rem;
+  margin: 0.75rem 0 1.25rem;
+}
+.swatch label { margin-bottom: 0.25rem; }
+.swatch p { margin: 0.25rem 0 0; }
+/* The input rule above gives every field width:100%, which on a colour picker
+   produces a swatch the width of the column. */
+.swatch input[type="color"] {
+  width: 100%;
+  height: 2.75rem;
+  padding: 0.2rem;
+  cursor: pointer;
+}
+
+/* The preview block. Every colour inside it comes from a custom property, so
+   board.js can restyle the whole thing by setting six of them on this one
+   element — which is also what makes it an honest preview rather than a
+   drawing of one. */
+.brand-preview {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.brand-preview__bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--brand);
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+}
+.brand-preview__card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  margin: 1rem;
+  padding: 1rem;
+}
+.brand-preview__meta { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.5rem; }
+.brand-preview__card p:last-of-type { margin: 0 0 0.75rem; }
+.brand-preview__btn {
+  display: inline-block;
+  background: var(--brand);
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+}
+
+.brand-current { max-height: 72px; max-width: 100%; width: auto; }
+.brand-current--small { max-height: 48px; }
+
+.brand-advanced { margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 0.75rem; }
+.brand-advanced summary { cursor: pointer; color: var(--subtle); }
+
+.btn--danger { background: var(--danger); }
+.btn--danger:hover { background: var(--danger); filter: brightness(0.9); }

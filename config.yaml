@@ -79,10 +79,13 @@ languages:
 
 params:
   # The picture a share card falls back on when a post or page has none, and the
-  # organisation's logo in the structured data. One path — /uploads/algo.png —
-  # and WhatsApp, Signal, Mastodon and Bluesky all start showing an image. Left
-  # empty until there is a logo to put here; a link then shares as title and
-  # description, which is what happens today.
+  # organisation's logo in the structured data.
+  #
+  # **The logo uploaded in Gestión → Marca is used first**, so this is now only
+  # for a site that wants a different share picture from its logo — a photo of
+  # the city, say. One path (/uploads/algo.png) and WhatsApp, Signal, Mastodon
+  # and Bluesky all start showing an image. Empty, with no logo either, means a
+  # link shares as title and description.
   defaultImage: ""
 
   # The organisation's profiles elsewhere, for `sameAs` in the Organization

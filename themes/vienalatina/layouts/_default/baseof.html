@@ -7,6 +7,7 @@
 	{{ partial "seo-head.html" . }}
 	{{ $css := resources.Get "css/main.css" | minify | fingerprint }}
 	<link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+	{{ partial "brand-head.html" . }}
 	<link rel="canonical" href="{{ .Permalink }}">
 	{{ range .AlternativeOutputFormats -}}
 	<link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink | safeURL }}">

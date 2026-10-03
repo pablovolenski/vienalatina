@@ -115,6 +115,9 @@ CLEARED_ON_ERASE = {
     # admin who typed it in: the meeting still happens after they leave, so the
     # row stays and the name goes.
     ("events", "created_by"),
+    # Same for the colours and the logo. An admin leaving is not a reason for
+    # the site to go back to looking like a default install.
+    ("brand", "updated_by"),
 }
 
 # Private correspondence is not reassigned to the tombstone, it goes. A thread

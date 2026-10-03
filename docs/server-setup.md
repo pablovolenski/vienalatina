@@ -1008,6 +1008,72 @@ Choosing a picture shows a thumbnail with its name and size before anything is
 uploaded. That is the one reason `blob:` is in the `img-src` policy — a handle to
 bytes already in the page, which reaches no network.
 
+### 11.18 Marca: the admin owns the look
+
+*Gestión* → **Marca**, admins only. Colours, a logo and a favicon for both
+halves of the site, with an *Avanzado* fold holding every token as a text field
+and a free CSS box.
+
+**`apps/board/brand.py`'s `FACTORY` is the single source of truth for the
+palette.** The two `:root` blocks — `themes/vienalatina/assets/css/main.css` and
+`apps/board/static/board.css` — each still carry their own copy, because they are
+served by different things and each has to stand alone; what changed is that
+`apps/board/tests/test_brand.py` parses both and fails the build if either
+disagrees with `FACTORY`. The comment that used to say *"If the brand colours
+change, change them in both"* was an instruction, which is the weakest kind of
+guarantee there is.
+
+**One save, two destinations**, because the two halves cannot read the same
+store:
+
+| Where | What | Why |
+|---|---|---|
+| SQLite, table `brand`, one row | the tokens, the custom CSS, both pictures under `/data/uploads` | the members area must render when the git server is down |
+| the content repository: `data/brand.yaml`, `static/brand/logo.*`, `static/brand/favicon.png` | the same values | the public site is files on disk and has no database |
+
+**SQLite first, then the commits.** If Gitea is unreachable the change still
+takes effect in the members area, `published_at` stays NULL, and the screen says
+so with a *Reintentar publicar* button. The other order would let a git outage
+block a change that does not need git. A colour therefore reaches
+vienalatina.com on the next pipeline run — a couple of minutes — and the members
+area immediately.
+
+Three details worth knowing before changing any of it:
+
+* **Only what differs from the factory is stored**, as JSON in one column. A
+  token added here later arrives with its default already in place for every
+  existing install, which a snapshot of all thirteen would not.
+* **`--brand-dark`, `--brand-soft` and `--brand-softer` are worked out from
+  `--brand`** in HLS (hue and saturation kept, lightness moved), so an admin
+  picks one colour and gets a coherent set. Each can be overridden in
+  *Avanzado*. With no brand colour stored, the factory hexes are used verbatim —
+  deriving from an unchanged colour would shift the palette by a rounding error
+  the first time anybody opened the screen.
+* **A WCAG contrast warning, not a refusal.** Text on background below 4.5:1,
+  or white on the brand colour below 3:1, is named with its ratio and saved
+  anyway. An admin may have a reason; what this prevents is shipping an
+  unreadable site without once being told.
+
+**The Marca screen deliberately does not load the generated stylesheet.** Every
+other page does. That is what keeps *Restaurar lo de fábrica* reachable after
+somebody puts `* { display: none }` in the CSS box — and the reason the colours
+an admin picks do not show on the page where they pick them. The live preview
+block is where they see them, restyled by `board.js` setting the custom
+properties on that one element (a DOM write, not an inline `style` attribute,
+which is what makes it work under a policy with no `'unsafe-inline'`).
+
+**No SVG and no ICO.** The logo takes PNG, JPG or WebP and the favicon PNG only,
+both identified from their bytes by the same sniffer the wall uses. An SVG is XML
+that can carry script and would be served from our own origin; ICO would be one
+more branch in the sniffer for a format every current browser no longer needs.
+
+The pictures are committed to stable paths, so saving a new logo replaces the
+file instead of leaving every previous one deployed and unreferenced; a logo
+saved in a different format has its predecessor deleted. `scripts/translate.py`
+needs nothing — it walks `content/` only, and `data/` and `static/` are outside
+it. A site with no `data/brand.yaml` builds byte-for-byte the HTML it built
+before any of this existed, which is asserted by building both ways.
+
 ## 12. Make Gitea look like the site
 
 Members sign in to `/comunidad/` through Gitea, so Gitea's sign-in form and its

@@ -4,7 +4,21 @@
 <header class="site-bar">
 	<div class="site-bar__inner">
 		<a class="site-bar__brand" href="{{ .Site.Home.Permalink }}" aria-label="Inicio">
+			{{/* The logo uploaded in Gestión → Marca, and the site's name in
+			     letters when there is none. The alt text is the name either way,
+			     so a reader who does not see the picture reads the same thing.
+
+			     Read through two variables rather than as
+			     `site.Data.brand.logo`, because on a site with no data/brand.yaml
+			     that expression is a field lookup on nil and fails the build —
+			     which is precisely the state every install starts in. */}}
+			{{ $logo := "" }}{{ $stamp := "0" }}
+			{{ with site.Data.brand }}{{ $logo = .logo }}{{ $stamp = .stamp }}{{ end }}
+			{{ with $logo }}
+			<img class="site-bar__logo" src="{{ . }}?v={{ $stamp }}" alt="{{ site.Title }}">
+			{{ else }}
 			<span class="site-bar__brand-text">{{ .Site.Title }}</span>
+			{{ end }}
 		</a>
 
 		<nav class="site-bar__nav" aria-label="Idioma">

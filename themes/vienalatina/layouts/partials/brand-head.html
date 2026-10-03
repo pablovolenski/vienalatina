@@ -1,0 +1,31 @@
+{{/* The admin's colours and the favicon, from data/brand.yaml.
+
+     That file is written by the members area — Gestión → Marca commits it
+     through the contents API, the pipeline runs, and the colours arrive here on
+     the next build. The whole partial is inside a `with`, so a site with no
+     brand.yaml emits nothing at all and its HTML is byte-identical to before
+     this existed.
+
+     Built with resources.FromString rather than written into a <style> block:
+     the public site has no Content-Security-Policy of its own today, but the
+     members area does and this stylesheet is generated the same way on both
+     sides. Fingerprinted, which is what makes a colour change reach a browser
+     that already has the old file.
+
+     The favicon carries ?v= the stamp instead, because it is a static file
+     Caddy serves under its own name — replacing the picture does not change
+     the path. */}}
+{{ with site.Data.brand }}
+{{ $tokens := "" }}
+{{ range $name, $value := .tokens }}{{ $tokens = printf "%s--%s:%s;" $tokens $name $value }}{{ end }}
+{{ $sheet := "" }}
+{{ with $tokens }}{{ $sheet = printf ":root{%s}" . }}{{ end }}
+{{ with $.Site.Data.brand.custom_css }}{{ $sheet = printf "%s\n%s" $sheet . }}{{ end }}
+{{ with $sheet }}
+{{ $brand := resources.FromString "css/brand.css" . | minify | fingerprint }}
+	<link rel="stylesheet" href="{{ $brand.RelPermalink }}" integrity="{{ $brand.Data.Integrity }}">
+{{ end }}
+{{ with .favicon }}
+	<link rel="icon" type="image/png" href="{{ . }}?v={{ $.Site.Data.brand.stamp }}">
+{{ end }}
+{{ end }}

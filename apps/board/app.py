@@ -94,10 +94,11 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import (auth, board, content, events, home, members, messages,
-                   profiles, submissions, uploads)
+    from . import (auth, board, brand, content, events, home, members,
+                   messages, profiles, submissions, uploads)
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(home.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(brand.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(submissions.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(events.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
@@ -121,6 +122,13 @@ def create_app(overrides: dict | None = None) -> Flask:
     @app.context_processor
     def _year():
         return {"current_year": datetime.now(timezone.utc).year}
+
+    @app.context_processor
+    def _brand():
+        # Not lazy, unlike the badges below: base.html draws the stylesheet
+        # link, the logo and the favicon on every page, so there is no render
+        # that would save the query by deferring it.
+        return {"brand": brand.state()}
 
     @app.context_processor
     def _badges():

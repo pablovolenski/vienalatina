@@ -11,6 +11,7 @@ Gitea, and the tests that care about it stub the two network calls instead.
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -18,6 +19,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from apps.board import gitea  # noqa: E402
 from apps.board.app import create_app  # noqa: E402
 from apps.board.db import connect  # noqa: E402
 
@@ -91,3 +93,60 @@ def post(client):
         payload.setdefault("csrf_token", "token-for-tests")
         return client.post(url, data=payload, **kwargs)
     return _post
+
+
+# --- the git server, as a dictionary --------------------------------------
+#
+# Shared because two features commit to the content repository now: the editor
+# (test_content.py) and the brand (test_brand.py). What matters in both is the
+# payload — which files, with which bytes, under whose name — and `requests` can
+# be trusted to do HTTP.
+
+class FakeRepo:
+    """A repository in a dict, with shas that change when content does."""
+
+    def __init__(self):
+        self.files: dict[str, bytes] = {}
+        self.commits: list[str] = []
+        self.authors: list[dict] = []
+        self.reads = 0
+
+    @staticmethod
+    def _sha(data: bytes) -> str:
+        return hashlib.sha1(data).hexdigest()
+
+    def list_directory(self, path, token=None):
+        out = []
+        for name, data in self.files.items():
+            if name.startswith(path + "/") and "/" not in name[len(path) + 1:]:
+                out.append({"name": name.rsplit("/", 1)[1], "path": name,
+                            "type": "file", "sha": self._sha(data)})
+        return out
+
+    def read_file(self, path, token=None):
+        self.reads += 1
+        if path not in self.files:
+            raise gitea.GiteaError("Ese archivo ya no existe.")
+        return self.files[path].decode("utf-8"), self._sha(self.files[path])
+
+    def write_file(self, path, data, message, token=None, sha=None, member=None):
+        if sha and self.files.get(path) is not None and self._sha(self.files[path]) != sha:
+            raise gitea.StaleFile("Alguien más guardó este archivo mientras lo editabas.")
+        self.files[path] = data
+        self.commits.append(message)
+        self.authors.append(gitea._identity(member))
+        return self._sha(data)
+
+    def delete_file(self, path, sha, message, token=None, member=None):
+        self.files.pop(path, None)
+        self.commits.append(message)
+
+
+@pytest.fixture
+def repo(monkeypatch):
+    fake = FakeRepo()
+    for name in ("list_directory", "read_file", "write_file", "delete_file"):
+        monkeypatch.setattr(gitea, name, getattr(fake, name))
+    return fake
+
+

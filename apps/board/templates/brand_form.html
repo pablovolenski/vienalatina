@@ -1,0 +1,162 @@
+{# Gestión → Marca: the colours, the logo and the favicon.
+
+   **This page deliberately does not load the generated stylesheet.** Every
+   other page in the members area does, and the free CSS box below can contain
+   anything — including `* { display: none }`. If that CSS applied here, the one
+   screen that can undo it would be the one screen you could not read. So the
+   block is overridden with nothing and this page is always in the factory
+   colours. The live preview below is where the admin sees their own.
+
+   The consequence is worth stating because it looks like an oversight: the
+   colours an admin picks do not show on the page where they pick them. #}
+{% extends "base.html" %}
+{% block title %}Marca{% endblock %}
+{% block brand_css %}{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Marca</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+</div>
+
+<p class="muted">
+	Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
+	sitio. El área privada cambia al guardar; vienalatina.com se reconstruye en
+	un par de minutos.
+</p>
+
+{% if state.updated_at and not state.published_at %}
+<section class="panel panel--attention">
+	<div class="panel__head">
+		<h2>Pendiente de publicar</h2>
+	</div>
+	<p class="panel__row">
+		Lo de aquí está guardado, pero no ha llegado al sitio público: no se pudo
+		contactar con el servidor de git la última vez.
+	</p>
+	<form method="post" action="{{ url_for('brand.publish') }}">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+		<button class="btn" type="submit">Reintentar publicar en el sitio</button>
+	</form>
+</section>
+{% endif %}
+
+{% for note in notes %}
+<p class="flash flash--error">{{ note }}</p>
+{% endfor %}
+
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('brand.edit') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+	<h2 class="section-title">Colores</h2>
+	<p class="muted small">
+		Seis colores. Los demás —los tonos claros y oscuros del principal— se
+		calculan a partir de él, para que no haya que acertar con cinco rojos
+		parecidos. Están en «Avanzado» si los quieres a mano.
+	</p>
+
+	{# A real colour picker, which every current browser draws natively: no
+	   dependency, no script, and it works with a keyboard. The text beside each
+	   one says where that colour shows up, because "--surface-soft" is not a
+	   question an admin can answer. #}
+	<div class="swatches" data-brand-preview>
+		{% for name, label, where in simple %}
+		<div class="swatch">
+			<label for="token-{{ name }}">{{ label }}</label>
+			<input id="token-{{ name }}" name="token-{{ name }}" type="color"
+			       data-token="{{ name }}" value="{{ state.tokens[name] }}">
+			<p class="muted small">{{ where }}</p>
+		</div>
+		{% endfor %}
+	</div>
+
+	{# Restyled by the pickers above, through board.js setting the custom
+	   properties on this element. The DOM write is not an inline style
+	   attribute in the HTML, which is why it works under the CSP. #}
+	<div class="brand-preview" data-brand-preview-target>
+		<div class="brand-preview__bar">Viena Latina</div>
+		<div class="brand-preview__card">
+			<p class="brand-preview__meta">Ana Pérez · hace dos horas</p>
+			<p>Así se verá una tarjeta del muro con estos colores.</p>
+			<span class="brand-preview__btn">Un botón</span>
+		</div>
+	</div>
+
+	<h2 class="section-title">Logotipo</h2>
+	<p class="muted small">
+		PNG, JPG o WebP. Aparece en la cabecera de las dos mitades del sitio y es
+		la imagen que sale al compartir un enlace que no tiene foto propia.
+		{% if state.logo_name %}Ahora hay uno puesto; si eliges otro, lo reemplaza.{% endif %}
+	</p>
+	{% if state.logo_name %}
+	<p><img class="brand-current"
+	        src="{{ url_for('brand.picture', stored_name=state.logo_name) }}?v={{ state.stamp }}"
+	        alt="El logotipo actual"></p>
+	{% endif %}
+	<input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp">
+
+	<h2 class="section-title">Icono de la pestaña</h2>
+	<p class="muted small">
+		PNG, y cuadrado: 32×32 o 180×180 van bien. Se sube aparte y no se saca del
+		logotipo — recortar un logotipo ancho a un cuadrado da un trozo de letra.
+	</p>
+	{% if state.favicon_name %}
+	<p><img class="brand-current brand-current--small"
+	        src="{{ url_for('brand.picture', stored_name=state.favicon_name) }}?v={{ state.stamp }}"
+	        alt="El icono actual"></p>
+	{% endif %}
+	<input id="favicon" name="favicon" type="file" accept="image/png">
+
+	<details class="brand-advanced">
+		<summary>Avanzado</summary>
+
+		<p class="muted small">
+			Para quien sepa CSS. Todo lo de aquí se aplica después de lo de arriba,
+			así que gana. Si algo sale mal, «Restaurar lo de fábrica» está al final
+			de esta página y esta página nunca carga este CSS, justamente para que
+			se pueda llegar a ese botón.
+		</p>
+
+		<h3 class="section-title">Los demás colores</h3>
+		<p class="muted small">
+			Déjalos en blanco para que se calculen desde el color principal
+			({{ derived|join(', ') }}) o queden como están de fábrica.
+		</p>
+		<div class="swatches">
+			{% for name in advanced %}
+			<div class="swatch">
+				<label for="token-{{ name }}"><span class="mono">--{{ name }}</span></label>
+				<input id="token-{{ name }}" name="token-{{ name }}" type="text"
+				       value="{{ state.stored.get(name, '') }}"
+				       placeholder="{{ state.tokens[name] }}"
+				       pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$">
+			</div>
+			{% endfor %}
+		</div>
+
+		<h3 class="section-title">CSS propio</h3>
+		<p class="muted small">
+			Se añade al final de la hoja de estilos, en las dos mitades del sitio.
+			No puede contener «&lt;» ni «&gt;».
+		</p>
+		<textarea id="custom_css" name="custom_css" rows="10" class="mono"
+		          placeholder=".site-bar__logo { max-height: 48px; }">{{ state.custom_css }}</textarea>
+	</details>
+
+	<button class="btn" type="submit">Guardar</button>
+</form>
+
+{% if state.customised %}
+<form class="card" method="post" action="{{ url_for('brand.restore') }}"
+      data-confirm="Se vuelve a los colores originales y se borran el logotipo y el icono. ¿Seguro?">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<h2 class="section-title">Restaurar lo de fábrica</h2>
+	<p class="muted small">
+		Deja los colores como estaban al principio y quita el logotipo y el icono.
+		Esto funciona siempre, incluso si el CSS propio ha roto el resto del sitio.
+	</p>
+	<button class="btn btn--danger" type="submit">Restaurar lo de fábrica</button>
+</form>
+{% endif %}
+{% endblock %}

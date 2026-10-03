@@ -10,15 +10,22 @@
      renders raggedly in some readers and truncated in others. */}}
 {{ $desc = trim ($desc | plainify | replaceRE "\\s+" " ") " " }}
 
-{{/* The picture a share card shows. A page's own image when it has one, the
-     site default when it does not — `params.defaultImage` is empty until the
-     logo arrives, and a card with no picture is what happens meanwhile, which is
-     also what happens today. Absolute, because WhatsApp, Signal, Mastodon and
-     Bluesky all fetch it from outside and a relative path means nothing to
-     them. */}}
+{{/* The picture a share card shows. A page's own image when it has one, and
+     otherwise the fallback: the logo uploaded in Gestión → Marca, or
+     `params.defaultImage` when there is no logo. The logo comes first because
+     it is the one somebody can change without the repository — and because
+     `defaultImage` only ever existed as the line to fill in once a logo
+     arrived. With neither, a card shows title and description and no picture,
+     which is what happened before either existed.
+
+     Absolute, because WhatsApp, Signal, Mastodon and Bluesky all fetch it from
+     outside and a relative path means nothing to them. */}}
+{{ $brandLogo := "" }}
+{{ with site.Data.brand }}{{ $brandLogo = .logo }}{{ end }}
+{{ $fallback := or $brandLogo .Site.Params.defaultImage }}
 {{ $image := "" }}
 {{ with .Params.image }}{{ $image = . | absURL }}
-{{ else }}{{ with .Site.Params.defaultImage }}{{ $image = . | absURL }}{{ end }}{{ end }}
+{{ else }}{{ with $fallback }}{{ $image = . | absURL }}{{ end }}{{ end }}
 
 <meta name="description" content="{{ $desc }}">
 
@@ -123,6 +130,14 @@
 <meta property="og:description" content="{{ $desc }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:locale" content="{{ $locale }}">
+{{/* The home page shared without a picture until there was one to use. Now
+     that an admin can upload a logo, the front page of the site is the last
+     place that should share as a bare link. */}}
+{{ with $image }}
+<meta property="og:image" content="{{ . }}">
+<meta property="og:image:alt" content="{{ $.Site.Title }}">
+<meta name="twitter:image" content="{{ . }}">
+{{ end }}
 
 {{ $org := dict
 	"@context" "https://schema.org"
@@ -132,7 +147,10 @@
 	"description" .Site.Params.description
 	"areaServed" (dict "@type" "City" "name" "Wien" "addressCountry" "AT")
 }}
-{{ with .Site.Params.defaultImage }}{{ $org = merge $org (dict "logo" (. | absURL)) }}{{ end }}
+{{/* The same fallback as the share card: the admin's logo, then the configured
+     default. This is the field a search engine uses to put a mark beside the
+     organisation's name, so it should be the logo somebody actually uploaded. */}}
+{{ with $fallback }}{{ $org = merge $org (dict "logo" (. | absURL)) }}{{ end }}
 {{ with .Site.Params.sameAs }}{{ $org = merge $org (dict "sameAs" .) }}{{ end }}
 <script type="application/ld+json">{{ $org | jsonify (dict "indent" "  ") | safeJS }}</script>
 

@@ -149,9 +149,36 @@ document.addEventListener("submit", function (event) {
     });
   }
 
+  // --- the brand preview --------------------------------------------------
+  //
+  // Setting the custom properties on one element, from the colour pickers above
+  // it. A DOM write rather than a `style=""` attribute in the template, which
+  // is what makes it work under a policy with no 'unsafe-inline' — and it is
+  // also why the preview exists at all: the Marca screen itself is deliberately
+  // rendered in the factory colours, so this block is the only place an admin
+  // sees their own.
+  function brandPreview() {
+    var target = document.querySelector("[data-brand-preview-target]");
+    if (!target) { return; }
+    var pickers = document.querySelectorAll("[data-brand-preview] [data-token]");
+
+    function paint() {
+      Array.prototype.forEach.call(pickers, function (picker) {
+        target.style.setProperty("--" + picker.getAttribute("data-token"),
+                                 picker.value);
+      });
+    }
+
+    Array.prototype.forEach.call(pickers, function (picker) {
+      picker.addEventListener("input", paint);
+    });
+    paint();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     Array.prototype.forEach.call(
       document.querySelectorAll("textarea[data-markdown]"), toolbarFor);
+    brandPreview();
 
     document.addEventListener("change", function (event) {
       var input = event.target;

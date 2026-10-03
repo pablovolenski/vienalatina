@@ -325,3 +325,29 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS events_month ON events(starts_on);
+
+-- The look of the site, as the admin set it.
+--
+-- One row, pinned by the CHECK: there is one association per install and one
+-- set of colours. `ON CONFLICT(id)` in brand.py relies on that pin, which is
+-- also why there is no "which brand is current" question to get wrong.
+--
+-- Only the tokens that differ from apps/board/brand.py's FACTORY are stored, as
+-- JSON. A snapshot of every token would mean that a token added later arrived
+-- frozen at its old value for every install that had ever opened this screen.
+--
+-- `published_at` is NULL between a save and the commit that carries it to the
+-- content repository — which is to say, whenever the git server was unreachable
+-- when somebody pressed save. The screen reads it and offers to try again.
+CREATE TABLE IF NOT EXISTS brand (
+  id            INTEGER PRIMARY KEY CHECK (id = 1),
+  tokens_json   TEXT    NOT NULL DEFAULT '{}',
+  custom_css    TEXT    NOT NULL DEFAULT '',
+  logo_name     TEXT,
+  favicon_name  TEXT,
+  -- Cleared rather than reassigned when that member is erased: the colours
+  -- belong to the association, like an event in the calendar.
+  updated_by    INTEGER REFERENCES members(id),
+  updated_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  published_at  TEXT
+);
