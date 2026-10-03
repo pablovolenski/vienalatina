@@ -415,15 +415,37 @@ finds Gitea level with your local `main`, and answers *"Already up to date."* �
 which is true about the wrong remote, and reads exactly like there is nothing
 to do.
 
-An update is a named pull, a push to Gitea so the build pipeline sees it, and a
-rebuild:
+**Paste one line at a time.** Every deploy that has gone wrong here went wrong
+in the terminal rather than in the code: three commands pasted on one line
+separated by commas, so git looked for a branch whose name ended in a comma; and
+a block pasted into a session that was still answering `ssh`'s host-key
+question, which swallowed the rest as answers. One line, one Enter, read what it
+says.
+
+An update is **two** named pulls, a push to Gitea so the build pipeline sees it,
+and a rebuild:
 
 ```sh
 cd ~/vienalatina
 git pull --no-rebase --no-edit github <the-branch-name>
-git push gitea main
+git pull --no-rebase --no-edit gitea main      # see below — Gitea moves on its own
 sudo bash scripts/deploy-board.sh
+git push gitea main
 ```
+
+**The second pull is the one this page used to be missing**, and the push fails
+without it with a non-fast-forward rejection. The translate step of the pipeline
+*commits* the generated German and Portuguese files back to Gitea
+(`translate: update N generated siblings [skip-translate]`), so every time
+anything is published, `gitea/main` gains a commit this checkout does not have.
+A push then has nothing to fast-forward from. Pulling it first merges the
+pipeline's own work into yours, which is all that is needed — there is never a
+conflict, because nothing but the pipeline writes those files.
+
+**The order of the last two lines matters when a release changes both halves.**
+`deploy-board.sh` puts the members area up; the push is what rebuilds the public
+site. Anything on the static side that calls the app — the members' bar asking
+`/comunidad/sesion.json` — then finds it already there.
 
 Both flags earn their place. `main` and the branch have genuinely diverged —
 main carries the previous merge, the branch carries the new work — and a git
