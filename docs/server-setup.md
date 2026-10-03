@@ -264,7 +264,6 @@ title: "Artículo de prueba"
 date: 2026-08-01
 lang: es
 manual_translation: false
-categories: [Comunidad]
 ---
 
 Esto es una prueba del flujo de traducción automática en el Grätzl.
@@ -807,7 +806,7 @@ profile:
 ```sh
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
-for path in / /de/ /pt-br/ /page/acerca/ /categories/ /robots.txt /comunidad/ /noexiste; do
+for path in / /de/ /pt-br/ /page/acerca/ /page/agenda/ /robots.txt /comunidad/ /noexiste; do
   printf '%-20s %s\n' "$path" "$(curl -s -o /dev/null -w '%{http_code}' https://vienalatina.com$path)"
 done
 ```
@@ -932,16 +931,22 @@ so nothing in the Caddyfile, the pipeline or the editor's filename rules has to
 learn about folders. The dropdown is the one the theme already had, ported from
 WordPress: hover and `:focus-within`, inline on a phone, no script.
 
-Only *Inicio* and *Comunidad* remain in `config.yaml`. Weight under 5 puts a menu
-entry before the pages, 5 or more after them.
+Only *Inicio* remains in `config.yaml`. Weight under 5 puts a menu entry before
+the pages, 5 or more after them. *Comunidad* used to be the entry at weight 9 and
+is a button in the bar now — see §11.19.
 
 ### 11.15b Two calendars
 
-**Public events are posts** in the **Evento** category, with three fields of
-their own: `event_date`, `event_time` and `event_location`. The post's own `date`
-is when it was announced — usually weeks earlier, and what Hugo sorts the blog by
-— so the event's date cannot be the same field. Ticking Evento without a date is
-refused. Members can propose events exactly as they propose anything else, and a
+**Public events are posts carrying an `event_date`**, with two more fields of
+their own: `event_time` and `event_location`. The post's own `date` is when it
+was announced — usually weeks earlier, and what Hugo sorts the blog by — so the
+event's date cannot be the same field.
+
+**The date is the whole declaration.** There used to be an «Evento» category to
+tick first, and ticking it without filling the date in was an error the form had
+to refuse; with the categories gone there is nothing to tick, and no way left to
+say "this is an event" without saying when. A date that is not a date is still
+refused. Members propose events exactly as they propose anything else, and a
 moderator approves them.
 
 An event's page leads with the day, the time and the place, shows its picture
@@ -1073,6 +1078,42 @@ saved in a different format has its predecessor deleted. `scripts/translate.py`
 needs nothing — it walks `content/` only, and `data/` and `static/` are outside
 it. A site with no `data/brand.yaml` builds byte-for-byte the HTML it built
 before any of this existed, which is asserted by building both ways.
+
+### 11.19 The chrome on a phone
+
+**The public menu opens from a ☰ below 768px**, and above it is the horizontal
+strip it has always been. No JavaScript: `header.html` carries a visually hidden
+checkbox immediately before the menu, the ☰ is a `<label>` for it anywhere in the
+bar, and one rule in `main.css` —
+`.site-menu__state:checked ~ .site-bar__pages { display: flex }` — does the rest.
+
+That is worth knowing because of how it was broken. The panel's styles, the ☰'s
+styles and the animated ✕ were all ported from the WordPress theme when the menu
+was built; the **button was not**, and nothing ever set the class the CSS was
+waiting for. So for three phases every phone saw the site with no navigation at
+all — brand, language letters, posts — while every rule involved was correct.
+`apps/board/tests/test_templates.py` now fails if the stylesheet hides the menu
+behind a state the header does not carry.
+
+*Why a checkbox and not `<details>`*, which is this project's usual answer for a
+control without a script: on desktop this menu has to be open and horizontal, and
+current Chrome hides a closed `<details>`'s content with `content-visibility` on
+`::details-content`, which a `display` rule on the child no longer overrides. A
+checkbox behaves the same in every engine. It stays in the tab order and keeps
+its label, so the menu opens from a keyboard.
+
+**Comunidad is a button in the bar**, at every width — brand-coloured through the
+same tokens Gestión → Marca writes, so it follows the site's colours. Its three
+translations are in `partials/t.html` rather than in three `menus.main` blocks:
+the URL is the same in every language, so the menu entry was only ever carrying
+a label. The language switcher is **rendered twice**, in the bar for desktop and
+at the foot of the menu panel for the phone — a brand, a button, a ☰ and three
+language letters do not fit across 360px, and CSS cannot lift an element out of
+the bar and into the panel.
+
+In the members area the navigation **wraps** on a phone rather than scrolling:
+six sections over two lines shows all six, where a swipe strip would have left
+Calendario and Gestión off the right edge with nothing to say they were there.
 
 ## 12. Make Gitea look like the site
 

@@ -22,9 +22,47 @@
 		</a>
 
 		<nav class="site-bar__nav" aria-label="Idioma">
+			{{/* Desktop only; the mobile copy is at the foot of the menu panel
+			     below. Rendered twice rather than moved, because at 360px the bar
+			     cannot hold a brand, a button, a ☰ and three language letters
+			     without something wrapping — and CSS cannot lift an element out
+			     of the bar and into the panel. */}}
 			{{ partial "lang-switcher.html" . }}
 		</nav>
+
+		{{/* The way into the members area, as a button rather than a word in the
+		     menu. It is the one link on this site that is not content: somebody
+		     who has an account needs to find the door at a glance, and somebody
+		     who does not should see that there is one. In the bar at every width,
+		     so a phone never has to open a menu to find it. */}}
+		<a class="site-bar__cta" href="/comunidad/">{{ partial "t.html" (dict "key" "community" "lang" .Site.Language.Lang) }}</a>
+
+		{{/* The ☰ itself. A <label> can sit anywhere in the document, so the
+		     checkbox it drives lives below, as a sibling of the menu it opens —
+		     which is what lets one CSS rule show the menu with no script. */}}
+		<label class="site-bar__hamburger" for="site-menu" aria-hidden="true">
+			<span class="hamburger-line"></span>
+			<span class="hamburger-line"></span>
+			<span class="hamburger-line"></span>
+		</label>
 	</div>
+
+	{{/* The state of the menu, as a checkbox, immediately before the menu so
+	     that `:checked ~ .site-bar__pages` reaches it.
+
+	     A checkbox rather than a <details>, which is this project's usual answer
+	     for a menu without a script. It does not work here: on desktop this menu
+	     has to be open and horizontal, and current Chrome hides a closed
+	     <details>'s content with content-visibility on ::details-content, which
+	     a display rule on the child no longer overrides. The trick that made
+	     that work has gone; a checkbox behaves the same in every engine.
+
+	     Visually hidden but not `hidden`: it keeps its place in the tab order,
+	     right before the menu it controls, and is announced with its own label —
+	     so the menu opens from a keyboard. The ☰ above is aria-hidden because it
+	     would otherwise be read a second time as the same control. */}}
+	<input id="site-menu" class="site-menu__state" type="checkbox"
+	       aria-label="{{ partial "t.html" (dict "key" "menu" "lang" .Site.Language.Lang) }}">
 
 	{{/* The menu is built from the pages themselves, not from a list in
 	     config.yaml. It used to be three names written there, which meant a page
@@ -97,5 +135,12 @@
 			</li>
 			{{ end }}
 		</ul>
+
+		{{/* The language switcher again, for the phone. The copy in the bar is
+		     hidden below 768px and this one is shown — see the note up there for
+		     why it is rendered twice rather than moved. */}}
+		<div class="site-bar__pages-lang">
+			{{ partial "lang-switcher.html" . }}
+		</div>
 	</nav>
 </header>

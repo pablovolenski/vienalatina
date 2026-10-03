@@ -21,7 +21,7 @@
 {% else %}
 <table class="table">
 	<thead>
-		<tr><th>Título</th>{% if meta.dated %}<th>Fecha</th>{% endif %}<th>Categorías</th><th></th></tr>
+		<tr><th>Título</th>{% if meta.dated %}<th>Fecha</th>{% endif %}{% if meta.dated %}<th>Evento</th>{% endif %}<th></th></tr>
 	</thead>
 	<tbody>
 	{% for item in items %}
@@ -31,7 +31,10 @@
 				<div class="muted small mono">{{ item.name }}</div>
 			</td>
 			{% if meta.dated %}<td>{{ item.date }}</td>{% endif %}
-			<td>{{ item.categories }}</td>
+			{# The column that used to hold the categories. An event date is the
+			   one thing left that changes what a post is, and it is what a
+			   moderator scanning this list is looking for. #}
+			{% if meta.dated %}<td>{{ item.event_date }}</td>{% endif %}
 			{# The flex row goes INSIDE the cell, never on it. `.actions` is
 			   display:flex, and a <td> told to be a flex container stops being a
 			   table cell: it leaves the row's layout and draws its bottom border

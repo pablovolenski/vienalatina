@@ -207,3 +207,48 @@ def test_the_form_rule_is_an_exclusion_and_not_a_list_of_accepted_types():
     )
     for typed_in in ("password", "number", "email", "date", "text", "search", "url"):
         assert typed_in not in excluded, f"{typed_in} is a box somebody types in"
+
+
+# --- the theme's own chrome -----------------------------------------------
+#
+# These two read the Hugo theme rather than the members area, which no other
+# test here does. They are here because the bug they guard against is this
+# suite's recurring shape — CSS that expects markup nobody wrote — and because
+# pytest is the only thing in this repository that runs on every commit.
+
+THEME = Path(__file__).resolve().parents[3] / "themes" / "vienalatina"
+
+
+def test_the_collapsed_menu_has_something_that_can_open_it():
+    """The one that shipped: `main.css` hid `.site-bar__pages` below 768px and
+    showed it again on a toggle, the hamburger's own styles were ported with
+    it, and `header.html` never got the button. For three phases the public
+    site had no navigation at all on a phone — every rule correct, every
+    selector pointing at an element that did not exist.
+
+    So: if the stylesheet hides the menu behind a state, the header has to carry
+    that state and the control that flips it.
+    """
+    css = (THEME / "assets" / "css" / "main.css").read_text(encoding="utf-8")
+    header = (THEME / "layouts" / "partials" / "header.html").read_text(encoding="utf-8")
+
+    assert ".site-menu__state:checked ~ .site-bar__pages" in css, (
+        "main.css no longer opens the mobile menu from the checkbox. If the "
+        "mechanism changed, change this test with it — but check first that the "
+        "menu still opens on a phone."
+    )
+    for needed in ('id="site-menu"', 'class="site-menu__state"', 'for="site-menu"'):
+        assert needed in header, (
+            f"header.html has no {needed}. The CSS hides the menu on a phone and "
+            "only shows it again on that checkbox, so without it the site has no "
+            "navigation below 768px."
+        )
+
+
+def test_the_way_into_the_members_area_is_in_the_bar_itself():
+    """Not in the menu. It was a menu entry, which on a phone put it inside a
+    menu that did not open — and even on a desktop made the one link that is not
+    content look like one of the pages."""
+    header = (THEME / "layouts" / "partials" / "header.html").read_text(encoding="utf-8")
+    bar = header.split('<nav class="site-bar__pages"')[0]
+    assert "site-bar__cta" in bar and "/comunidad/" in bar

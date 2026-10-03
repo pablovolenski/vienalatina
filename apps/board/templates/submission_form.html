@@ -24,26 +24,14 @@
 	       value="{{ fields.description if fields else '' }}">
 	<p class="muted small">Una o dos líneas: es lo que se ve en los listados.</p>
 
-	<fieldset class="choices">
-		<legend>Categorías</legend>
-		{% for category in categories %}
-		<label class="choice">
-			<input type="checkbox" name="categories" value="{{ category }}"
-			       {{ 'checked' if fields and category in fields.categories }}>
-			{{ category }}
-		</label>
-		{% endfor %}
-	</fieldset>
-
-	{# An event's own date, which is not the day the post goes up. Shown whenever
-	   a post can be written: ticking Evento above is what makes these required,
-	   checked on the server rather than hidden and shown with a script. #}
+	{# An event's own date, which is not the day the post goes up. The date is
+	   also what makes this an event: there is nothing to tick first, so there is
+	   no way to say "this is an event" and then not say when. #}
 	<fieldset class="fieldset">
 		<legend>Si es un evento</legend>
 		<p class="muted small">
-			Marca <strong>Evento</strong> arriba y rellena al menos la fecha. El
-			evento aparecerá en la agenda del sitio y se podrá añadir al
-			calendario del móvil.
+			Pon la fecha y será un evento: aparecerá en la agenda del sitio, con el
+			día y el lugar destacados. Déjala vacía y es un artículo normal.
 		</p>
 
 		<label for="event_date">Fecha del evento</label>

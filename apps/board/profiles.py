@@ -42,6 +42,10 @@ LINKS_MAX = 8
 # collision harmless rather than dangerous — Hugo wins and the profile is
 # simply unreachable — so this exists to stop somebody discovering months later
 # that their page has never loaded for anybody.
+#
+# `categories` and `tags` stay on the list although the taxonomies are gone: the
+# site served those paths for a year, and a URL somebody may still have in a
+# bookmark or a search index should not quietly become a member's profile.
 RESERVED = {
     "de", "pt-br", "es", "en",                    # language trees
     "page", "post", "posts", "categories", "tags", "category", "tag",

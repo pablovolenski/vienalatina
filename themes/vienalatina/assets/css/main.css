@@ -168,6 +168,13 @@ img { max-width: 100%; height: auto; }
 
 .lang-btn:hover { color: var(--text, #1a0d09); }
 
+/* A finger is about 44px across and this button is 20px tall with a mouse in
+   mind. Widened only where the pointer is coarse, so the desktop bar keeps its
+   proportions and the phone gets something hittable. */
+@media (pointer: coarse) {
+  .lang-btn { padding: 12px 10px; }
+}
+
 .lang-btn[aria-pressed="true"] {
   color: var(--brand, #c0391c);
   background: var(--brand-softer, #fdf1ed);
@@ -287,6 +294,52 @@ img { max-width: 100%; height: auto; }
   color: var(--muted, #5c3d37);
 }
 
+/* The way into the members area, as a button rather than a word in the menu.
+   In the bar at every width, so a phone never has to open a menu to find it.
+   Brand-coloured through the tokens, so it follows whatever an admin picks in
+   Gestión → Marca. */
+.site-bar__cta {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--brand, #c0391c);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 140ms ease;
+}
+.site-bar__cta:hover {
+  background: var(--brand-dark, #9a2a0f);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* The menu's state. Visually hidden but still focusable and still announced:
+   `display: none` or `hidden` would take it out of the tab order and leave the
+   menu unopenable from a keyboard. */
+.site-menu__state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Focus lands on the invisible checkbox, so the ring has to be drawn on the ☰
+   it drives — otherwise tabbing to the menu looks like tabbing to nothing. */
+.site-menu__state:focus-visible ~ .site-bar__inner .site-bar__hamburger,
+.site-bar__inner:has(~ .site-menu__state:focus-visible) .site-bar__hamburger {
+  outline: 2px solid var(--brand-dark, #9a2a0f);
+  outline-offset: 2px;
+}
+
 /* Hamburger — hidden on desktop, visible on mobile */
 .site-bar__hamburger {
   display: none;
@@ -319,14 +372,19 @@ img { max-width: 100%; height: auto; }
   transition: transform 200ms ease, opacity 200ms ease;
 }
 
-/* Animated X when open */
-.site-bar__hamburger[aria-expanded="true"] .hamburger-line:nth-child(1) {
+/* Animated X when open.
+   Through :has(), because the ☰ sits in the bar and the checkbox that holds the
+   state is a sibling of the menu below it — there is no selector from one to
+   the other without it. Purely decorative: in a browser without :has() the ☰
+   stays three lines and the menu still opens, which is why this is the one
+   place :has() is load-bearing for nothing. */
+.site-bar:has(.site-menu__state:checked) .hamburger-line:nth-child(1) {
   transform: translateY(7.5px) rotate(45deg);
 }
-.site-bar__hamburger[aria-expanded="true"] .hamburger-line:nth-child(2) {
+.site-bar:has(.site-menu__state:checked) .hamburger-line:nth-child(2) {
   opacity: 0;
 }
-.site-bar__hamburger[aria-expanded="true"] .hamburger-line:nth-child(3) {
+.site-bar:has(.site-menu__state:checked) .hamburger-line:nth-child(3) {
   transform: translateY(-7.5px) rotate(-45deg);
 }
 
@@ -380,7 +438,18 @@ img { max-width: 100%; height: auto; }
   background: var(--surface, #fff);
 }
 
-/* On mobile/tablet the nav is collapsed and toggled by the hamburger */
+/* The switcher at the foot of the mobile panel — the second copy. Hidden on
+   desktop, where the one in the bar is the real one. */
+.site-bar__pages-lang { display: none; }
+
+/* On mobile/tablet the nav is collapsed and opened by the ☰.
+ *
+ * This is what was missing: these rules were ported from the WordPress theme
+ * along with the hamburger's own styles, but the button was never ported with
+ * them and nothing ever set `is-open`. For three phases the menu was
+ * display:none on every phone with nothing in existence that could show it —
+ * the site simply had no navigation below 768px. The selector below is a
+ * sibling of the checkbox in header.html, which is the whole mechanism. */
 @media (max-width: 768px) {
   .site-bar__pages {
     display: none;
@@ -390,14 +459,40 @@ img { max-width: 100%; height: auto; }
     box-shadow: 0 4px 16px rgba(60, 20, 10, 0.08);
   }
 
-  .site-bar__pages.is-open {
+  .site-menu__state:checked ~ .site-bar__pages {
     display: flex;
+  }
+
+  /* The bar's own switcher goes, the panel's arrives: four things do not fit
+     across a 360px bar. The button takes over the auto margin that used to
+     push the switcher right, so it sits against the ☰ rather than floating in
+     the middle of the bar. */
+  .site-bar__nav { display: none; }
+  .site-bar__cta { margin-left: auto; font-size: 0.8rem; padding: 9px 14px; }
+  .site-bar__pages-lang {
+    display: flex;
+    justify-content: center;
+    margin: 4px 16px 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-light, #e0cec8);
+  }
+  .site-bar__pages-lang .lang-switcher {
+    border-right: 0;
+    padding-right: 0;
+    margin-right: 0;
   }
 
   .page-nav {
     flex-direction: column;
     padding: 0;
     overflow: visible;
+    /* The desktop rule centres the strip with `margin: 0 auto`. An auto margin
+       on the cross axis beats a flex item's stretch, so in this column the
+       whole menu shrank to the width of its longest word and sat in the middle
+       of the screen with the items starting at 43% — which is what it did the
+       first time this panel was ever rendered. */
+    margin: 0;
+    width: 100%;
   }
 
   .page-nav li a {

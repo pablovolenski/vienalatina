@@ -21,9 +21,11 @@ defaultContentLanguageInSubdir: false
 permalinks:
   post: "/:year/:month/:day/:slug/"
 
-taxonomies:
-  category: "categories"
-  tag: "tags"
+# No taxonomies. An empty map rather than no `taxonomies` key at all: leaving
+# the key out restores Hugo's own defaults, which are `tags` and `categories` —
+# so deleting the block built the very pages it was meant to remove. This turns
+# them off, and /categories/… and /tags/ fall through to the site's 404.
+taxonomies: {}
 
 languages:
   es:
@@ -32,22 +34,21 @@ languages:
     weight: 1
     params:
       description: "Comunidad latinoamericana en Viena — turismo, cultura, gastronomía, comunidad y comercio."
-    # Only the two ends of the menu live here. Everything between them is built
-    # from the pages themselves by partials/header.html — so a page published
-    # from the members area appears on the site, with its own translated title,
-    # instead of needing three edits in this file. Weight decides the side:
-    # under 5 goes before the pages, 5 or more after them.
+    # Only Inicio lives here. Everything after it is built from the pages
+    # themselves by partials/header.html — so a page published from the members
+    # area appears on the site, with its own translated title, instead of
+    # needing three edits in this file. Weight decides the side: under 5 goes
+    # before the pages, 5 or more after them.
+    #
+    # Comunidad used to be the entry at weight 9. It is a button in the header
+    # bar now rather than a word in the menu, so its three translations live in
+    # partials/t.html — the URL is the same in every language, and a menu entry
+    # was only ever carrying the label.
     menus:
       main:
         - name: "Inicio"
           url: "/"
           weight: 1
-        # The way into the members area, in the menu for everybody: somebody who
-        # has an account needs to find the door, and somebody who does not should
-        # at least see that there is one.
-        - name: "Comunidad"
-          url: "/comunidad/"
-          weight: 9
   de:
     languageCode: "de"
     languageName: "Deutsch"
@@ -59,9 +60,6 @@ languages:
         - name: "Start"
           url: "/de/"
           weight: 1
-        - name: "Community"
-          url: "/comunidad/"
-          weight: 9
   pt-br:
     languageCode: "pt-BR"
     languageName: "Português (Brasil)"
@@ -73,9 +71,6 @@ languages:
         - name: "Início"
           url: "/pt-br/"
           weight: 1
-        - name: "Comunidade"
-          url: "/comunidad/"
-          weight: 9
 
 params:
   # The picture a share card falls back on when a post or page has none, and the

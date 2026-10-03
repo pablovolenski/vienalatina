@@ -319,3 +319,43 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
     create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
                 "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
     db.close()
+
+
+def test_step_six_drops_the_category_columns_and_keeps_the_rows(tmp_path):
+    """The categories are gone; the two columns that held them go with them.
+
+    Built on the current schema rather than an old one, because the point here
+    is not "does an old database survive" — step 5's test covers that — but
+    that a database which *has* the column loses it without losing anything
+    around it. A dropped column takes its data and nothing else, and a row
+    written before the drop still reads afterwards.
+    """
+    from apps.board.app import create_app
+    from apps.board.db import connect
+
+    path = str(tmp_path / "board.db")
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    # Put the column back and fill it, as a server that has been running since
+    # before this phase would have it.
+    db.execute("ALTER TABLE content_cache ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
+    db.execute("""INSERT INTO content_cache (path, sha, title, date, categories, event_date)
+                  VALUES ('content/post/2026-10-24-feria.es.md', 'abc', 'Feria',
+                          '2026-10-24', 'Evento, Comunidad', '2026-11-07')""")
+    db.execute("PRAGMA user_version = 5")
+    db.commit()
+    db.close()
+
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    columns = {row[1] for row in db.execute("PRAGMA table_info(content_cache)")}
+    assert "categories" not in columns
+    row = db.execute("SELECT title, event_date FROM content_cache").fetchone()
+    assert (row["title"], row["event_date"]) == ("Feria", "2026-11-07")
+    assert db.execute("PRAGMA user_version").fetchone()[0] == max(
+        number for number, _, _ in migrations.STEPS)
+    db.close()

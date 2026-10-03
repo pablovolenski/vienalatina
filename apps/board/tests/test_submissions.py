@@ -73,11 +73,10 @@ def test_a_proposal_is_a_row_and_not_a_commit(repo, db, post, maria, sign_in):
     """The whole point of the table. If this ever commits, the post is on
     vienalatina.com before anybody has read it."""
     sign_in(maria)
-    propose(post, description="Una feria", categories=["Comunidad"])
+    propose(post, description="Una feria")
 
     row = only_submission(db)
-    assert (row["state"], row["title"], row["categories"]) == (
-        "pending", "Feria en Ottakring", "Comunidad")
+    assert (row["state"], row["title"]) == ("pending", "Feria en Ottakring")
     assert repo.files == {}
     assert repo.commits == []
 
@@ -189,7 +188,7 @@ def test_approving_commits_once_under_the_author_is_name(
     """Attribution is the reason `write_file` takes an author at all. A post
     approved by Luisa but written by María has to say María in git."""
     sign_in(maria)
-    propose(post, categories=["Comunidad"])
+    propose(post)
     submission_id = only_submission(db)["id"]
 
     sign_in(luisa)
@@ -205,11 +204,11 @@ def test_approving_commits_once_under_the_author_is_name(
 
 def test_the_approved_file_is_what_the_pipeline_expects(repo, db, post, maria,
                                                         luisa, sign_in):
-    """The same contract the editor's own tests hold it to: Spanish source, no
-    `translated_from`, categories as a list."""
+    """The same contract the editor's own tests hold it to: a Spanish source
+    with no `translated_from`."""
     import yaml
     sign_in(maria)
-    propose(post, categories=["Comunidad", "Cultura"], description="Una feria")
+    propose(post, description="Una feria")
     submission_id = only_submission(db)["id"]
 
     sign_in(luisa)
@@ -220,7 +219,7 @@ def test_the_approved_file_is_what_the_pipeline_expects(repo, db, post, maria,
     front = yaml.safe_load(text.split("---")[1])
     assert front["lang"] == "es"
     assert front["manual_translation"] is False
-    assert front["categories"] == ["Comunidad", "Cultura"]
+    assert "categories" not in front
     assert front["description"] == "Una feria"
     assert "translated_from" not in front
     assert "empanadas" in text
@@ -477,7 +476,7 @@ def test_a_member_can_propose_an_event_and_it_keeps_its_date(
     site is the one the member described, dated when it happens."""
     import yaml
     sign_in(maria)
-    propose(post, categories=["Evento"], event_date="2026-11-07",
+    propose(post, event_date="2026-11-07",
             event_time="20:00", event_location="Sala Ottakring")
     submission_id = only_submission(db)["id"]
 
@@ -492,10 +491,13 @@ def test_a_member_can_propose_an_event_and_it_keeps_its_date(
     assert front["author"] == "Maria"
 
 
-def test_an_event_proposal_without_a_date_is_refused(db, post, maria, sign_in):
+def test_a_proposal_with_a_nonsense_event_date_is_refused(db, post, maria, sign_in):
+    """A proposal with no date at all is just an article, so there is nothing
+    left to refuse there — the date is the declaration. A date that is not a
+    date still is."""
     sign_in(maria)
 
-    response = propose(post, categories=["Evento"])
+    response = propose(post, event_date="el martes")
 
     assert response.status_code == 400
     assert db.execute("SELECT COUNT(*) AS n FROM submissions").fetchone()["n"] == 0

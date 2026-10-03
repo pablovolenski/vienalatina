@@ -3,9 +3,9 @@
 What the association is doing and when, for the people inside: a meeting, a
 rehearsal, a visit somewhere. Admins write them, every member reads them, and
 nothing here is ever published — no Open Graph, no sitemap, nothing written to
-/var/www. That is the whole difference between this and a post in the Evento
-category, and it is why the two live in different places rather than behind a
-flag on one.
+/var/www. That is the whole difference between this and a public post carrying
+an event date, and it is why the two live in different places rather than behind
+a flag on one.
 
 **The public events appear here too**, marked as public and linking to the site,
 because a member should have one place to look rather than two. They come from

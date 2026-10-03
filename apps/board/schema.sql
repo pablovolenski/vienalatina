@@ -189,7 +189,6 @@ CREATE TABLE IF NOT EXISTS content_cache (
   sha         TEXT NOT NULL,
   title       TEXT NOT NULL DEFAULT '',
   date        TEXT NOT NULL DEFAULT '',
-  categories  TEXT NOT NULL DEFAULT '',
   -- Files carrying `translated_from` are the pipeline's output, not anyone's
   -- draft. Recorded here so the listing can skip them without re-reading
   -- every file to find out what it already knew.
@@ -245,10 +244,9 @@ CREATE TABLE IF NOT EXISTS submissions (
   title          TEXT    NOT NULL,
   body_md        TEXT    NOT NULL,
   description    TEXT    NOT NULL DEFAULT '',
-  categories     TEXT    NOT NULL DEFAULT '',   -- comma-separated, as content_cache
-  -- Set only when the proposal carries the Evento category. The event's own
-  -- date, which is not the day it is published: a member announcing a concert
-  -- three weeks out is the normal case.
+  -- The event's own date, which is also what makes this proposal an event at
+  -- all. It is not the day it is published: a member announcing a concert three
+  -- weeks out is the normal case.
   event_date     TEXT,
   event_time     TEXT,
   event_location TEXT,
@@ -304,7 +302,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS reactions_one_per_comment
 -- Events the association puts on for its members: a meeting, a rehearsal, a
 -- visit somewhere. Written by admins, read by every member, and never published
 -- — nothing here reaches /var/www, the sitemap or a share card, which is the
--- difference between this table and a post with the Evento category.
+-- difference between this table and a public post carrying an event date.
 --
 -- `starts_on` and `starts_at` are kept apart rather than as one timestamp
 -- because an event with no time is an ordinary thing ("the whole Saturday") and

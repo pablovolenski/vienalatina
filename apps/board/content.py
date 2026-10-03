@@ -59,13 +59,6 @@ COLLECTIONS = {
     },
 }
 
-# The one category that changes what a post *is* rather than what it is about:
-# tick it and the post needs a date of its own, appears in the agenda, renders
-# with the date and the place at the top, and offers an .ics.
-EVENT_CATEGORY = "Evento"
-
-CATEGORIES = ["Evento", "Turismo", "Cultura", "Gastronomía", "Comunidad", "Comercio"]
-
 UPLOAD_FOLDER = "static/uploads"
 
 TITLE_MAX = 140
@@ -149,8 +142,6 @@ def frontmatter_for(collection: str, form: dict) -> dict:
         # person: it is a build instruction, not something to explain in a form.
         fields["outputs"] = ["HTML", "ics"]
     if collection == "post":
-        if form["categories"]:
-            fields["categories"] = form["categories"]
         if form["description"]:
             fields["description"] = form["description"]
         if form["image"]:
@@ -181,17 +172,17 @@ def _cache_read(path: str, sha: str):
 
 def _cache_write(path: str, sha: str, fm: dict) -> None:
     get_db().execute(
-        """INSERT INTO content_cache (path, sha, title, date, categories, generated,
+        """INSERT INTO content_cache (path, sha, title, date, generated,
                                       event_date, event_time, event_location)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(path) DO UPDATE SET
                sha = excluded.sha, title = excluded.title, date = excluded.date,
-               categories = excluded.categories, generated = excluded.generated,
+               generated = excluded.generated,
                event_date = excluded.event_date, event_time = excluded.event_time,
                event_location = excluded.event_location,
                updated_at = datetime('now')""",
         (path, sha, str(fm.get("title", "")), str(fm.get("date", "")),
-         ", ".join(fm.get("categories") or []), 1 if fm.get("translated_from") else 0,
+         1 if fm.get("translated_from") else 0,
          # Cached for the private calendar, which shows public events beside the
          # internal ones and would otherwise read every post's frontmatter on
          # every page view to find out when they are.
@@ -223,7 +214,7 @@ def listing(collection: str) -> list[dict]:
         items.append({
             "name": name, "path": path, "sha": sha,
             "title": row["title"] or name,
-            "date": row["date"], "categories": row["categories"],
+            "date": row["date"],
             "event_date": row["event_date"] or "",
             "event_time": row["event_time"] or "",
             "event_location": row["event_location"] or "",
@@ -275,8 +266,6 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         except ValueError:
             errors.append("La fecha debe tener el formato AAAA-MM-DD.")
 
-    categories = [c for c in request.form.getlist("categories") if c in CATEGORIES]
-
     # A page's place in the menu. `parent` is another page's basename — the one
     # translate.py uses to pair siblings, so a parent chosen once holds in all
     # three languages — and the menu is built from these, not from a list in
@@ -297,7 +286,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
     # When a post is an event, it has a date of its own. The post's `date` above
     # is when it was announced — often weeks earlier, and the thing Hugo sorts
     # the blog by — so the two cannot be the same field.
-    event = read_event_fields(request.form, categories, errors)
+    event = read_event_fields(request.form, errors)
 
     faq = clean_faq(request.form.get("faq", ""))
     image_alt = request.form.get("image_alt", "").strip()[:200]
@@ -322,7 +311,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         errors.append("El cuerpo no puede estar vacío.")
 
     fields = {
-        "title": title, "date": when, "categories": categories,
+        "title": title, "date": when,
         "description": request.form.get("description", "").strip(),
         "image": image,
         "manual_translation": request.form.get("manual_translation") == "on",
@@ -368,27 +357,33 @@ def commit_picture(data: bytes, filename: str, author=None) -> str:
     return f"/uploads/{name}"
 
 
-def read_event_fields(form, categories: list[str], errors: list[str]) -> dict:
-    """The three fields that come with the Evento category.
+def read_event_fields(form, errors: list[str]) -> dict:
+    """The three fields that make a post an event.
+
+    **The date is the marker.** There used to be an «Evento» category to tick
+    first, and ticking it without filling the date in was an error the form had
+    to refuse. With the categories gone there is nothing to tick: a post that
+    carries a date is an event, which also means there is no way left to say
+    "this is an event" and then not say when.
 
     Shared by the editor and by a member's proposal, so a post written by a
     moderator and one approved from the queue carry the same frontmatter. The
-    date is required and the other two are not: an event with no time is an
-    all-day event, and one with no place is a mistake somebody can fix later
-    rather than a reason to refuse the whole post.
+    other two fields stay optional: an event with no time is an all-day event,
+    and one with no place is a mistake somebody can fix later rather than a
+    reason to refuse the whole post.
 
-    Returns empty strings when the category is absent, so an ordinary article
-    never carries empty event lines in its frontmatter.
+    Returns empty strings when no date was given, so an ordinary article never
+    carries empty event lines in its frontmatter.
     """
-    if EVENT_CATEGORY not in categories:
+    raw = form.get("event_date", "").strip()
+    if not raw:
         return {"event_date": "", "event_time": "", "event_location": ""}
 
-    raw = form.get("event_date", "").strip()
     try:
         event_date = datetime.strptime(raw, "%Y-%m-%d").date().isoformat()
     except ValueError:
         event_date = ""
-        errors.append("Un evento necesita fecha, con el formato AAAA-MM-DD.")
+        errors.append("La fecha del evento debe tener el formato AAAA-MM-DD.")
 
     event_time = form.get("event_time", "").strip()
     if event_time and not EVENT_TIME.match(event_time):
@@ -505,7 +500,7 @@ def new(collection: str):
     meta = _collection_or_404(collection)
     if request.method == "GET":
         return render_template("content_form.html", collection=collection, meta=meta,
-                               categories=CATEGORIES, item=None, fields=None,
+                               item=None, fields=None,
                                body="", today=date_type.today().isoformat(),
                                parents=possible_parents(collection))
 
@@ -548,7 +543,6 @@ def edit(collection: str, name: str):
         fields = {
             "title": fm.get("title", ""),
             "date": fm.get("date"),
-            "categories": fm.get("categories") or [],
             "description": fm.get("description", ""),
             "image": fm.get("image", ""),
             "manual_translation": bool(fm.get("manual_translation")),
@@ -567,7 +561,7 @@ def edit(collection: str, name: str):
             "event_location": fm.get("event_location", ""),
         }
         return render_template("content_form.html", collection=collection, meta=meta,
-                               categories=CATEGORIES, item={"name": name, "sha": sha},
+                               item={"name": name, "sha": sha},
                                fields=fields, body=body,
                                today=date_type.today().isoformat(),
                                parents=possible_parents(collection, name))
@@ -628,7 +622,7 @@ def preview(collection: str):
     sha = request.form.get("sha", "")
     item = {"name": request.form.get("name", ""), "sha": sha} if sha else None
     return render_template("content_form.html", collection=collection, meta=meta,
-                           categories=CATEGORIES, item=item, fields=fields, body=body,
+                           item=item, fields=fields, body=body,
                            today=date_type.today().isoformat(),
                            parents=possible_parents(collection,
                                                     item["name"] if item else ""),
@@ -686,7 +680,7 @@ def _back_to_form(collection, meta, fields, body, errors, item):
     for message in errors:
         flash(message, "error")
     return render_template("content_form.html", collection=collection, meta=meta,
-                           categories=CATEGORIES, item=item, fields=fields, body=body,
+                           item=item, fields=fields, body=body,
                            today=date_type.today().isoformat(),
                            parents=possible_parents(collection,
                                                     item["name"] if item else "")), 400

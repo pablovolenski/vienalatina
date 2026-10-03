@@ -232,6 +232,23 @@ def _rooms_for_a_date_of_its_own(db: sqlite3.Connection) -> None:
                 db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
 
 
+def _no_more_categories(db: sqlite3.Connection) -> None:
+    """Take the category column off the two tables that carried one.
+
+    `DROP COLUMN` rather than a rebuild: SQLite has had it since 3.35 and
+    neither column is in a CHECK, an index or a foreign key, which are the three
+    things that make it refuse. The rebuilds in steps 1 and 4 exist because a
+    CHECK cannot be altered any other way — this needs none of that.
+
+    Dropping rather than leaving a column nobody writes to: a dead column is a
+    question for whoever reads this schema next, and the answer ("we used to
+    have categories") is not in the file.
+    """
+    for table in ("content_cache", "submissions"):
+        if "categories" in _columns(db, table):
+            db.execute(f"ALTER TABLE {table} DROP COLUMN categories")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
@@ -240,6 +257,7 @@ STEPS = [
     (3, "members can have a public page", _members_get_a_public_page),
     (4, "members can be moderators", _members_can_moderate),
     (5, "events carry a date of their own", _rooms_for_a_date_of_its_own),
+    (6, "there are no categories any more", _no_more_categories),
 ]
 
 

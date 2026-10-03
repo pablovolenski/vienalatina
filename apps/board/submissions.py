@@ -92,17 +92,14 @@ def _read_proposal() -> tuple[dict, list[str]]:
     """The same fields the editor asks for, minus the ones only a publisher
     decides: the date is the day it is approved, and `manual_translation` is a
     pipeline switch, not something to explain to a member."""
-    categories = [c for c in request.form.getlist("categories")
-                  if c in content.CATEGORIES]
     errors = []
     fields = {
         "title": request.form.get("title", "").strip()[:TITLE_MAX],
         "body": request.form.get("body", "").strip()[:BODY_MAX],
         "description": request.form.get("description", "").strip()[:300],
-        "categories": categories,
         # The same three fields the editor asks for, read by the same function:
         # a member's event and a moderator's have to produce the same post.
-        **content.read_event_fields(request.form, categories, errors),
+        **content.read_event_fields(request.form, errors),
     }
     if not fields["title"]:
         errors.append("El título no puede estar vacío.")
@@ -154,8 +151,7 @@ def propose():
         return redirect(url_for("content.new", collection="post"))
 
     if request.method == "GET":
-        return render_template("submission_form.html", item=None, fields=None,
-                               categories=content.CATEGORIES)
+        return render_template("submission_form.html", item=None, fields=None)
 
     fields, errors = _read_proposal()
     waiting = get_db().execute(
@@ -179,11 +175,11 @@ def propose():
     photo_name = _store_picture(staged)
     get_db().execute(
         """INSERT INTO submissions
-               (author_id, title, body_md, description, categories, photo_name,
+               (author_id, title, body_md, description, photo_name,
                 event_date, event_time, event_location)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (g.member["id"], fields["title"], fields["body"], fields["description"],
-         ", ".join(fields["categories"]), photo_name,
+         photo_name,
          fields["event_date"], fields["event_time"], fields["event_location"]),
     )
     flash("Enviado. Un moderador lo leerá antes de publicarlo.", "ok")
@@ -217,12 +213,10 @@ def edit(submission_id: int):
         return redirect(url_for("submissions.index"))
 
     if request.method == "GET":
-        return render_template("submission_form.html", item=row, categories=content.CATEGORIES,
+        return render_template("submission_form.html", item=row,
                                fields={
                                    "title": row["title"], "body": row["body_md"],
                                    "description": row["description"],
-                                   "categories": [c.strip() for c in
-                                                  (row["categories"] or "").split(",") if c.strip()],
                                    "event_date": row["event_date"] or "",
                                    "event_time": row["event_time"] or "",
                                    "event_location": row["event_location"] or "",
@@ -246,14 +240,14 @@ def edit(submission_id: int):
 
     get_db().execute(
         """UPDATE submissions
-              SET title = ?, body_md = ?, description = ?, categories = ?,
+              SET title = ?, body_md = ?, description = ?,
                   photo_name = ?, event_date = ?, event_time = ?,
                   event_location = ?, state = 'pending', note = NULL,
                   reviewed_by = NULL, reviewed_at = NULL,
                   updated_at = datetime('now')
             WHERE id = ?""",
         (fields["title"], fields["body"], fields["description"],
-         ", ".join(fields["categories"]), photo_name, fields["event_date"],
+         photo_name, fields["event_date"],
          fields["event_time"], fields["event_location"], submission_id),
     )
     # Back to pending on every edit, including one made after a rejection: a
@@ -320,7 +314,6 @@ def approve(submission_id: int):
         # this and the URL carries it, so a proposal that waited a week should
         # not arrive dated a week ago.
         "date": date_type.today(),
-        "categories": [c.strip() for c in (row["categories"] or "").split(",") if c.strip()],
         "description": row["description"],
         "image": "",
         "manual_translation": False,
@@ -419,5 +412,4 @@ def _store_picture(staged: list[dict]) -> str | None:
 def _back_to_form(item, fields, errors):
     for message in errors:
         flash(message, "error")
-    return render_template("submission_form.html", item=item, fields=fields,
-                           categories=content.CATEGORIES), 400
+    return render_template("submission_form.html", item=item, fields=fields), 400

@@ -1,27 +1,26 @@
 {{/* BreadcrumbList — where this page sits, for a search result and for an answer
      engine deciding what a page is about.
 
-     Two levels for a page (Inicio → this), three for an article (Inicio → its
-     category → this). Nothing is rendered visibly: the site is shallow enough
-     that a visible trail would be clutter, while the machine-readable one still
-     answers "what is this page part of".
+     Two levels: Inicio → this. An article used to carry its category in the
+     middle; there are no categories any more, and a post is a child of the home
+     page. Nothing is rendered visibly: the site is shallow enough that a visible
+     trail would be clutter, while the machine-readable one still answers "what
+     is this page part of".
 
      A subpage says Inicio → its parent → itself, read from the same `parent`
      basename the menu is built from, so the trail and the menu cannot disagree. */}}
 {{ $items := slice (dict "@type" "ListItem" "position" 1 "name" "Inicio" "item" .Site.Home.Permalink) }}
 {{ $position := 2 }}
 
-{{ if eq .Section "post" }}
-{{ range first 1 (.GetTerms "categories") }}
-{{ $items = $items | append (dict "@type" "ListItem" "position" $position "name" .LinkTitle "item" .Permalink) }}
-{{ $position = add $position 1 }}
-{{ end }}
-{{ else }}
+{{ if ne .Section "post" }}
 {{ with .Params.parent }}
 {{ $base := . }}
 {{ range where $.Site.RegularPages "Section" "page" }}
 {{ with .File }}{{ if eq .ContentBaseName $base }}
 {{ $items = $items | append (dict "@type" "ListItem" "position" $position "name" $.Page.Title "item" $.Permalink) }}
+{{/* Was missing: only the category branch bumped the position, so a subpage
+     emitted its parent and itself both at position 2. */}}
+{{ $position = add $position 1 }}
 {{ end }}{{ end }}
 {{ end }}
 {{ end }}

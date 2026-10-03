@@ -68,6 +68,10 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  /* A long display name beside a logo has nowhere to go on a phone otherwise,
+     and `space-between` pushes the brand off the left edge rather than
+     wrapping. */
+  flex-wrap: wrap;
 }
 
 .site-bar__brand { text-decoration: none; }
@@ -84,7 +88,15 @@ button, input, select, textarea { font: inherit; }
   padding: 0.6rem 16px;
   list-style: none;
   display: flex;
-  gap: 1.5rem;
+  gap: 0.5rem 1.5rem;
+  /* Six sections and their badges do not fit across a phone. Without this the
+     row overflowed and took the whole page sideways with it — a members area
+     you had to scroll right to read.
+     Wrapping rather than a strip you swipe: two lines show all six, and a
+     horizontal scroll would have left Calendario and Gestión off the right
+     edge with nothing to say they were there. On a laptop it is one line
+     either way. */
+  flex-wrap: wrap;
 }
 .page-nav a { color: var(--muted); text-decoration: none; }
 .page-nav a:hover { color: var(--brand); }

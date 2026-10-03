@@ -57,9 +57,7 @@ def build_provider():
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = REPO_ROOT / "content"
 
-# Frontmatter strings translated alongside the body. Note `categories` is
-# deliberately absent: the taxonomy terms stay Spanish in every language, or
-# Hugo would fork the taxonomy per language.
+# Frontmatter strings translated alongside the body.
 # `event_location` is deliberately absent: an address is how somebody finds the
 # place, and a translated street or venue name is worse than an untranslated one.
 # `event_date` and `event_time` are data, not prose.
