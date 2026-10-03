@@ -180,8 +180,22 @@ label { display: block; margin: 1rem 0 0.35rem; font-weight: 600; font-size: 0.9
 label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; }
 label.check input { margin: 0; }
 
-input[type="text"], input[type="email"], input[type="date"],
-input:not([type]), select, textarea {
+/* Everything a person types in, named by what it is NOT.
+ *
+ * This was a list — text, email, date and inputs with no type at all — and a
+ * list of accepted types is wrong the moment somebody adds one. It was: the
+ * password box on the sign-in page was a browser default sitting under a
+ * full-width username box, because `password` was never added, and so was the
+ * number box for a page's order. Nothing errors; the form just looks unfinished
+ * in a way only a person looking at it can catch.
+ *
+ * The controls below are excluded because they are not text boxes and would be
+ * disfigured by this: a checkbox, a radio, a file picker (styled separately),
+ * and the button-like types. Anything else — password, number, url, search,
+ * tel, whatever arrives next — is a field somebody types in and gets the same
+ * box without this rule having to be edited again. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="hidden"]),
+select, textarea {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border-light);
@@ -189,7 +203,7 @@ input:not([type]), select, textarea {
   background: var(--bg);
   color: var(--text);
 }
-input[type="checkbox"] { width: auto; }
+input[type="checkbox"], input[type="radio"] { width: auto; }
 textarea { resize: vertical; line-height: 1.55; }
 
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }

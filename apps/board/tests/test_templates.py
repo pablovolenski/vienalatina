@@ -174,3 +174,36 @@ def test_the_fields_that_are_not_prose_stay_plain():
         html = (Path(__file__).resolve().parents[1] / "templates" / name).read_text(encoding="utf-8")
         opening = re.search(rf'<textarea id="{box}"[^>]*>', html)
         assert opening and "data-markdown" not in opening.group(0), name
+
+
+# --- the form controls are named by what they are not ---------------------
+
+UNSTYLED_ON_PURPOSE = {"checkbox", "radio", "file", "submit",
+                       "button", "reset", "image", "hidden"}
+
+
+def test_the_form_rule_is_an_exclusion_and_not_a_list_of_accepted_types():
+    """It used to be `input[type=text], input[type=email], input[type=date],
+    input:not([type])` — an allowlist, which is wrong the moment anybody adds a
+    field. It was: the password box on the sign-in page was a browser default
+    sitting under a full-width username box, and the number box for a page's
+    order was the same. Nothing errors; the form just looks unfinished, which
+    only a person looking at it can catch.
+
+    So the guard is on the shape of the rule rather than on any one type: it has
+    to exclude the controls that are not text boxes and style everything else.
+    """
+    css = (Path(__file__).resolve().parents[1] / "static" / "board.css").read_text(encoding="utf-8")
+    selector = [line for line in css.splitlines() if line.startswith("input:not(")]
+    assert selector, (
+        "board.css has no `input:not(...)` form rule. If it is back to listing "
+        "accepted types, the next field somebody adds will be unstyled."
+    )
+    excluded = set(re.findall(r'\[type="([a-z]+)"\]', selector[0]))
+    assert excluded == UNSTYLED_ON_PURPOSE, (
+        f"the stylesheet excludes {sorted(excluded)}; expected "
+        f"{sorted(UNSTYLED_ON_PURPOSE)}. Anything a person types in belongs in "
+        "the rule, not outside it."
+    )
+    for typed_in in ("password", "number", "email", "date", "text", "search", "url"):
+        assert typed_in not in excluded, f"{typed_in} is a box somebody types in"
