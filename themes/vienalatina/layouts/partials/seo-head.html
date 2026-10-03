@@ -85,6 +85,36 @@
 {{ partial "breadcrumbs-schema.html" . }}
 {{ partial "faq-schema.html" . }}
 
+{{/* An event is also an Event. This is what puts a date next to the result in a
+     search listing, and what an answer engine reads when somebody asks what is
+     on in Vienna this weekend — the article alone says none of it in a form a
+     machine can use. */}}
+{{ with .Params.event_date }}
+{{ $when := . | time.AsTime }}
+{{ $start := $when.Format "2006-01-02" }}
+{{ with $.Params.event_time }}{{ $start = printf "%sT%s:00" $start . }}{{ end }}
+{{ $event := dict
+	"@context" "https://schema.org"
+	"@type" "Event"
+	"name" $.Title
+	"startDate" $start
+	"url" $.Permalink
+	"inLanguage" $.Site.Language.LanguageCode
+	"eventAttendanceMode" "https://schema.org/OfflineEventAttendanceMode"
+	"eventStatus" "https://schema.org/EventScheduled"
+	"organizer" (dict "@type" "Organization" "name" $.Site.Title "url" $.Site.Home.Permalink)
+}}
+{{ with $desc }}{{ $event = merge $event (dict "description" .) }}{{ end }}
+{{ with $image }}{{ $event = merge $event (dict "image" .) }}{{ end }}
+{{ with $.Params.event_location }}
+{{ $event = merge $event (dict "location" (dict
+	"@type" "Place"
+	"name" .
+	"address" (dict "@type" "PostalAddress" "addressLocality" "Wien" "addressCountry" "AT"))) }}
+{{ end }}
+<script type="application/ld+json">{{ $event | jsonify (dict "indent" "  ") | safeJS }}</script>
+{{ end }}
+
 {{ else if .IsHome }}
 {{/* ---- Home ---- */}}
 <meta property="og:type" content="website">

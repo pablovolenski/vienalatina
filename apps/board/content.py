@@ -59,7 +59,12 @@ COLLECTIONS = {
     },
 }
 
-CATEGORIES = ["Turismo", "Cultura", "Gastronomía", "Comunidad", "Comercio"]
+# The one category that changes what a post *is* rather than what it is about:
+# tick it and the post needs a date of its own, appears in the agenda, renders
+# with the date and the place at the top, and offers an .ics.
+EVENT_CATEGORY = "Evento"
+
+CATEGORIES = ["Evento", "Turismo", "Cultura", "Gastronomía", "Comunidad", "Comercio"]
 
 UPLOAD_FOLDER = "static/uploads"
 
@@ -79,6 +84,10 @@ AUTHOR_URL = re.compile(r"^/[A-Za-z0-9][A-Za-z0-9._-]{0,38}$")
 # A page's basename, as it appears in acerca.es.md — which is what another page
 # names when it hangs under it.
 PAGE_BASENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
+
+# 24-hour, because every reader of this site is in one city and half of them
+# learned to read a clock in a country that writes it this way.
+EVENT_TIME = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 
 
 # --- the contract with translate.py --------------------------------------
@@ -129,6 +138,16 @@ def frontmatter_for(collection: str, form: dict) -> dict:
         fields["faq"] = form["faq"]
     if form.get("image_alt"):
         fields["image_alt"] = form["image_alt"]
+    if collection == "post" and form.get("event_date"):
+        fields["event_date"] = form["event_date"]
+        if form.get("event_time"):
+            fields["event_time"] = form["event_time"]
+        if form.get("event_location"):
+            fields["event_location"] = form["event_location"]
+        # Hugo builds one output per format listed here, so only an event gets
+        # an .ics file beside its page. Written by this code and never by a
+        # person: it is a build instruction, not something to explain in a form.
+        fields["outputs"] = ["HTML", "ics"]
     if collection == "post":
         if form["categories"]:
             fields["categories"] = form["categories"]
@@ -162,14 +181,22 @@ def _cache_read(path: str, sha: str):
 
 def _cache_write(path: str, sha: str, fm: dict) -> None:
     get_db().execute(
-        """INSERT INTO content_cache (path, sha, title, date, categories, generated)
-           VALUES (?, ?, ?, ?, ?, ?)
+        """INSERT INTO content_cache (path, sha, title, date, categories, generated,
+                                      event_date, event_time, event_location)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(path) DO UPDATE SET
                sha = excluded.sha, title = excluded.title, date = excluded.date,
                categories = excluded.categories, generated = excluded.generated,
+               event_date = excluded.event_date, event_time = excluded.event_time,
+               event_location = excluded.event_location,
                updated_at = datetime('now')""",
         (path, sha, str(fm.get("title", "")), str(fm.get("date", "")),
-         ", ".join(fm.get("categories") or []), 1 if fm.get("translated_from") else 0),
+         ", ".join(fm.get("categories") or []), 1 if fm.get("translated_from") else 0,
+         # Cached for the private calendar, which shows public events beside the
+         # internal ones and would otherwise read every post's frontmatter on
+         # every page view to find out when they are.
+         str(fm.get("event_date", "") or ""), str(fm.get("event_time", "") or ""),
+         str(fm.get("event_location", "") or "")),
     )
 
 
@@ -197,6 +224,9 @@ def listing(collection: str) -> list[dict]:
             "name": name, "path": path, "sha": sha,
             "title": row["title"] or name,
             "date": row["date"], "categories": row["categories"],
+            "event_date": row["event_date"] or "",
+            "event_time": row["event_time"] or "",
+            "event_location": row["event_location"] or "",
         })
 
     items.sort(key=lambda item: (item["date"], item["name"]), reverse=True)
@@ -247,11 +277,6 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
 
     categories = [c for c in request.form.getlist("categories") if c in CATEGORIES]
 
-    # Carried through the form as hidden fields, the way the date and the image
-    # path are: they belong to the document being edited, not to whoever is
-    # editing it, so saving a correction must not re-sign the post. Checked on
-    # the way back in because a hidden field is only a convention — the URL has
-    # to be a path on this site and nothing else.
     # A page's place in the menu. `parent` is another page's basename — the one
     # translate.py uses to pair siblings, so a parent chosen once holds in all
     # three languages — and the menu is built from these, not from a list in
@@ -269,9 +294,19 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
     # separator is dropped rather than published half-formed. They are rendered
     # on the page and as FAQPage structured data, which is the shape an answer
     # engine quotes most readily.
+    # When a post is an event, it has a date of its own. The post's `date` above
+    # is when it was announced — often weeks earlier, and the thing Hugo sorts
+    # the blog by — so the two cannot be the same field.
+    event = read_event_fields(request.form, categories, errors)
+
     faq = clean_faq(request.form.get("faq", ""))
     image_alt = request.form.get("image_alt", "").strip()[:200]
 
+    # Carried through the form as hidden fields, the way the date and the image
+    # path are: they belong to the document being edited, not to whoever is
+    # editing it, so saving a correction must not re-sign the post. Checked on
+    # the way back in because a hidden field is only a convention — the URL has
+    # to be a path on this site and nothing else.
     author = request.form.get("author", "").strip()[:80]
     author_url = request.form.get("author_url", "").strip()
     if author_url and not AUTHOR_URL.match(author_url):
@@ -294,6 +329,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         "author": author, "author_url": author_url,
         "parent": parent, "weight": weight,
         "faq": faq, "image_alt": image_alt,
+        **event,
     }
     return fields, body, errors
 
@@ -330,6 +366,40 @@ def commit_picture(data: bytes, filename: str, author=None) -> str:
                      f"content: subir {name}", gitea.content_token(),
                      member=author or g.member)
     return f"/uploads/{name}"
+
+
+def read_event_fields(form, categories: list[str], errors: list[str]) -> dict:
+    """The three fields that come with the Evento category.
+
+    Shared by the editor and by a member's proposal, so a post written by a
+    moderator and one approved from the queue carry the same frontmatter. The
+    date is required and the other two are not: an event with no time is an
+    all-day event, and one with no place is a mistake somebody can fix later
+    rather than a reason to refuse the whole post.
+
+    Returns empty strings when the category is absent, so an ordinary article
+    never carries empty event lines in its frontmatter.
+    """
+    if EVENT_CATEGORY not in categories:
+        return {"event_date": "", "event_time": "", "event_location": ""}
+
+    raw = form.get("event_date", "").strip()
+    try:
+        event_date = datetime.strptime(raw, "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        event_date = ""
+        errors.append("Un evento necesita fecha, con el formato AAAA-MM-DD.")
+
+    event_time = form.get("event_time", "").strip()
+    if event_time and not EVENT_TIME.match(event_time):
+        event_time = ""
+        errors.append("La hora debe ser HH:MM, de 00:00 a 23:59.")
+
+    return {
+        "event_date": event_date,
+        "event_time": event_time,
+        "event_location": form.get("event_location", "").strip()[:200],
+    }
 
 
 def clean_faq(raw: str) -> list[str]:
@@ -492,6 +562,9 @@ def edit(collection: str, name: str):
             "weight": fm.get("weight", ""),
             "faq": "\n".join(fm.get("faq") or []),
             "image_alt": fm.get("image_alt", ""),
+            "event_date": str(fm.get("event_date", "") or ""),
+            "event_time": str(fm.get("event_time", "") or ""),
+            "event_location": fm.get("event_location", ""),
         }
         return render_template("content_form.html", collection=collection, meta=meta,
                                categories=CATEGORIES, item={"name": name, "sha": sha},
@@ -560,6 +633,36 @@ def preview(collection: str):
                            parents=possible_parents(collection,
                                                     item["name"] if item else ""),
                            preview_html=to_html(body))
+
+
+def public_events() -> list[dict]:
+    """The published events, for the private calendar to show beside its own.
+
+    Reads the same cache the editor's listing fills, so this costs one directory
+    request and nothing more for files that have not changed. The permalink is
+    rebuilt from the filename rather than stored: `YYYY-MM-DD-slug.es.md` is the
+    contract translate.py and Hugo's `permalinks` both already rely on.
+    """
+    events = []
+    for item in listing("post"):
+        if not item["event_date"]:
+            continue
+        # `2026-10-24-feria.es.md` → /2026/10/24/feria/, the shape config.yaml's
+        # `permalinks` sets for this section.
+        parts = item["name"].removesuffix(".es.md").split("-", 3)
+        if len(parts) == 4 and parts[0].isdigit():
+            url = f"/{parts[0]}/{parts[1]}/{parts[2]}/{parts[3]}/"
+        else:
+            url = ""
+        events.append({
+            "title": item["title"],
+            "starts_on": item["event_date"],
+            "starts_at": item["event_time"],
+            "location": item["event_location"],
+            "url": url,
+            "public": True,
+        })
+    return events
 
 
 def possible_parents(collection: str, exclude: str = "") -> list[dict]:

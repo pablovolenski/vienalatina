@@ -103,6 +103,14 @@ outputFormats:
     mediaType: "text/plain"
     baseName: "llms"
     isPlainText: true
+  # One .ics beside an event's page, so "añadir a mi calendario" is a link and
+  # not an instruction. Only pages whose frontmatter lists this output generate
+  # one, and the editor writes that line for a post in the Evento category —
+  # see apps/board/content.py.
+  ics:
+    mediaType: "text/calendar"
+    baseName: "index"
+    isPlainText: true
 
 outputs:
   home: ["HTML", "RSS", "llms"]

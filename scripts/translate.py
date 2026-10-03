@@ -60,6 +60,9 @@ CONTENT_DIR = REPO_ROOT / "content"
 # Frontmatter strings translated alongside the body. Note `categories` is
 # deliberately absent: the taxonomy terms stay Spanish in every language, or
 # Hugo would fork the taxonomy per language.
+# `event_location` is deliberately absent: an address is how somebody finds the
+# place, and a translated street or venue name is worse than an untranslated one.
+# `event_date` and `event_time` are data, not prose.
 TRANSLATED_KEYS = ("title", "description", "image_alt")
 
 # `faq` is a list of "question|answer" lines, so it cannot go through the loop

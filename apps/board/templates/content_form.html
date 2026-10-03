@@ -77,6 +77,30 @@
 		{% endfor %}
 	</fieldset>
 
+	{# An event's own date, which is not the day the post goes up. Shown whenever
+	   a post can be written: ticking Evento above is what makes these required,
+	   checked on the server rather than hidden and shown with a script. #}
+	<fieldset class="fieldset">
+		<legend>Si es un evento</legend>
+		<p class="muted small">
+			Marca <strong>Evento</strong> arriba y rellena al menos la fecha. El
+			evento aparecerá en la agenda del sitio y se podrá añadir al
+			calendario del móvil.
+		</p>
+
+		<label for="event_date">Fecha del evento</label>
+		<input id="event_date" name="event_date" type="date" value="{{ f.event_date or '' }}">
+
+		<label for="event_time">Hora <span class="muted small">(opcional)</span></label>
+		<input id="event_time" name="event_time" type="time" value="{{ f.event_time or '' }}">
+		<p class="muted small">Déjala vacía si dura todo el día.</p>
+
+		<label for="event_location">Lugar <span class="muted small">(opcional)</span></label>
+		<input id="event_location" name="event_location" maxlength="200"
+		       value="{{ f.event_location or '' }}">
+		<p class="muted small">Dónde es: el sitio, la calle, el barrio.</p>
+	</fieldset>
+
 	<label for="description">Resumen</label>
 	<textarea id="description" name="description" rows="2">{{ f.description or '' }}</textarea>
 	<p class="muted small">

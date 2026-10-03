@@ -23,6 +23,7 @@ SECTIONS = {
     "Muro": "/comunidad/muro",
     "Privados": "/comunidad/privados",
     "Publicaciones": "/comunidad/publicaciones",
+    "Calendario": "/comunidad/calendario",
 }
 ADMIN_ONLY = {"Gestión": "/comunidad/gestion"}
 
@@ -175,7 +176,7 @@ def test_a_member_gets_their_name_and_their_sections(client, make_member, sign_i
     assert state["signed_in"] is True
     assert state["name"] == "Maria"
     assert [s["label"] for s in state["sections"]] == [
-        "Inicio", "Muro", "Privados", "Publicaciones"]
+        "Inicio", "Muro", "Privados", "Publicaciones", "Calendario"]
     assert state["csrf"]                       # the bar renders a real logout form
 
 

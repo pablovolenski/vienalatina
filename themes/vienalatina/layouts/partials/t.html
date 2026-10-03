@@ -1,0 +1,27 @@
+{{- /* The handful of words the templates themselves say.
+
+      Everything else on this site is content and arrives already translated by
+      the pipeline. These are the labels around it — "Lugar", "Hoy" — and there
+      are eleven of them, which is a table rather than a reason to install i18n
+      files and a translation workflow for the theme.
+
+      Usage: {{ partial "t.html" (dict "key" "place" "lang" .Site.Language.Lang) }}
+      An unknown key returns itself, so a typo is visible on the page instead of
+      rendering as nothing. */ -}}
+{{- $words := dict
+	"time"     (dict "es" "Hora" "de" "Uhrzeit" "pt-br" "Hora")
+	"place"    (dict "es" "Lugar" "de" "Ort" "pt-br" "Local")
+	"add"      (dict "es" "Añadir a mi calendario" "de" "Zum Kalender hinzufügen" "pt-br" "Adicionar ao meu calendário")
+	"agenda"   (dict "es" "Agenda" "de" "Termine" "pt-br" "Agenda")
+	"today"    (dict "es" "Hoy" "de" "Heute" "pt-br" "Hoje")
+	"previous" (dict "es" "Mes anterior" "de" "Voriger Monat" "pt-br" "Mês anterior")
+	"next"     (dict "es" "Mes siguiente" "de" "Nächster Monat" "pt-br" "Próximo mês")
+	"noevents" (dict "es" "No hay nada en este mes." "de" "In diesem Monat ist nichts geplant." "pt-br" "Nada marcado neste mês.")
+	"allevents" (dict "es" "Todos los eventos" "de" "Alle Termine" "pt-br" "Todos os eventos")
+-}}
+{{- $entry := index $words .key -}}
+{{- if $entry -}}
+{{- index $entry .lang | default (index $entry "es") -}}
+{{- else -}}
+{{- .key -}}
+{{- end -}}

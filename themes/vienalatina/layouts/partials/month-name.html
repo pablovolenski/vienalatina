@@ -1,0 +1,12 @@
+{{- /* The month in the page's own language.
+
+      Hugo's time.Format follows the site's language only when the translation
+      tables are installed, and this theme ships no i18n files — three languages,
+      twelve words each, is a table rather than a dependency. */ -}}
+{{- $names := dict
+	"es" (slice "enero" "febrero" "marzo" "abril" "mayo" "junio" "julio" "agosto" "septiembre" "octubre" "noviembre" "diciembre")
+	"de" (slice "Januar" "Februar" "März" "April" "Mai" "Juni" "Juli" "August" "September" "Oktober" "November" "Dezember")
+	"pt-br" (slice "janeiro" "fevereiro" "março" "abril" "maio" "junho" "julho" "agosto" "setembro" "outubro" "novembro" "dezembro")
+-}}
+{{- $table := index $names .lang | default (index $names "es") -}}
+{{- index $table (sub (int .month) 1) -}}

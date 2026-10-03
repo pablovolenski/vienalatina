@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar evento' if event else 'Nuevo evento' }}{% endblock %}
+
+{% set f = fields or event %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>{{ 'Editar evento' if event else 'Nuevo evento' }}</h1>
+</div>
+
+<p class="muted">
+	Esto va al calendario de la comunidad, que sólo ven los miembros. No sale al
+	sitio público ni se comparte fuera.
+</p>
+
+<form class="card" method="post" enctype="multipart/form-data"
+      action="{{ url_for('events.edit', event_id=event.id) if event else url_for('events.new') }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+	<label for="title">Título</label>
+	<input id="title" name="title" maxlength="140" required
+	       value="{{ f.title if f else '' }}">
+
+	<label for="starts_on">Fecha</label>
+	<input id="starts_on" name="starts_on" type="date" required
+	       value="{{ (f.starts_on if f else '') or suggested }}">
+
+	<label for="starts_at">Hora <span class="muted small">(opcional)</span></label>
+	<input id="starts_at" name="starts_at" type="time" value="{{ (f.starts_at if f else '') or '' }}">
+	<p class="muted small">Déjala vacía si dura todo el día.</p>
+
+	<label for="location">Lugar <span class="muted small">(opcional)</span></label>
+	<input id="location" name="location" maxlength="200" value="{{ (f.location if f else '') or '' }}">
+
+	<label for="body">Detalles <span class="muted small">(opcional)</span></label>
+	<textarea id="body" name="body" rows="8" data-markdown
+	          placeholder="Qué llevar, cómo llegar, a quién avisar.">{{ (f.body_md if event and not fields else (f.body if f else '')) or '' }}</textarea>
+
+	<label for="picture">Imagen <span class="muted small">(opcional)</span></label>
+	<input id="picture" name="picture" type="file" accept="image/*">
+	{% if event and event.photo_name %}
+	<p class="muted small">Ya tiene una. Subir otra la reemplaza.</p>
+	{% endif %}
+
+	<div class="actions">
+		<button class="btn" type="submit">Guardar</button>
+		<a class="linkish" href="{{ url_for('events.month') }}">Cancelar</a>
+	</div>
+</form>
+{% endblock %}

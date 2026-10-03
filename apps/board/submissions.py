@@ -92,14 +92,18 @@ def _read_proposal() -> tuple[dict, list[str]]:
     """The same fields the editor asks for, minus the ones only a publisher
     decides: the date is the day it is approved, and `manual_translation` is a
     pipeline switch, not something to explain to a member."""
+    categories = [c for c in request.form.getlist("categories")
+                  if c in content.CATEGORIES]
+    errors = []
     fields = {
         "title": request.form.get("title", "").strip()[:TITLE_MAX],
         "body": request.form.get("body", "").strip()[:BODY_MAX],
         "description": request.form.get("description", "").strip()[:300],
-        "categories": [c for c in request.form.getlist("categories")
-                       if c in content.CATEGORIES],
+        "categories": categories,
+        # The same three fields the editor asks for, read by the same function:
+        # a member's event and a moderator's have to produce the same post.
+        **content.read_event_fields(request.form, categories, errors),
     }
-    errors = []
     if not fields["title"]:
         errors.append("El título no puede estar vacío.")
     if not fields["body"]:
@@ -175,10 +179,12 @@ def propose():
     photo_name = _store_picture(staged)
     get_db().execute(
         """INSERT INTO submissions
-               (author_id, title, body_md, description, categories, photo_name)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+               (author_id, title, body_md, description, categories, photo_name,
+                event_date, event_time, event_location)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (g.member["id"], fields["title"], fields["body"], fields["description"],
-         ", ".join(fields["categories"]), photo_name),
+         ", ".join(fields["categories"]), photo_name,
+         fields["event_date"], fields["event_time"], fields["event_location"]),
     )
     flash("Enviado. Un moderador lo leerá antes de publicarlo.", "ok")
     return redirect(url_for("submissions.index"))
@@ -217,6 +223,9 @@ def edit(submission_id: int):
                                    "description": row["description"],
                                    "categories": [c.strip() for c in
                                                   (row["categories"] or "").split(",") if c.strip()],
+                                   "event_date": row["event_date"] or "",
+                                   "event_time": row["event_time"] or "",
+                                   "event_location": row["event_location"] or "",
                                })
 
     fields, errors = _read_proposal()
@@ -238,12 +247,14 @@ def edit(submission_id: int):
     get_db().execute(
         """UPDATE submissions
               SET title = ?, body_md = ?, description = ?, categories = ?,
-                  photo_name = ?, state = 'pending', note = NULL,
+                  photo_name = ?, event_date = ?, event_time = ?,
+                  event_location = ?, state = 'pending', note = NULL,
                   reviewed_by = NULL, reviewed_at = NULL,
                   updated_at = datetime('now')
             WHERE id = ?""",
         (fields["title"], fields["body"], fields["description"],
-         ", ".join(fields["categories"]), photo_name, submission_id),
+         ", ".join(fields["categories"]), photo_name, fields["event_date"],
+         fields["event_time"], fields["event_location"], submission_id),
     )
     # Back to pending on every edit, including one made after a rejection: a
     # rejected post that has been rewritten is waiting again, and leaving it
@@ -313,6 +324,11 @@ def approve(submission_id: int):
         "description": row["description"],
         "image": "",
         "manual_translation": False,
+        # Straight through: the event the member described is the event that
+        # gets published, with its own date rather than today's.
+        "event_date": row["event_date"] or "",
+        "event_time": row["event_time"] or "",
+        "event_location": row["event_location"] or "",
     }
     # Read the picture before the try, and catch only the error that means what
     # it says. The first version wrapped everything in `except OSError`, which

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Calendario{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Calendario</h1>
+	{% if may_edit %}
+	<a class="btn" href="{{ url_for('events.new') }}">Añadir evento</a>
+	{% endif %}
+</div>
+
+{% if public_missing %}
+<p class="flash flash--error">
+	No se pudo leer la agenda pública del servidor de git, así que aquí abajo
+	faltan los eventos del sitio. Los internos están todos.
+</p>
+{% endif %}
+
+<nav class="cal-bar" aria-label="Mes">
+	<a class="linkish" href="{{ url_for('events.month', mes=previous) }}">← Anterior</a>
+	<strong>{{ label }}</strong>
+	<a class="linkish" href="{{ url_for('events.month', mes=next) }}">Siguiente →</a>
+</nav>
+<p class="muted small cal-bar__today">
+	<a href="{{ url_for('events.month', mes=this_month) }}">Ir a este mes</a>
+</p>
+
+<table class="cal">
+	<thead>
+		<tr>{% for day in weekdays %}<th scope="col">{{ day }}</th>{% endfor %}</tr>
+	</thead>
+	<tbody>
+		{% for week in weeks %}
+		<tr>
+			{% for day in week %}
+			{# calendar.monthdayscalendar pads the first and last weeks with
+			   zeroes, which are days belonging to the neighbouring months. #}
+			{% if day == 0 %}
+			<td class="cal__pad"></td>
+			{% else %}
+			<td class="cal__day {{ 'cal__day--today' if day == today }}">
+				<span class="cal__number">{{ day }}</span>
+				{% for item in by_day.get(day, []) %}
+				<a class="cal__event {{ 'cal__event--public' if item.public }}"
+				   href="{{ item.url }}">
+					{% if item.starts_at %}<time>{{ item.starts_at }}</time> {% endif %}{{ item.title }}
+					{% if item.public %}<span class="tag tag--quiet">público</span>{% endif %}
+				</a>
+				{% endfor %}
+				{% if may_edit %}
+				{# The day is carried into the form, so adding something to the
+				   24th starts with the 24th already filled in. #}
+				<a class="cal__add" title="Añadir evento este día"
+				   href="{{ url_for('events.new', dia='%s-%02d'|format(month_key, day)) }}">+</a>
+				{% endif %}
+			</td>
+			{% endif %}
+			{% endfor %}
+		</tr>
+		{% endfor %}
+	</tbody>
+</table>
+
+<p class="muted small">
+	Los eventos marcados <span class="tag tag--quiet">público</span> están en
+	vienalatina.com y los ve cualquiera. Los demás sólo se ven desde aquí.
+</p>
+{% endblock %}

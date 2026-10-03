@@ -1,0 +1,101 @@
+{{/* The public agenda: one grid per month, all of them built here.
+
+     Every month between the first event and the last is rendered, plus the
+     current one, and assets/js/agenda.js shows one at a time. Two things fall
+     out of building them all rather than fetching a month at a time:
+
+     * **With JavaScript off, every month is on the page**, stacked, each under
+       its own heading. Nothing is hidden from a reader who has no script, and
+       nothing is hidden from a crawler either.
+     * Moving between months is instant and makes no request.
+
+     The weekday arithmetic is the awkward part, because Hugo exposes no
+     AddDate: the length of a month comes from a table plus a leap-year check,
+     and the weekday of the first falls out of formatting that date. It looks
+     like something simpler was missed, and it is not. */}}
+{{ define "main" }}
+{{ $lang := .Site.Language.Lang }}
+{{ $events := where (where .Site.RegularPages "Section" "post") "Params.event_date" "!=" nil }}
+
+{{/* The span to render: from the earliest event to the latest, and always
+     including the month the site was built in, so an empty agenda still shows
+     the reader where they are. */}}
+{{ $months := slice }}
+{{ range $events }}{{ $months = $months | append (substr .Params.event_date 0 7) }}{{ end }}
+{{ $months = $months | append (now.Format "2006-01") }}
+{{ $months = sort (uniq $months) }}
+{{ $from := index $months 0 }}
+{{ $to := index $months (sub (len $months) 1) }}
+
+{{/* Expanded so a month with nothing in it can still be visited. */}}
+{{ $span := slice }}
+{{ range $y := seq (int (substr $from 0 4)) (int (substr $to 0 4)) }}
+{{ range $m := seq 1 12 }}
+{{ $key := printf "%04d-%02d" $y $m }}
+{{ if and (ge $key $from) (le $key $to) }}{{ $span = $span | append $key }}{{ end }}
+{{ end }}
+{{ end }}
+
+{{ $script := resources.Get "js/agenda.js" | minify | fingerprint }}
+<script src="{{ $script.RelPermalink }}" integrity="{{ $script.Data.Integrity }}" defer></script>
+
+<main class="feed feed--agenda">
+	<h1 class="feed__title">{{ .Title }}</h1>
+	{{ with .Content }}<div class="agenda__intro">{{ . }}</div>{{ end }}
+
+	<nav class="agenda__bar" aria-label="{{ partial "t.html" (dict "key" "agenda" "lang" $lang) }}">
+		<button class="agenda__move" type="button" data-agenda-move="-1"
+		        aria-label="{{ partial "t.html" (dict "key" "previous" "lang" $lang) }}">←</button>
+		<strong class="agenda__current" data-agenda-label></strong>
+		<button class="agenda__move" type="button" data-agenda-move="1"
+		        aria-label="{{ partial "t.html" (dict "key" "next" "lang" $lang) }}">→</button>
+	</nav>
+
+	{{ range $key := $span }}
+	{{ $year := int (substr $key 0 4) }}
+	{{ $month := int (substr $key 5 2) }}
+	{{ $firstDay := printf "%s-01" $key }}
+
+	{{/* Days in the month: a table, with February decided by the leap rule —
+	     every four years, not every hundred, except every four hundred. */}}
+	{{ $lengths := slice 31 28 31 30 31 30 31 31 30 31 30 31 }}
+	{{ $days := index $lengths (sub $month 1) }}
+	{{ if eq $month 2 }}
+	{{ if or (and (eq (mod $year 4) 0) (ne (mod $year 100) 0)) (eq (mod $year 400) 0) }}
+	{{ $days = 29 }}
+	{{ end }}
+	{{ end }}
+
+	{{/* Monday first, as in Austria and most of Latin America. Go names the
+	     weekday; this turns the name into a column offset. */}}
+	{{ $offsets := dict "Mon" 0 "Tue" 1 "Wed" 2 "Thu" 3 "Fri" 4 "Sat" 5 "Sun" 6 }}
+	{{ $lead := index $offsets (($firstDay | time.AsTime).Format "Mon") }}
+
+	<section class="agenda__month" data-month="{{ $key }}"
+	         data-label="{{ partial "month-name.html" (dict "month" $month "lang" $lang) }} {{ $year }}">
+		<h2 class="agenda__heading">{{ partial "month-name.html" (dict "month" $month "lang" $lang) }} {{ $year }}</h2>
+
+		<ol class="agenda__grid">
+			{{ if gt $lead 0 }}{{ range seq $lead }}<li class="agenda__pad" aria-hidden="true"></li>{{ end }}{{ end }}
+			{{ range $day := seq 1 $days }}
+			{{ $date := printf "%s-%02d" $key $day }}
+			{{ $onThisDay := where $events "Params.event_date" $date }}
+			<li class="agenda__day {{ if $onThisDay }}agenda__day--busy{{ end }}">
+				<span class="agenda__number">{{ $day }}</span>
+				{{ range $onThisDay }}
+				<a class="agenda__event" href="{{ .RelPermalink }}">
+					{{ with .Params.event_time }}<time>{{ . }}</time> {{ end }}{{ .Title }}
+				</a>
+				{{ end }}
+			</li>
+			{{ end }}
+		</ol>
+
+		{{ $inMonth := where (where $events "Params.event_date" "ge" (printf "%s-01" $key)) "Params.event_date" "le" (printf "%s-31" $key) }}
+		{{ if not $inMonth }}
+		<p class="muted agenda__empty">{{ partial "t.html" (dict "key" "noevents" "lang" $lang) }}</p>
+		{{ end }}
+	</section>
+	{{ end }}
+</main>
+{{ end }}

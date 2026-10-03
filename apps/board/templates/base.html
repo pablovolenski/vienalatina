@@ -53,6 +53,7 @@
 				   anybody else the function returns 0 and nothing is drawn. #}
 				<a href="{{ url_for('submissions.index') }}">Publicaciones{% set waiting = pending_review() %}{% if waiting %} <span class="tag">{{ waiting }}</span>{% endif %}</a>
 			</li>
+			<li><a href="{{ url_for('events.month') }}">Calendario</a></li>
 			{% if g.member.role in ('owner', 'admin') %}
 			<li><a href="{{ url_for('home.gestion') }}">Gestión</a></li>
 			{% endif %}

@@ -246,6 +246,12 @@ CREATE TABLE IF NOT EXISTS submissions (
   body_md        TEXT    NOT NULL,
   description    TEXT    NOT NULL DEFAULT '',
   categories     TEXT    NOT NULL DEFAULT '',   -- comma-separated, as content_cache
+  -- Set only when the proposal carries the Evento category. The event's own
+  -- date, which is not the day it is published: a member announcing a concert
+  -- three weeks out is the normal case.
+  event_date     TEXT,
+  event_time     TEXT,
+  event_location TEXT,
   photo_name     TEXT,
   state          TEXT    NOT NULL DEFAULT 'pending'
                  CHECK (state IN ('pending', 'approved', 'rejected')),
@@ -292,3 +298,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS reactions_one_per_thread
   ON reactions(member_id, thread_id) WHERE thread_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS reactions_one_per_comment
   ON reactions(member_id, comment_id) WHERE comment_id IS NOT NULL;
+
+-- The private calendar.
+--
+-- Events the association puts on for its members: a meeting, a rehearsal, a
+-- visit somewhere. Written by admins, read by every member, and never published
+-- — nothing here reaches /var/www, the sitemap or a share card, which is the
+-- difference between this table and a post with the Evento category.
+--
+-- `starts_on` and `starts_at` are kept apart rather than as one timestamp
+-- because an event with no time is an ordinary thing ("the whole Saturday") and
+-- a timestamp cannot say so without inventing midnight.
+CREATE TABLE IF NOT EXISTS events (
+  id          INTEGER PRIMARY KEY,
+  title       TEXT    NOT NULL,
+  body_md     TEXT    NOT NULL DEFAULT '',
+  starts_on   TEXT    NOT NULL,              -- YYYY-MM-DD
+  starts_at   TEXT,                          -- HH:MM, or null for all day
+  location    TEXT    NOT NULL DEFAULT '',
+  photo_name  TEXT,
+  -- Cleared rather than reassigned when that member is erased: the event
+  -- belongs to the association, not to whoever typed it in.
+  created_by  INTEGER REFERENCES members(id),
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT
+);
+
+CREATE INDEX IF NOT EXISTS events_month ON events(starts_on);

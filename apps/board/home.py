@@ -124,6 +124,7 @@ def session_state():
         {"label": "Muro", "url": url_for("board.threads")},
         {"label": "Privados", "url": url_for("messages.inbox")},
         {"label": "Publicaciones", "url": url_for("submissions.index")},
+        {"label": "Calendario", "url": url_for("events.month")},
     ]
     if g.member["role"] in ("owner", "admin"):
         sections.append({"label": "Gestión", "url": url_for("home.gestion")})

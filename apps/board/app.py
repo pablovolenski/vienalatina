@@ -94,11 +94,12 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import (auth, board, content, home, members, messages, profiles,
-                   submissions, uploads)
+    from . import (auth, board, content, events, home, members, messages,
+                   profiles, submissions, uploads)
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(home.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(submissions.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(events.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(content.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(uploads.bp, url_prefix=URL_PREFIX)

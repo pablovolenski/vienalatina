@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>{{ event.title }}</h1>
+	<a class="linkish" href="{{ url_for('events.month', mes=event.starts_on[:7]) }}">Volver al calendario</a>
+</div>
+
+<article class="card">
+	<div class="event-facts">
+		<p><strong>{{ when }}</strong>{% if event.starts_at %} · {{ event.starts_at }}{% endif %}</p>
+		{% if event.location %}<p class="muted">{{ event.location }}</p>{% endif %}
+	</div>
+
+	{% if event.photo_name %}
+	<img class="attachment" src="{{ url_for('events.photo', stored_name=event.photo_name) }}"
+	     alt="{{ event.title }}">
+	{% endif %}
+
+	{% if event.body_md %}<div class="prose">{{ body_html }}</div>{% endif %}
+
+	<div class="actions actions--row">
+		<a class="btn" href="{{ url_for('events.ics', event_id=event.id) }}">Añadir a mi calendario</a>
+		{% if may_edit %}
+		<a class="linkish" href="{{ url_for('events.edit', event_id=event.id) }}">Editar</a>
+		<form method="post" action="{{ url_for('events.delete', event_id=event.id) }}"
+		      data-confirm="Se quitará «{{ event.title }}» del calendario. ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button class="linkish linkish--danger" type="submit">Eliminar</button>
+		</form>
+		{% endif %}
+	</div>
+</article>
+
+<p class="muted small">
+	Este evento sólo se ve desde el área de miembros. Para anunciar algo a todo
+	el mundo, usa <a href="{{ url_for('submissions.index') }}">Publicaciones</a>
+	con la categoría «Evento».
+</p>
+{% endblock %}

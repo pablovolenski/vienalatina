@@ -218,12 +218,25 @@ def _content_request(method: str, url: str, token: str, **kwargs):
     Hence the message: the thing to check is the token's scope, and it should
     say so on the screen rather than in a traceback nobody reads.
     """
-    response = requests.request(
-        method, url,
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=TIMEOUT,
-        **kwargs,
-    )
+    try:
+        response = requests.request(
+            method, url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=TIMEOUT,
+            **kwargs,
+        )
+    except requests.RequestException as exc:
+        # The network is a failure mode of this module, not of its callers.
+        # `requests` raises its own exceptions, which inherit from OSError and so
+        # are not GiteaError — so a caller that handles GiteaError carefully, as
+        # the calendar does to keep working while the git server is down, would
+        # still have been taken out by a refused connection. Translated here, at
+        # the one place that touches the wire.
+        current_app.logger.warning("gitea unreachable: %s", exc)
+        raise GiteaError(
+            "No se pudo contactar con el servidor de git. Vuelve a intentarlo "
+            "en un momento."
+        ) from exc
     if response.status_code in (401, 403):
         raise GiteaError(
             "El servidor de git rechazó el token del editor. Comprueba que "

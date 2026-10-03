@@ -1,0 +1,40 @@
+{{- /* One event, as a file a calendar app understands.
+
+      RFC 5545 in fifteen lines. The things that actually matter here:
+
+      * CRLF line endings. The spec says so and some readers are strict about
+        it; Hugo writes what this template contains, so the \r is explicit.
+      * UID has to be stable and unique — the permalink is both, and re-adding
+        an event updates the entry instead of duplicating it.
+      * Times are written with a TZID of Europe/Vienna rather than converted to
+        UTC. Every event here happens in one city, and a local time that stays
+        local survives a daylight-saving change the way a converted one does
+        not.
+      * An event with no time is a whole day: VALUE=DATE, which is how a
+        calendar shows it as a band across the top instead of inventing
+        midnight. */ -}}
+{{- $date := .Params.event_date | time.AsTime -}}
+{{- $stamp := now.UTC.Format "20060102T150405Z" -}}
+BEGIN:VCALENDAR{{ printf "\r" }}
+VERSION:2.0{{ printf "\r" }}
+PRODID:-//{{ .Site.Title }}//agenda//ES{{ printf "\r" }}
+CALSCALE:GREGORIAN{{ printf "\r" }}
+METHOD:PUBLISH{{ printf "\r" }}
+BEGIN:VEVENT{{ printf "\r" }}
+UID:{{ .Permalink }}{{ printf "\r" }}
+DTSTAMP:{{ $stamp }}{{ printf "\r" }}
+{{ with .Params.event_time -}}
+DTSTART;TZID=Europe/Vienna:{{ $date.Format "20060102" }}T{{ replace . ":" "" }}00{{ printf "\r" }}
+{{ else -}}
+DTSTART;VALUE=DATE:{{ $date.Format "20060102" }}{{ printf "\r" }}
+{{ end -}}
+SUMMARY:{{ .Title | plainify | replaceRE "[,;\\\\]" "\\${0}" }}{{ printf "\r" }}
+{{ with .Params.event_location -}}
+LOCATION:{{ . | plainify | replaceRE "[,;\\\\]" "\\${0}" }}{{ printf "\r" }}
+{{ end -}}
+{{ with .Description -}}
+DESCRIPTION:{{ . | plainify | replaceRE "[,;\\\\]" "\\${0}" }}{{ printf "\r" }}
+{{ end -}}
+URL:{{ .Permalink }}{{ printf "\r" }}
+END:VEVENT{{ printf "\r" }}
+END:VCALENDAR{{ printf "\r" }}

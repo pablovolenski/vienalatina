@@ -902,6 +902,40 @@ WordPress: hover and `:focus-within`, inline on a phone, no script.
 Only *Inicio* and *Comunidad* remain in `config.yaml`. Weight under 5 puts a menu
 entry before the pages, 5 or more after them.
 
+### 11.15b Two calendars
+
+**Public events are posts** in the **Evento** category, with three fields of
+their own: `event_date`, `event_time` and `event_location`. The post's own `date`
+is when it was announced — usually weeks earlier, and what Hugo sorts the blog by
+— so the event's date cannot be the same field. Ticking Evento without a date is
+refused. Members can propose events exactly as they propose anything else, and a
+moderator approves them.
+
+An event's page leads with the day, the time and the place, shows its picture
+full width, and offers **Añadir a mi calendario**: a `.ics` beside the page,
+generated because the editor writes `outputs: ["HTML", "ics"]` into an event's
+frontmatter. It also carries `Event` structured data, which is what puts a date
+beside the result in a search listing.
+
+`vienalatina.com/page/agenda/` is a month grid per month, from the first event to
+the last, built at build time. `assets/js/agenda.js` shows one and moves between
+them — so with JavaScript off every month is on the page as a list, and with it
+on, moving months costs no request and starts on the month the *reader* is in
+rather than the month the site was built in.
+
+**The private calendar** is `/comunidad/calendario`: rows in SQLite, written by
+admins, read by every member, never published. It shows the public events too,
+marked, so a member has one place to look; those come from the `content_cache`
+that the editor's listing already fills, which is why **migration 5** adds three
+columns to it and to `submissions`. If the git server is unreachable the private
+events still render and the page says so — `gitea.py` now turns a refused
+connection into a `GiteaError` rather than letting `requests`' own exception
+through, which is what made that possible.
+
+The month grid is Python's `calendar.Calendar`; there is no date arithmetic of
+ours anywhere in it. Erasing an admin clears `events.created_by` and leaves the
+event standing: the meeting still happens after they leave.
+
 ### 11.16 Sharing, SEO and answer engines
 
 `partials/seo-head.html` was already emitting hreflang, Open Graph, a Twitter

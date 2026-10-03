@@ -302,6 +302,11 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
     assert (kept["stored_name"], kept["thread_id"], kept["bytes"]) == (
         "foto-abc123abc123.jpg", 1, 2048)
 
+    # Step 5: somewhere to keep an event's own date, in both tables.
+    for table in ("submissions", "content_cache"):
+        columns = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+        assert {"event_date", "event_time", "event_location"} <= columns, table
+
     # Step 4: the role list is wider, the one-owner rule survived the rebuild,
     # and nothing that pointed at a member row lost its target.
     db.execute("INSERT INTO members (gitea_login, display_name, role) "

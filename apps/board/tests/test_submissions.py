@@ -469,3 +469,33 @@ def test_an_approved_post_is_signed_by_the_member_not_the_moderator(
     assert front["author"] == "Maria"
     assert front["author_url"] == "/maria"
     assert repo.authors == [{"name": "Maria", "email": "maria@example.com"}]
+
+
+def test_a_member_can_propose_an_event_and_it_keeps_its_date(
+        repo, db, post, maria, luisa, sign_in):
+    """Same form, same queue, same approval — and the event that reaches the
+    site is the one the member described, dated when it happens."""
+    import yaml
+    sign_in(maria)
+    propose(post, categories=["Evento"], event_date="2026-11-07",
+            event_time="20:00", event_location="Sala Ottakring")
+    submission_id = only_submission(db)["id"]
+
+    sign_in(luisa)
+    post(f"/comunidad/publicaciones/{submission_id}/aprobar")
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert front["event_date"] == "2026-11-07"
+    assert front["event_time"] == "20:00"
+    assert front["event_location"] == "Sala Ottakring"
+    assert front["author"] == "Maria"
+
+
+def test_an_event_proposal_without_a_date_is_refused(db, post, maria, sign_in):
+    sign_in(maria)
+
+    response = propose(post, categories=["Evento"])
+
+    assert response.status_code == 400
+    assert db.execute("SELECT COUNT(*) AS n FROM submissions").fetchone()["n"] == 0

@@ -108,7 +108,13 @@ REASSIGNED_ON_ERASE = {
     # Removing the picture itself means deleting the post it is attached to.
     ("attachments", "uploaded_by"),
 }
-CLEARED_ON_ERASE = {("members", "created_by")}
+CLEARED_ON_ERASE = {
+    ("members", "created_by"),
+    # An event in the private calendar belongs to the association, not to the
+    # admin who typed it in: the meeting still happens after they leave, so the
+    # row stays and the name goes.
+    ("events", "created_by"),
+}
 
 # Private correspondence is not reassigned to the tombstone, it goes. A thread
 # outlives its author because other people replied and the conversation would

@@ -206,6 +206,32 @@ def _members_can_moderate(db: sqlite3.Connection) -> None:
     if broken:
         raise RuntimeError(f"migration left dangling references: {broken}")
 
+def _rooms_for_a_date_of_its_own(db: sqlite3.Connection) -> None:
+    """Somewhere to keep an event's date, in the two tables that already exist.
+
+    Plain ADD COLUMNs, nothing like the rebuilds in steps 1 and 4 — neither
+    table has a CHECK in the way.
+
+    `submissions` needs them because a member can propose an event, and the date
+    has to survive in the queue until a moderator approves it. `content_cache`
+    needs them because the private calendar shows public events beside internal
+    ones, and reading every post's frontmatter on every page view to find their
+    dates is exactly what that cache exists to avoid.
+    """
+    for table in ("submissions", "content_cache"):
+        existing = _columns(db, table)
+        if not existing:
+            # No such table in this database. `init_db` runs schema.sql before
+            # these steps, so on a real server both tables are always there;
+            # skipping rather than failing keeps a step from depending on how
+            # much of the schema a given database happens to have, which is the
+            # property that lets these run against any vintage.
+            continue
+        for column in ("event_date", "event_time", "event_location"):
+            if column not in existing:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
@@ -213,6 +239,7 @@ STEPS = [
     (2, "members keep their own password", _members_own_their_passwords),
     (3, "members can have a public page", _members_get_a_public_page),
     (4, "members can be moderators", _members_can_moderate),
+    (5, "events carry a date of their own", _rooms_for_a_date_of_its_own),
 ]
 
 

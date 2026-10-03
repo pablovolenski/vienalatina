@@ -36,12 +36,41 @@
 
 		<h1 class="article-single__title">{{ .Title }}</h1>
 
+		{{/* An event leads with the three things somebody needs before they read
+		     a word: when, what time, and where. Everything else on the page is
+		     the same article it would otherwise be. */}}
+		{{ with .Params.event_date }}
+		{{ $when := . | time.AsTime }}
+		<aside class="event-card">
+			<div class="event-card__date">
+				<span class="event-card__day">{{ $when.Format "2" }}</span>
+				<span class="event-card__month">{{ partial "month-name.html" (dict "month" ($when.Format "1") "lang" $.Site.Language.Lang) }}</span>
+				<span class="event-card__year">{{ $when.Format "2006" }}</span>
+			</div>
+			<dl class="event-card__facts">
+				{{ with $.Params.event_time }}
+				<dt>{{ partial "t.html" (dict "key" "time" "lang" $.Site.Language.Lang) }}</dt><dd>{{ . }}</dd>
+				{{ end }}
+				{{ with $.Params.event_location }}
+				<dt>{{ partial "t.html" (dict "key" "place" "lang" $.Site.Language.Lang) }}</dt><dd>{{ . }}</dd>
+				{{ end }}
+			</dl>
+			{{/* The .ics is generated for this page because its frontmatter asks
+			     for the format — see apps/board/content.py, which writes that
+			     line for anything in the Evento category. */}}
+			{{ with $.OutputFormats.Get "ics" }}
+			<a class="event-card__add" href="{{ .RelPermalink }}" download>{{ partial "t.html" (dict "key" "add" "lang" $.Site.Language.Lang) }}</a>
+			{{ end }}
+		</aside>
+		{{ end }}
+
 		{{ with .Description }}
 		<p class="article-single__summary">{{ . }}</p>
 		{{ end }}
 
 		{{ with .Params.image }}
-		<img class="article-single__cover" src="{{ . | relURL }}" alt="">
+		<img class="article-single__cover {{ if $.Params.event_date }}article-single__cover--hero{{ end }}"
+		     src="{{ . | relURL }}" alt="{{ $.Params.image_alt | default $.Title }}" loading="lazy">
 		{{ end }}
 
 		<div class="article-single__body">

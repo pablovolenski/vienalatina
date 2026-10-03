@@ -599,3 +599,79 @@ def test_a_parent_that_has_been_deleted_is_kept_and_named(repo, editor, client):
 
     assert 'value="borrada" selected' in body
     assert "no encontrada" in body
+
+
+# --- events, which are posts with a date of their own ---------------------
+
+def test_an_event_carries_its_own_date_and_an_ics(repo, editor, post):
+    """The post's `date` is when it was announced; `event_date` is when it
+    happens, and the two are weeks apart in the normal case."""
+    import yaml
+    post("/comunidad/contenido/post/nuevo",
+         {"title": "Feria de otoño", "body": "Ven.", "date": "2026-10-03",
+          "categories": ["Evento", "Comunidad"], "event_date": "2026-10-24",
+          "event_time": "18:30", "event_location": "Plaza de Ottakring"})
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    assert front["date"].isoformat() == "2026-10-03"
+    assert front["event_date"] == "2026-10-24"
+    assert front["event_time"] == "18:30"
+    assert front["event_location"] == "Plaza de Ottakring"
+    # Hugo builds an .ics only for pages that ask for one.
+    assert front["outputs"] == ["HTML", "ics"]
+
+
+def test_the_evento_category_without_a_date_is_refused(repo, editor, post):
+    response = post("/comunidad/contenido/post/nuevo",
+                    {"title": "Algún día", "body": "Texto.", "date": "2026-10-03",
+                     "categories": ["Evento"]})
+
+    assert response.status_code == 400
+    assert "necesita fecha" in response.get_data(as_text=True)
+    assert repo.files == {}
+
+
+def test_a_nonsense_hour_is_refused(repo, editor, post):
+    response = post("/comunidad/contenido/post/nuevo",
+                    {"title": "Feria", "body": "Texto.", "date": "2026-10-03",
+                     "categories": ["Evento"], "event_date": "2026-10-24",
+                     "event_time": "25:99"})
+
+    assert response.status_code == 400
+    assert repo.files == {}
+
+
+def test_an_ordinary_post_carries_no_event_lines(repo, editor, post):
+    """Rather than three empty keys for somebody to wonder about."""
+    import yaml
+    post("/comunidad/contenido/post/nuevo",
+         {"title": "Un artículo", "body": "Texto.", "date": "2026-10-03",
+          "categories": ["Cultura"], "event_date": "2026-10-24"})
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode().split("---")[1])
+    for key in ("event_date", "event_time", "event_location", "outputs"):
+        assert key not in front, key
+
+
+def test_an_event_keeps_its_date_when_edited(repo, editor, post, client):
+    import yaml
+    repo.files["content/post/2026-10-03-feria.es.md"] = (
+        "---\ntitle: Feria\ndate: 2026-10-03\nlang: es\nmanual_translation: false\n"
+        "event_date: '2026-10-24'\nevent_time: '18:30'\n"
+        "event_location: La plaza\ncategories:\n- Evento\n---\n\nVen.\n").encode("utf-8")
+
+    body = client.get("/comunidad/contenido/post/editar/2026-10-03-feria.es.md").get_data(as_text=True)
+    assert 'value="2026-10-24"' in body
+    assert 'value="18:30"' in body
+
+    post("/comunidad/contenido/post/editar/2026-10-03-feria.es.md",
+         {"title": "Feria", "body": "Ven pronto.", "date": "2026-10-03",
+          "categories": ["Evento"], "event_date": "2026-10-24",
+          "event_time": "18:30", "event_location": "La plaza",
+          "sha": repo._sha(repo.files["content/post/2026-10-03-feria.es.md"])})
+
+    front = yaml.safe_load(
+        repo.files["content/post/2026-10-03-feria.es.md"].decode().split("---")[1])
+    assert front["event_date"] == "2026-10-24"
