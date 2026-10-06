@@ -19,7 +19,17 @@
 {{ $tokens := "" }}
 {{ range $name, $value := .tokens }}{{ $tokens = printf "%s--%s:%s;" $tokens $name $value }}{{ end }}
 {{ $sheet := "" }}
-{{ with $tokens }}{{ $sheet = printf ":root{%s}" . }}{{ end }}
+{{/* The uploaded typeface first, so the @font-face is declared before anything
+     asks for the family. `font-display: swap` deliberately: the alternative
+     shows nothing until the file arrives, and a blank article on a slow phone
+     is worse than one that changes typeface a moment after it appears. */}}
+{{ with .font }}
+{{ $sheet = printf "@font-face{font-family:\"VLPropia\";src:url(%s) format('woff2');font-weight:100 900;font-display:swap}" . }}
+{{ end }}
+{{ with $tokens }}{{ $sheet = printf "%s:root{%s}" $sheet . }}{{ end }}
+{{/* On `body`, because that is where main.css sets the stack and a custom
+     property would need every rule to opt in. */}}
+{{ with .font_stack }}{{ $sheet = printf "%sbody{font-family:%s}" $sheet . }}{{ end }}
 {{ with $.Site.Data.brand.custom_css }}{{ $sheet = printf "%s\n%s" $sheet . }}{{ end }}
 {{ with $sheet }}
 {{ $brand := resources.FromString "css/brand.css" . | minify | fingerprint }}

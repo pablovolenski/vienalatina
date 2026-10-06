@@ -1,0 +1,20 @@
+{{- /* The site's name, from Gestión → Identidad when it has been set there and
+      from config.yaml when it has not.
+
+      Hugo cannot have `config.yaml` overridden by a data file, so this partial
+      is the override: every template that shows the name calls it, and the two
+      sources cannot drift. A site with no data/site.yaml renders exactly what it
+      rendered before any of this existed.
+
+      Read through a variable rather than as site.Data.site.languages.<lang>.name,
+      because on a site with no data file that chain is a field lookup on nil and
+      fails the build — which is the state every install starts in. */ -}}
+{{- $name := site.Title -}}
+{{- with site.Data.site -}}
+{{- with .languages -}}
+{{- with index . $.Site.Language.Lang -}}
+{{- with .name }}{{ $name = . }}{{ end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $name -}}

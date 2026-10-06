@@ -352,8 +352,69 @@ CREATE TABLE IF NOT EXISTS brand (
   custom_css    TEXT    NOT NULL DEFAULT '',
   logo_name     TEXT,
   favicon_name  TEXT,
+  -- A key from brand.TYPEFACES, or 'propia' when `font_name` holds an uploaded
+  -- .woff2. Null means the one the site was built with.
+  typeface      TEXT,
+  font_name     TEXT,
+  -- A key from brand.ROUNDNESS. One setting driving four radius tokens: a site
+  -- whose cards are round and whose buttons are square looks like two sites.
+  roundness     TEXT,
   -- Cleared rather than reassigned when that member is erased: the colours
   -- belong to the association, like an event in the calendar.
+  updated_by    INTEGER REFERENCES members(id),
+  updated_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  published_at  TEXT
+);
+
+-- What somebody did, for the superadministrator to read.
+--
+-- An audit trail is the natural companion to a role that can do everything: the
+-- question "who made them an administrator?" has no other answer, and asking it
+-- after the fact is exactly when nobody can remember.
+--
+-- `actor_id` is cleared and not cascaded when that member is erased. That a
+-- role was changed is the association's record; whose name was on it is the
+-- erased person's data, and the two can be separated.
+--
+-- Deliberately not a general event store. One row per act that changes who can
+-- do what, or what the public sees — not page views, not sign-ins that worked.
+CREATE TABLE IF NOT EXISTS activity (
+  id          INTEGER PRIMARY KEY,
+  actor_id    INTEGER REFERENCES members(id),
+  -- A short stable key: 'role.changed', 'member.erased', 'brand.saved'. Stable
+  -- because it is what a later reader greps for; short because the sentence a
+  -- person reads is built from it in the template, not stored here in Spanish.
+  action      TEXT    NOT NULL,
+  -- What it was done to, as a display name or a title. A copy on purpose: the
+  -- row it names may be gone, and "erased Miembro eliminado" is not a record.
+  object      TEXT    NOT NULL DEFAULT '',
+  detail      TEXT    NOT NULL DEFAULT '',
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS activity_recent ON activity(created_at DESC);
+
+-- The site's identity, as opposed to its look: what it is called, what it says
+-- it is, where to find it. One row, pinned like `brand`.
+--
+-- Separate from `brand` because the two have different audiences and different
+-- failure modes: a wrong colour is ugly, a wrong contact address is a message
+-- nobody receives. They are also published to different files.
+CREATE TABLE IF NOT EXISTS site (
+  id            INTEGER PRIMARY KEY CHECK (id = 1),
+  -- {"es": {"name": …, "tagline": …}, "de": …}: per language, because the
+  -- tagline is prose and prose is not the same in three languages.
+  names_json    TEXT    NOT NULL DEFAULT '{}',
+  -- {"instagram": "https://…", …} → `sameAs` in the Organization schema, which
+  -- is how a search or answer engine knows an account and this site are one
+  -- body.
+  social_json   TEXT    NOT NULL DEFAULT '{}',
+  email         TEXT    NOT NULL DEFAULT '',
+  phone         TEXT    NOT NULL DEFAULT '',
+  city          TEXT    NOT NULL DEFAULT '',
+  street        TEXT    NOT NULL DEFAULT '',
+  share_image   TEXT    NOT NULL DEFAULT '',
+  footer_text   TEXT    NOT NULL DEFAULT '',
   updated_by    INTEGER REFERENCES members(id),
   updated_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   published_at  TEXT

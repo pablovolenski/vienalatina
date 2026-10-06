@@ -14,7 +14,7 @@ from flask import Flask, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .db import TOMBSTONE_LOGIN, close_db, init_db
-from .security import check_csrf, csrf_token
+from .security import check_csrf, csrf_token, is_at_least
 
 URL_PREFIX = "/comunidad"
 
@@ -94,11 +94,16 @@ def create_app(overrides: dict | None = None) -> Flask:
         # restart, which is a confusing way to find out the variable is unset.
         raise RuntimeError("BOARD_SECRET_KEY is required (generate one with `openssl rand -hex 32`).")
 
-    from . import (auth, board, brand, content, events, home, members,
-                   messages, profiles, submissions, uploads)
+    from . import (activity, auth, board, brand, content, events, home,
+                   identity, media, members, messages, profiles, status,
+                   submissions, uploads)
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(home.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(brand.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(identity.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(status.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(activity.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(media.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(submissions.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(events.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(members.bp, url_prefix=URL_PREFIX)
@@ -122,6 +127,11 @@ def create_app(overrides: dict | None = None) -> Flask:
     # keeps the picker from offering a role the handler will refuse — with two
     # levels above admin, a hardcoded list can only be right for one of them.
     app.jinja_env.globals["assignable_roles"] = members.assignable_roles
+    # The same predicate the handlers use. Templates had their own literal
+    # tuples until a tier appeared above them and Gestión quietly disappeared
+    # from the superadministrator's own navigation — the exact failure
+    # `is_at_least` was introduced to end on the Python side.
+    app.jinja_env.globals["is_at_least"] = is_at_least
 
     @app.context_processor
     def _year():
@@ -133,6 +143,12 @@ def create_app(overrides: dict | None = None) -> Flask:
         # link, the logo and the favicon on every page, so there is no render
         # that would save the query by deferring it.
         return {"brand": brand.state()}
+
+    @app.context_processor
+    def _identity():
+        # Only Gestión draws it, so unlike `brand` this one is lazy: a function
+        # the template calls, costing nothing on the pages that never ask.
+        return {"identity": identity.current}
 
     @app.context_processor
     def _badges():

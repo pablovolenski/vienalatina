@@ -1,0 +1,47 @@
+{# Gestión → Biblioteca de medios.
+
+   Orphans first, because they are the only rows anybody has to act on: a
+   listing sorted by name buries them among the pictures doing their job, which
+   is how they went unnoticed for the life of the site. #}
+{% extends "base.html" %}
+{% block title %}Medios{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Biblioteca de medios</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+</div>
+
+<p class="muted">
+	Todas las imágenes que lleva el sitio público, y qué artículo usa cada una.
+	{% if orphans %}
+	<strong>{{ orphans }} no la usa nadie</strong>: se subieron con un artículo que
+	luego se borró, y siguen ahí ocupando sitio.
+	{% endif %}
+</p>
+
+{% if not items %}
+<p class="muted">No hay imágenes todavía.</p>
+{% else %}
+<ul class="media-grid">
+	{% for item in items %}
+	<li class="media-item {{ 'media-item--orphan' if not item.posts }}">
+		<img src="{{ item.url }}" alt="" loading="lazy">
+		<p class="mono small">{{ item.name }}</p>
+		<p class="muted small">{{ item.size }} KB</p>
+		{% if item.posts %}
+		<p class="muted small">{{ item.posts|join(', ') }}</p>
+		{% else %}
+		<p class="muted small">No la usa ningún artículo.</p>
+		<form method="post" action="{{ url_for('media.delete', name=item.name) }}"
+		      data-confirm="Se borrará {{ item.name }} del repositorio. ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<input type="hidden" name="sha" value="{{ item.sha }}">
+			<button class="linkish linkish--danger" type="submit">Borrar</button>
+		</form>
+		{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -8,5 +8,21 @@
 		{{ end }}
 	</nav>
 	{{ end }}
-	<p>{{ .Site.Title }} &copy; {{ now.Format "2006" }}</p>
+	{{/* The association's accounts elsewhere. Read through a variable for the
+	     same reason as the name — a field lookup on nil fails the build on a
+	     site that has not set any. `rel="me"` is what lets Mastodon verify a
+	     link back, and costs nothing on the others. */}}
+	{{ $social := dict }}
+	{{ with site.Data.site }}{{ with .social }}{{ $social = . }}{{ end }}{{ end }}
+	{{ with $social }}
+	<nav class="site-foot__social" aria-label="Redes">
+		{{ range $name, $url := . }}
+		<a href="{{ $url }}" rel="me nofollow noopener">{{ $name | title }}</a>
+		{{ end }}
+	</nav>
+	{{ end }}
+
+	{{ $footer := "" }}
+	{{ with site.Data.site }}{{ $footer = .footer_text }}{{ end }}
+	<p>{{ with $footer }}{{ . }}{{ else }}{{ partial "site-name.html" $ }} &copy; {{ now.Format "2006" }}{{ end }}</p>
 </footer>

@@ -393,3 +393,116 @@ def test_erasing_whoever_set_the_brand_leaves_it_standing(client, db, post, admi
     row = db.execute("SELECT tokens_json, updated_by FROM brand").fetchone()
     assert json.loads(row["tokens_json"]) == {"brand": "#1b5e20"}
     assert row["updated_by"] is None
+
+
+# --- the typeface and the corners -----------------------------------------
+
+WOFF2 = b"wOF2" + b"\x00" * 200
+TTF = b"\x00\x01\x00\x00" + b"\x00" * 200
+
+
+def test_a_preset_typeface_reaches_the_stylesheet(client, post, admin):
+    save(post, typeface="serif")
+
+    css = client.get("/comunidad/marca.css").get_data(as_text=True)
+
+    assert "body { font-family: Georgia" in css
+    assert "@font-face" not in css          # nothing is downloaded for a preset
+
+
+def test_the_default_typeface_writes_no_rule_at_all(client, post, admin):
+    """An install that has not touched this serves what it always served."""
+    save(post, typeface="sans")
+
+    css = client.get("/comunidad/marca.css").get_data(as_text=True)
+
+    assert "font-family" not in css
+
+
+def test_a_font_that_is_not_a_woff2_is_refused(client, db, post, admin):
+    """By its signature, not its name — the same rule every other upload here
+    follows. A .ttf renders fine in a browser and is two to five times the size
+    for the same letters."""
+    response = save(post, typeface="propia", font=(io.BytesIO(TTF), "bonita.woff2"),
+                    content_type="multipart/form-data", follow_redirects=True)
+
+    assert "no es un .woff2" in response.get_data(as_text=True)
+    assert db.execute("SELECT COUNT(*) AS n FROM brand").fetchone()["n"] == 0
+
+
+def test_an_enormous_font_is_refused(client, db, post, admin):
+    big = b"wOF2" + b"\x00" * 500_000
+    response = save(post, typeface="propia", font=(io.BytesIO(big), "gorda.woff2"),
+                    content_type="multipart/form-data", follow_redirects=True)
+
+    assert "Subconjunta" in response.get_data(as_text=True)
+    assert db.execute("SELECT COUNT(*) AS n FROM brand").fetchone()["n"] == 0
+
+
+def test_choosing_propia_without_a_file_is_refused(client, db, post, admin):
+    """Rather than falling back silently: the site would look unchanged and the
+    setting would say otherwise."""
+    response = save(post, typeface="propia", follow_redirects=True)
+
+    assert "hay que subir un archivo" in response.get_data(as_text=True)
+    assert db.execute("SELECT COUNT(*) AS n FROM brand").fetchone()["n"] == 0
+
+
+def test_an_uploaded_font_is_declared_served_and_falls_back(client, db, post, admin):
+    save(post, typeface="propia", font=(io.BytesIO(WOFF2), "bonita.woff2"),
+         content_type="multipart/form-data")
+
+    name = db.execute("SELECT font_name FROM brand").fetchone()["font_name"]
+    css = client.get("/comunidad/marca.css").get_data(as_text=True)
+
+    assert "@font-face" in css and name in css
+    # Named first, with the old stack behind it: a font that 404s or arrives
+    # corrupt must leave a readable site, not a browser default.
+    assert 'body { font-family: "VLPropia", "Montserrat"' in css
+
+    served = client.get(f"/comunidad/marca/{name}")
+    assert served.status_code == 200
+    assert served.mimetype == "font/woff2"
+
+
+def test_roundness_writes_the_four_radius_tokens(client, post, admin):
+    save(post, roundness="recta")
+
+    css = client.get("/comunidad/marca.css").get_data(as_text=True)
+
+    for token in ("--radius-xl", "--radius-lg", "--radius-md", "--radius-sm"):
+        assert f"{token}: 0;" in css, token
+
+
+def test_a_made_up_choice_falls_back_rather_than_being_stored(client, db, post, admin):
+    """Both pickers read a key from a table in this module, never the value that
+    arrived."""
+    save(post, typeface="../../etc/passwd", roundness="DROP TABLE brand")
+
+    row = db.execute("SELECT typeface, roundness FROM brand").fetchone()
+    assert (row["typeface"], row["roundness"]) == ("sans", "suave")
+
+
+def test_restoring_takes_the_font_with_it(app, client, db, post, admin):
+    save(post, typeface="propia", font=(io.BytesIO(WOFF2), "bonita.woff2"),
+         content_type="multipart/form-data")
+    name = db.execute("SELECT font_name FROM brand").fetchone()["font_name"]
+
+    post("/comunidad/gestion/marca/restaurar")
+
+    with app.app_context():
+        from apps.board import uploads
+        assert not uploads.directory().joinpath(name).exists()
+    assert "font-family" not in client.get("/comunidad/marca.css").get_data(as_text=True)
+
+
+def test_the_font_and_the_radii_reach_the_public_site(db, post, admin, repo):
+    save(post, typeface="propia", roundness="redonda",
+         font=(io.BytesIO(WOFF2), "bonita.woff2"),
+         content_type="multipart/form-data")
+
+    assert "static/brand/font.woff2" in repo.files
+    yaml = repo.files["data/brand.yaml"].decode("utf-8")
+    assert 'font: "/brand/font.woff2"' in yaml
+    assert "font_stack: '\"VLPropia\"" in yaml
+    assert '  radius-xl: "28px"' in yaml

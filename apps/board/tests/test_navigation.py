@@ -217,3 +217,40 @@ def test_signing_in_sets_the_hint_and_signing_out_clears_it(client, db, post, ma
     signed_out = post("/comunidad/logout")
     assert any("vl_sesion=;" in header or "vl_sesion=\"\"" in header
                for header in signed_out.headers.get_all("Set-Cookie"))
+
+
+# --- the tier above admin -------------------------------------------------
+
+def test_the_superadmin_sees_gestion(nav, superadmin_id):
+    """The regression this file exists for, one tier higher.
+
+    `base.html` asked `g.member.role in ('owner', 'admin')`, which was right
+    until a role appeared above both — and then Gestión vanished from the
+    navigation of the one account that owns every screen on it. 622 tests
+    passed while it was broken, because every one of them signed in as an
+    admin or below.
+    """
+    body = nav(superadmin_id)
+    assert "Gestión" in body
+    assert "/comunidad/gestion" in body
+
+
+@pytest.mark.parametrize("role", ["superadmin", "owner", "admin"])
+def test_gestion_opens_for_every_role_that_can_see_it(role, client, db,
+                                                      superadmin_id, make_member,
+                                                      sign_in):
+    """Seeing the link and reaching the page are two different checks, and a
+    role that passes one and fails the other is the worst of both."""
+    member_id = superadmin_id if role == "superadmin" else make_member("x", role=role)
+    sign_in(member_id)
+    assert client.get("/comunidad/gestion").status_code == 200
+
+
+def test_the_public_strip_offers_gestion_to_the_superadmin(client, superadmin_id,
+                                                           sign_in):
+    """`sesion.json` draws the bar on vienalatina.com from its own list, so it
+    is a second place the same rule can be got wrong."""
+    sign_in(superadmin_id)
+    labels = [s["label"] for s in
+              client.get("/comunidad/sesion.json").get_json()["sections"]]
+    assert "Gestión" in labels

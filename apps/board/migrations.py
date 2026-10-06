@@ -313,6 +313,31 @@ def _a_superadmin_above_the_owner(db: sqlite3.Connection) -> None:
         raise RuntimeError(f"migration left dangling references: {broken}")
 
 
+def _room_for_identity_and_a_typeface(db: sqlite3.Connection) -> None:
+    """Columns for the style half's new settings and for the media library.
+
+    Plain ADD COLUMNs — none of these is in a CHECK, an index or a foreign key,
+    which is what separates this from steps 1, 4 and 7.
+
+    `content_cache.image` is what turns "which post uses this picture?" into a
+    query. Without it the media library would re-read every post's frontmatter
+    from the git server on every page view, which is the exact cost that cache
+    was built to avoid.
+
+    The three new tables — `activity`, `site`, and nothing else — need no step
+    at all: `CREATE TABLE IF NOT EXISTS` in schema.sql runs before these and
+    creates them on any database that lacks them.
+    """
+    for table, columns in (("brand", ("typeface", "font_name", "roundness")),
+                           ("content_cache", ("image",))):
+        existing = _columns(db, table)
+        if not existing:
+            continue
+        for column in columns:
+            if column not in existing:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
@@ -323,6 +348,8 @@ STEPS = [
     (5, "events carry a date of their own", _rooms_for_a_date_of_its_own),
     (6, "there are no categories any more", _no_more_categories),
     (7, "a superadministrator above the responsable", _a_superadmin_above_the_owner),
+    (8, "room for the identity, a typeface and the media library",
+     _room_for_identity_and_a_typeface),
 ]
 
 

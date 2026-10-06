@@ -181,7 +181,8 @@ def gestion():
             "SELECT COUNT(*) AS n FROM members WHERE active = 0 AND role != 'tombstone'"
         ).fetchone()["n"],
         "moderators": db.execute(
-            "SELECT COUNT(*) AS n FROM members WHERE role IN ('owner', 'admin', 'moderator')"
+            "SELECT COUNT(*) AS n FROM members WHERE role IN "
+            "('superadmin', 'owner', 'admin', 'moderator')"
         ).fetchone()["n"],
         "pending": db.execute(
             "SELECT COUNT(*) AS n FROM submissions WHERE state = 'pending'").fetchone()["n"],

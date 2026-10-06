@@ -1,0 +1,12 @@
+{{- /* The one-line description of the site, from Gestión → Identidad or from
+      config.yaml. See site-name.html for why it is a partial and why it reads
+      through a variable. */ -}}
+{{- $tagline := site.Params.description -}}
+{{- with site.Data.site -}}
+{{- with .languages -}}
+{{- with index . $.Site.Language.Lang -}}
+{{- with .tagline }}{{ $tagline = . }}{{ end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $tagline -}}

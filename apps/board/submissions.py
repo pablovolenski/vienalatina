@@ -30,7 +30,7 @@ from datetime import date as date_type
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, send_from_directory, url_for)
 
-from . import content, gitea, uploads
+from . import activity, content, gitea, uploads
 from .db import get_db
 from .render import excerpt, to_html
 from .security import is_at_least, login_required, moderator_required
@@ -360,6 +360,7 @@ def approve(submission_id: int):
     # in one place, and no orphan in /data/uploads that nothing will ever serve.
     if row["photo_name"]:
         uploads.remove(row["photo_name"])
+    activity.log("submission.approved", row["title"], f"de {row['author']}")
     flash(f"Publicado «{row['title']}». La traducción tarda un par de minutos.", "ok")
     return redirect(url_for("submissions.index"))
 
@@ -387,6 +388,7 @@ def reject(submission_id: int):
             WHERE id = ?""",
         (note, g.member["id"], submission_id),
     )
+    activity.log("submission.rejected", row["title"], f"de {row['author']}")
     flash("Devuelto al autor con tu motivo.", "ok")
     return redirect(url_for("submissions.index"))
 

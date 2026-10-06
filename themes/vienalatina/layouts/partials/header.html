@@ -15,9 +15,10 @@
 			{{ $logo := "" }}{{ $stamp := "0" }}
 			{{ with site.Data.brand }}{{ $logo = .logo }}{{ $stamp = .stamp }}{{ end }}
 			{{ with $logo }}
-			<img class="site-bar__logo" src="{{ . }}?v={{ $stamp }}" alt="{{ site.Title }}">
+			<img class="site-bar__logo" src="{{ . }}?v={{ $stamp }}"
+			     alt="{{ partial "site-name.html" $ }}">
 			{{ else }}
-			<span class="site-bar__brand-text">{{ .Site.Title }}</span>
+			<span class="site-bar__brand-text">{{ partial "site-name.html" . }}</span>
 			{{ end }}
 		</a>
 

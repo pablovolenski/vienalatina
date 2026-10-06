@@ -30,7 +30,7 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import auth, invites, mail, messages, profiles, uploads
+from . import activity, auth, invites, mail, messages, profiles, uploads
 from .db import TOMBSTONE_LOGIN, get_db
 from .render import to_html
 from .security import (admin_required, login_required, owner_required,
@@ -153,9 +153,15 @@ CLEARED_ON_ERASE = {
     # admin who typed it in: the meeting still happens after they leave, so the
     # row stays and the name goes.
     ("events", "created_by"),
-    # Same for the colours and the logo. An admin leaving is not a reason for
-    # the site to go back to looking like a default install.
+    # Same for the colours and the logo. Whoever set them leaving is not a
+    # reason for the site to go back to looking like a default install.
     ("brand", "updated_by"),
+    ("site", "updated_by"),
+    # That a role was changed is the association's record; whose name was on it
+    # is the erased person's data. The row stays, the name goes — which is also
+    # why the log is not a cascade: an audit trail that deletes itself when the
+    # person who triggered it leaves is not an audit trail.
+    ("activity", "actor_id"),
 }
 
 # Private correspondence is not reassigned to the tombstone, it goes. A thread
@@ -422,6 +428,8 @@ def new():
     except mail.MailFailed:
         invite_link, mail_problem = link, "failed"
 
+    activity.log("member.created", display_name or login,
+                 f"rol: {ROLE_LABELS[role]}")
     return render_template("member_created.html", login=login,
                            email=email, created=True,
                            invite_link=invite_link, mail_problem=mail_problem,
@@ -463,6 +471,7 @@ def invite(member_id: int):
         flash(f"No se pudo enviar el correo. Pásale este enlace: {link}", "error")
         return redirect(_page(target))
 
+    activity.log("member.invited", target["display_name"], target["email"])
     flash(f"Invitación enviada a {target['email']}.", "ok")
     return redirect(_page(target))
 
@@ -475,6 +484,8 @@ def set_active(member_id: int):
         abort(403)
     active = 1 if request.form.get("active") == "1" else 0
     get_db().execute("UPDATE members SET active = ? WHERE id = ?", (active, member_id))
+    activity.log("member.restored" if active else "member.suspended",
+                 target["display_name"])
     flash(f"{target['display_name']}: acceso {'restaurado' if active else 'suspendido'}.", "ok")
     return redirect(_page(target))
 
@@ -499,6 +510,8 @@ def set_role(member_id: int):
     if not may_create(g.member["role"], role):
         abort(403)
     get_db().execute("UPDATE members SET role = ? WHERE id = ?", (role, member_id))
+    activity.log("role.changed", target["display_name"],
+                 f"{ROLE_LABELS[target['role']]} → {ROLE_LABELS[role]}")
     flash(f"{target['display_name']} ahora es {ROLE_LABELS[role].lower()}.", "ok")
     return redirect(_page(target))
 
@@ -513,6 +526,7 @@ def transfer(member_id: int):
         flash("Solo puedes nombrar responsable a un miembro activo.", "error")
         return redirect(_page(target))
     transfer_ownership(get_db(), g.member["id"], target["id"], "owner")
+    activity.log("chair.owner", target["display_name"])
     flash(f"{target['display_name']} es ahora el responsable.", "ok")
     return redirect(_page(target))
 
@@ -532,6 +546,7 @@ def transfer_platform(member_id: int):
         flash("Solo puedes entregar la plataforma a un administrador activo.", "error")
         return redirect(_page(target))
     transfer_ownership(get_db(), g.member["id"], target["id"], "superadmin")
+    activity.log("chair.superadmin", target["display_name"])
     flash(f"{target['display_name']} es ahora el superadministrador. "
           "Tú eres administrador.", "ok")
     return redirect(_page(target))
@@ -550,6 +565,9 @@ def erase(member_id: int):
     # rows back, and nothing can put the pictures back.
     for stored_name in erase_member(get_db(), member_id):
         uploads.remove(stored_name)
+    # After the transaction: a row recording an erasure that rolled back is a
+    # worse record than no row.
+    activity.log("member.erased", target["display_name"])
     flash(f"{target['display_name']} eliminado. Sus mensajes quedan como «Miembro eliminado».", "ok")
     return redirect(url_for("members.index"))
 

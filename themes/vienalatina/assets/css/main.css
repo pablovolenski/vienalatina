@@ -4041,3 +4041,14 @@ a.notif-card__message:hover {
   .agenda__day--busy { display: block; }
   .agenda__number { display: inline-block; margin-right: 8px; }
 }
+
+/* The association's accounts elsewhere, in the footer. Set in
+   Gestión → Identidad; absent entirely on a site that has set none. */
+.site-foot__social {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+}

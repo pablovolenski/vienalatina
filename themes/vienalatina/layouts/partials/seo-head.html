@@ -4,7 +4,7 @@
 {{ $localeMap := .Site.Params.localeMap }}
 {{ $locale := index $localeMap .Language.Lang | default "es_ES" }}
 {{ $desc := "" }}
-{{ if .IsPage }}{{ $desc = .Description | default (.Summary | plainify | truncate 200) }}{{ else }}{{ $desc = .Site.Params.description }}{{ end }}
+{{ if .IsPage }}{{ $desc = .Description | default (.Summary | plainify | truncate 200) }}{{ else }}{{ $desc = partial "site-tagline.html" . }}{{ end }}
 {{/* One line, always. A summary pulled out of the body arrives with the line
      breaks the prose had, and a newline inside og:description is a card that
      renders raggedly in some readers and truncated in others. */}}
@@ -20,9 +20,13 @@
 
      Absolute, because WhatsApp, Signal, Mastodon and Bluesky all fetch it from
      outside and a relative path means nothing to them. */}}
-{{ $brandLogo := "" }}
+{{ $brandLogo := "" }}{{ $chosen := "" }}
 {{ with site.Data.brand }}{{ $brandLogo = .logo }}{{ end }}
-{{ $fallback := or $brandLogo .Site.Params.defaultImage }}
+{{ with site.Data.site }}{{ $chosen = .share_image }}{{ end }}
+{{/* The picture chosen in Identidad wins over the logo, which wins over the
+     one in config.yaml: most sites want their logo and the field exists for the
+     ones that want something else. */}}
+{{ $fallback := or $chosen (or $brandLogo .Site.Params.defaultImage) }}
 {{ $image := "" }}
 {{ with .Params.image }}{{ $image = . | absURL }}
 {{ else }}{{ with $fallback }}{{ $image = . | absURL }}{{ end }}{{ end }}
@@ -42,7 +46,7 @@
 {{ if and .IsPage (eq .Section "post") }}
 {{/* ---- Article ---- */}}
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="{{ .Site.Title }}">
+<meta property="og:site_name" content="{{ partial "site-name.html" . }}">
 <meta property="og:title" content="{{ .Title }}">
 <meta property="og:description" content="{{ $desc }}">
 <meta property="og:url" content="{{ .Permalink }}">
@@ -124,8 +128,8 @@
 {{ else if .IsHome }}
 {{/* ---- Home ---- */}}
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="{{ .Site.Title }}">
-<meta property="og:title" content="{{ .Site.Title }}">
+<meta property="og:site_name" content="{{ partial "site-name.html" . }}">
+<meta property="og:title" content="{{ partial "site-name.html" . }}">
 <meta property="og:description" content="{{ $desc }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:locale" content="{{ $locale }}">
@@ -138,14 +142,33 @@
 <meta name="twitter:image" content="{{ . }}">
 {{ end }}
 
+{{/* The organisation, as a search or answer engine reads it. Everything
+     overridable lives in Gestión → Identidad; `areaServed` stays here because a
+     city is a fact about this association and not a setting. */}}
 {{ $org := dict
 	"@context" "https://schema.org"
 	"@type" "Organization"
-	"name" .Site.Title
+	"name" (partial "site-name.html" .)
 	"url" .Site.Home.Permalink
-	"description" .Site.Params.description
+	"description" (partial "site-tagline.html" .)
 	"areaServed" (dict "@type" "City" "name" "Wien" "addressCountry" "AT")
 }}
+{{ with site.Data.site }}
+{{/* sameAs is how an engine knows an Instagram account and this site are one
+     body — the single highest-value field here for being found at all. */}}
+{{ with .sameAs }}{{ $org = merge $org (dict "sameAs" .) }}{{ end }}
+{{ with .email }}
+{{ $org = merge $org (dict "contactPoint" (dict
+	"@type" "ContactPoint" "contactType" "general" "email" .)) }}
+{{ end }}
+{{ if or .city .street }}
+{{ $address := dict "@type" "PostalAddress" "addressCountry" "AT" }}
+{{ with .city }}{{ $address = merge $address (dict "addressLocality" .) }}{{ end }}
+{{ with .street }}{{ $address = merge $address (dict "streetAddress" .) }}{{ end }}
+{{ with .phone }}{{ $org = merge $org (dict "telephone" .) }}{{ end }}
+{{ $org = merge $org (dict "address" $address) }}
+{{ end }}
+{{ end }}
 {{/* The same fallback as the share card: the admin's logo, then the configured
      default. This is the field a search engine uses to put a mark beside the
      organisation's name, so it should be the logo somebody actually uploaded. */}}
@@ -184,7 +207,7 @@
      document about the organisation rather than an article, hence WebPage
      rather than BlogPosting, and no author: a page is the site speaking. */}}
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="{{ .Site.Title }}">
+<meta property="og:site_name" content="{{ partial "site-name.html" . }}">
 <meta property="og:title" content="{{ .Title }}">
 <meta property="og:description" content="{{ $desc }}">
 <meta property="og:url" content="{{ .Permalink }}">

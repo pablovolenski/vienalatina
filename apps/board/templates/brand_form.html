@@ -108,6 +108,97 @@
 	{% endif %}
 	<input id="favicon" name="favicon" type="file" accept="image/png">
 
+	<h2 class="section-title">Tipografía</h2>
+	<p class="muted small">
+		Las cuatro primeras ya están en el ordenador de quien lee: no se descarga
+		nada de ningún sitio. Eso es a propósito — una hoja de estilos que pide una
+		fuente a Google le cuenta a Google la dirección IP de todo el que entra, y
+		eso no se puede consentir en nombre de quien visita la página.
+	</p>
+
+	<div class="choices">
+		{% for key, (label, stack) in typefaces.items() %}
+		<label class="choice">
+			<input type="radio" name="typeface" value="{{ key }}"
+			       {{ 'checked' if state.typeface == key }}>
+			{# The class, not a style attribute: `default-src 'self'` covers
+			   style-src, so an inline style on this label would be dropped and
+			   every option would look identical. The four classes are in
+			   board.css beside the form rules. #}
+			<span class="face face--{{ key }}">{{ label }}</span>
+		</label>
+		{% endfor %}
+		<label class="choice">
+			<input type="radio" name="typeface" value="propia"
+			       {{ 'checked' if state.typeface == 'propia' }}>
+			Propia (subida aquí)
+		</label>
+	</div>
+
+	{% if state.font_name %}
+	<p class="muted small">Ya hay una tipografía subida. Si eliges otra, la sustituye.</p>
+	{% endif %}
+	<label for="font">Archivo .woff2 <span class="muted small">(sólo para «Propia»)</span></label>
+	<input id="font" name="font" type="file" accept=".woff2,font/woff2">
+
+	{# Closed by default and one line tall, as asked. Everything in it is a way
+	   this goes wrong in practice rather than in theory. #}
+	<details class="brand-warning">
+		<summary>Antes de subir una tipografía, lee esto</summary>
+
+		<p><strong>Lo que hace una fuente mala.</strong> Una tipografía sin
+		<span class="mono">ñ á ü ç ã</span> dibuja esas letras con otra distinta, así
+		que el español y el portugués salen visiblemente remendados — y nadie te
+		avisa. Un archivo de 2 MB retrasa cada página en un móvil. Una fuente de
+		titulares puesta a 16px no se lee.</p>
+
+		<p><strong>Cómo hacerlo bien.</strong> Sube un solo archivo, el peso normal:
+		la negrita y la cursiva las fabrica el navegador a partir de él, lo cual
+		está bien para un sitio con logotipo y mal para textos largos. Subconjunta
+		la fuente a latín y latín extendido-A. Que no pase de unos 100 KB. Sólo
+		<span class="mono">.woff2</span>: es el formato de la web, lo entienden
+		todos los navegadores y es el que este formulario comprueba por su firma,
+		no por el nombre del archivo. Antes de guardar, mira cómo quedan
+		<span class="mono">ñ á ü ç ã</span> en la vista previa de arriba.</p>
+
+		<p><strong>La licencia, que es lo único de aquí que cuesta dinero.</strong>
+		Una tipografía es software, y una licencia de escritorio no es una licencia
+		web: servir desde tu propio servidor una fuente que compraste para el
+		ordenador suele incumplirla, y esa responsabilidad viaja con la plataforma
+		a cada organización donde la instales. Busca
+		<strong>SIL OFL</strong> o <strong>Apache 2.0</strong>: las dos permiten
+		alojarla uno mismo y redistribuirla.</p>
+
+		<p><strong>Dónde buscarlas sin riesgo.</strong>
+		<a href="https://fonts.google.com/" rel="nofollow noopener">Google Fonts</a>
+		(descargándolas, no enlazándolas, por lo del párrafo primero),
+		<a href="https://fontsource.org/" rel="nofollow noopener">Fontsource</a>
+		(las mismas familias ya empaquetadas en <span class="mono">.woff2</span>),
+		<a href="https://www.fontsquirrel.com/" rel="nofollow noopener">Font Squirrel</a>,
+		<a href="https://www.theleagueofmoveabletype.com/" rel="nofollow noopener">The League of Moveable Type</a>,
+		<a href="https://velvetyne.fr/" rel="nofollow noopener">Velvetyne</a>,
+		<a href="https://open-foundry.com/" rel="nofollow noopener">Open Foundry</a> y
+		<a href="https://usemodify.com/" rel="nofollow noopener">Use &amp; Modify</a>.
+		Comprueba la licencia del archivo que te has descargado, no la de la página
+		desde la que llegaste a él.</p>
+	</details>
+
+	<h2 class="section-title">Esquinas</h2>
+	<p class="muted small">
+		Lo redondeadas que son las tarjetas, los botones y las fotos. Un solo ajuste
+		para todo: un sitio con tarjetas redondas y botones cuadrados parece dos
+		sitios.
+	</p>
+	<div class="choices">
+		{% for key, (label, values) in roundness.items() %}
+		<label class="choice">
+			<input type="radio" name="roundness" value="{{ key }}"
+			       {{ 'checked' if state.roundness == key }}>
+			{{ label }}
+		</label>
+		{% endfor %}
+	</div>
+
 	<details class="brand-advanced">
 		<summary>Avanzado</summary>
 

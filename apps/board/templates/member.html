@@ -19,7 +19,7 @@
    cannot offer a role that comes back 403. #}
 {% set is_super = me.role == 'superadmin' %}
 {% set is_chair = me.role in ('superadmin', 'owner') %}
-{% set is_admin = me.role in ('superadmin', 'owner', 'admin') %}
+{% set is_admin = is_at_least(me.role, 'admin') %}
 {% set can_assign = assignable_roles(me.role) %}
 
 {% block main %}

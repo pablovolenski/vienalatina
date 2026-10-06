@@ -53,6 +53,17 @@
 	</p>
 </section>
 
+<section class="panel">
+	<div class="panel__head">
+		<h2>Biblioteca de medios</h2>
+		<a class="linkish" href="{{ url_for('media.index') }}">Abrir</a>
+	</div>
+	<p class="muted small">
+		Todas las imágenes del sitio público y qué artículo usa cada una. Las que
+		no usa nadie —de artículos que se borraron— se pueden quitar desde ahí.
+	</p>
+</section>
+
 {% if g.member.role == 'superadmin' %}
 <section class="panel">
 	<div class="panel__head">
@@ -66,6 +77,42 @@
 		Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
 		sitio. Con un apartado avanzado para quien sepa CSS, y un botón para
 		volver a lo de fábrica.
+	</p>
+</section>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Identidad</h2>
+		<a class="linkish" href="{{ url_for('identity.edit') }}">Abrir</a>
+	</div>
+	{% set site = identity() %}{% if site.updated_at and not site.published_at %}
+	<p class="panel__row">Hay cambios guardados que no han llegado al sitio público.</p>
+	{% endif %}
+	<p class="muted small">
+		El nombre y el lema en los tres idiomas, los perfiles de la asociación en
+		otros sitios, el contacto y el pie de página.
+	</p>
+</section>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Estado del sistema</h2>
+		<a class="linkish" href="{{ url_for('status.index') }}">Abrir</a>
+	</div>
+	<p class="muted small">
+		Si el token para publicar funciona de verdad, si el correo sale, cuándo fue
+		la última copia de seguridad y cuánto disco queda. No cambia nada: responde.
+	</p>
+</section>
+
+<section class="panel">
+	<div class="panel__head">
+		<h2>Registro de actividad</h2>
+		<a class="linkish" href="{{ url_for('activity.index') }}">Abrir</a>
+	</div>
+	<p class="muted small">
+		Quién cambió un rol, aprobó una publicación, tocó el aspecto del sitio o
+		eliminó a alguien.
 	</p>
 </section>
 {% endif %}

@@ -816,3 +816,66 @@ input[type="file"] {
 
 .btn--danger { background: var(--danger); }
 .btn--danger:hover { background: var(--danger); filter: brightness(0.9); }
+
+/* --- the typeface picker ------------------------------------------------ */
+
+/* Each option shown in the face it offers. Classes rather than a style
+   attribute on the label, because the Content-Security-Policy has no
+   'unsafe-inline' and style-src falls under default-src: an inline style here
+   is dropped and all four options render identically, which is a picker that
+   tells you nothing. The stacks are the ones in brand.TYPEFACES. */
+.face { font-size: 1.05rem; }
+.face--sans { font-family: "Montserrat", -apple-system, BlinkMacSystemFont,
+              "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+.face--serif { font-family: Georgia, Cambria, "Times New Roman", Times, serif; }
+.face--redonda { font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif; }
+.face--sistema { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+/* The font warning. One line closed, which is the point: it is four paragraphs
+   nobody needs until the moment they are uploading a typeface. */
+.brand-warning {
+  margin: 0.75rem 0 1.5rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-soft);
+}
+.brand-warning summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+.brand-warning p { font-size: 0.9rem; color: var(--muted); margin: 0.75rem 0 0; }
+.brand-warning p:last-child { margin-bottom: 0.25rem; }
+
+/* --- the media library -------------------------------------------------- */
+
+.media-grid {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.media-item {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+}
+/* Orphans are the only rows anybody has to act on, so they say so twice: first
+   in the order (they sort to the top) and then in the colour. */
+.media-item--orphan { border-color: var(--brand); background: var(--brand-softer); }
+.media-item img {
+  display: block;
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+.media-item p { margin: 0.4rem 0 0; word-break: break-all; }
+.media-item form { margin-top: 0.5rem; }
+
+/* --- the status screen -------------------------------------------------- */
+
+.tag--ok   { background: #e4f2e4; color: #1b5e20; }
+.tag--warn { background: var(--brand-soft); color: var(--brand-dark); }
+.tag--bad  { background: #f6dcdc; color: var(--danger); }

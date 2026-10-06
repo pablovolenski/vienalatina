@@ -49,11 +49,12 @@ from __future__ import annotations
 import colorsys
 import json
 import re
+import secrets
 
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, send_from_directory, url_for)
 
-from . import gitea, uploads
+from . import activity, gitea, uploads
 from .db import get_db
 from .security import superadmin_required
 
@@ -104,6 +105,50 @@ DERIVED = {
 }
 
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+# --- the typeface ----------------------------------------------------------
+#
+# Four stacks of fonts that are already on the reader's machine, and nothing
+# downloaded from anywhere. The site's freedom from Google Fonts is deliberate
+# and a GDPR matter: a stylesheet that pulls a font from fonts.gstatic.com tells
+# Google the IP address of everyone who reads this site, which is a disclosure
+# an association cannot make on its visitors' behalf without asking them.
+#
+# A fifth option, `propia`, uses an uploaded .woff2 and falls back to the sans
+# stack — so a font that fails to load leaves a readable site rather than a
+# browser default.
+TYPEFACES = {
+    "sans": ("Sans (la de ahora)",
+             '"Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", '
+             'Roboto, "Helvetica Neue", Arial, sans-serif'),
+    "serif": ("Serif",
+              'Georgia, Cambria, "Times New Roman", Times, serif'),
+    "redonda": ("Redondeada",
+                '"Trebuchet MS", "Segoe UI", Verdana, sans-serif'),
+    "sistema": ("La del sistema",
+                'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'),
+}
+DEFAULT_TYPEFACE = "sans"
+FONT_STACK_FALLBACK = TYPEFACES["sans"][1]
+
+# A .woff2 and nothing else. It is the web format — every browser in use takes
+# it, it is the smallest, and it has a four-byte signature this can check
+# without a parser. A .ttf or .otf would work in a browser and would also be
+# two to five times the size for the same letters.
+FONT_SIGNATURE = b"wOF2"
+FONT_MAX_BYTES = 400_000
+
+# How round everything is. One setting driving four tokens, because a site whose
+# cards are round and whose buttons are square looks like two sites.
+ROUNDNESS = {
+    "suave": ("Suave (la de ahora)", {"radius-xl": "18px", "radius-lg": "12px",
+                                      "radius-md": "8px", "radius-sm": "5px"}),
+    "recta": ("Recta", {"radius-xl": "0", "radius-lg": "0",
+                        "radius-md": "0", "radius-sm": "0"}),
+    "redonda": ("Redonda", {"radius-xl": "28px", "radius-lg": "20px",
+                            "radius-md": "14px", "radius-sm": "10px"}),
+}
+DEFAULT_ROUNDNESS = "suave"
 
 # The free CSS box takes anything but these. `<` and `>` cannot appear in valid
 # CSS outside a string, and they are the two characters that could end the
@@ -236,25 +281,43 @@ def current() -> dict:
         stored = {}
     if not isinstance(stored, dict):
         stored = {}
+    def column(name):
+        return (row[name] if row else None) or None
+
+    typeface = column("typeface")
+    if typeface not in TYPEFACES and typeface != "propia":
+        typeface = DEFAULT_TYPEFACE
+    roundness = column("roundness")
+    if roundness not in ROUNDNESS:
+        roundness = DEFAULT_ROUNDNESS
+
     return {
         "stored": stored,
         "tokens": resolve(stored),
         "custom_css": (row["custom_css"] if row else "") or "",
-        "logo_name": row["logo_name"] if row else None,
-        "favicon_name": row["favicon_name"] if row else None,
+        "logo_name": column("logo_name"),
+        "favicon_name": column("favicon_name"),
+        "font_name": column("font_name"),
+        "typeface": typeface,
+        "roundness": roundness,
         "updated_at": row["updated_at"] if row else None,
         "published_at": row["published_at"] if row else None,
         "stamp": _stamp(row["updated_at"] if row else None),
         "customised": bool(stored or (row and (row["custom_css"] or row["logo_name"]
-                                               or row["favicon_name"]))),
+                                               or row["favicon_name"]
+                                               or column("font_name")
+                                               or typeface != DEFAULT_TYPEFACE
+                                               or roundness != DEFAULT_ROUNDNESS))),
     }
 
 
 def _blank() -> dict:
     """The factory look, as `current()` would describe it."""
     return {"stored": {}, "tokens": dict(FACTORY), "custom_css": "",
-            "logo_name": None, "favicon_name": None, "updated_at": None,
-            "published_at": None, "stamp": "0", "customised": False}
+            "logo_name": None, "favicon_name": None, "font_name": None,
+            "typeface": DEFAULT_TYPEFACE, "roundness": DEFAULT_ROUNDNESS,
+            "updated_at": None, "published_at": None, "stamp": "0",
+            "customised": False}
 
 
 def state() -> dict:
@@ -283,20 +346,74 @@ def _stamp(updated_at: str | None) -> str:
     return re.sub(r"\D", "", updated_at or "") or "0"
 
 
-def stylesheet(state: dict | None = None) -> str:
-    """The `:root` overrides and then the custom CSS, in that order.
+def font_stack(state: dict) -> str | None:
+    """The `font-family` the site should use, or None to leave it alone.
 
-    Only the tokens that differ from the factory are written, so the file reads
-    as what the admin changed, and an install that has changed nothing serves a
+    None rather than the default string when nothing was chosen, so a site that
+    has not touched this serves no font rule at all and the stylesheets stay
+    byte-identical to what they were.
+
+    An uploaded face is named first and the sans stack follows it: a font that
+    404s or arrives corrupt then leaves a readable site rather than whatever the
+    browser falls back to on its own.
+    """
+    if state["typeface"] == "propia" and state["font_name"]:
+        return f'"VLPropia", {FONT_STACK_FALLBACK}'
+    if state["typeface"] in TYPEFACES and state["typeface"] != DEFAULT_TYPEFACE:
+        return TYPEFACES[state["typeface"]][1]
+    return None
+
+
+def _radius_tokens(state: dict) -> dict:
+    """The four radius values, or nothing when the roundness is the built-in."""
+    if state["roundness"] == DEFAULT_ROUNDNESS:
+        return {}
+    return ROUNDNESS[state["roundness"]][1]
+
+
+def font_face(state: dict, url: str) -> str:
+    """The `@font-face` for an uploaded typeface, at whatever URL serves it.
+
+    `font-display: swap` deliberately: the alternative shows nothing until the
+    file arrives, and a blank article on a slow phone is worse than an article
+    that changes typeface a moment after it appears.
+    """
+    return ("@font-face {\n"
+            '\tfont-family: "VLPropia";\n'
+            f"\tsrc: url({url}) format('woff2');\n"
+            "\tfont-weight: 100 900;\n"
+            "\tfont-display: swap;\n"
+            "}\n")
+
+
+def stylesheet(state: dict | None = None) -> str:
+    """The `@font-face`, the `:root` overrides, then the custom CSS, in that
+    order.
+
+    Only what differs from the factory is written, so the file reads as what the
+    superadministrator changed, and an install that has changed nothing serves a
     comment and no rules at all.
     """
     state = state or current()
+    css = "/* Generado desde Gestión → Marca. No editar a mano. */\n"
+
+    if state["typeface"] == "propia" and state["font_name"]:
+        css += font_face(state, url_for("brand.picture",
+                                        stored_name=state["font_name"]))
+
     lines = [f"\t--{name}: {value};"
              for name, value in state["tokens"].items()
              if value != FACTORY[name]]
-    css = "/* Generado desde Gestión → Marca. No editar a mano. */\n"
+    lines += [f"\t--{name}: {value};" for name, value in _radius_tokens(state).items()]
     if lines:
         css += ":root {\n" + "\n".join(lines) + "\n}\n"
+
+    stack = font_stack(state)
+    if stack:
+        # On `body` rather than `:root`, because the rule it is overriding is on
+        # `body` and a custom property would need every rule to opt in.
+        css += f"body {{ font-family: {stack}; }}\n"
+
     if state["custom_css"]:
         # Last, so it wins over everything above it. That is the whole contract
         # of the advanced box.
@@ -369,6 +486,52 @@ def _read_picture(field: str, allowed: tuple[str, ...], errors: list[str]):
     return item
 
 
+def _read_font(errors: list[str]):
+    """The uploaded typeface, sniffed rather than trusted.
+
+    Not through `uploads.stage`, which knows about pictures: this needs its own
+    four-byte check and its own size limit. Same shape though, and the same
+    rule — the name on the file decides nothing.
+
+    A stored name that ends `.woff2` would not match `uploads.STORED_NAME`,
+    which allows three or four letters; `.wof` would be a lie. So the file is
+    stored as `.bin` and served with an explicit Content-Type, which is what the
+    browser reads anyway.
+    """
+    upload = request.files.get("font")
+    if not upload or not upload.filename:
+        return None
+    data = upload.read()
+    if not data:
+        return None
+    if len(data) > FONT_MAX_BYTES:
+        errors.append(
+            f"La tipografía pesa {len(data) // 1024}KB y el máximo son "
+            f"{FONT_MAX_BYTES // 1024}KB. Subconjunta la fuente a latín y "
+            "latín extendido antes de subirla."
+        )
+        return None
+    if not data.startswith(FONT_SIGNATURE):
+        errors.append(
+            f"«{upload.filename[:60]}» no es un .woff2. Es el único formato que "
+            "se acepta: es el de la web, lo entienden todos los navegadores y "
+            "es el más pequeño."
+        )
+        return None
+    return {
+        "data": data,
+        "original_name": upload.filename[:200],
+        "stored_name": f"tipografia-{secrets.token_hex(6)}.bin",
+    }
+
+
+def _read_choice(form, field: str, table: dict, default: str,
+                 extra: tuple[str, ...] = ()) -> str:
+    """One key from a table of our own, or the default. Never the raw value."""
+    choice = (form.get(field) or "").strip()
+    return choice if choice in table or choice in extra else default
+
+
 # --- routes ----------------------------------------------------------------
 
 @bp.route("/gestion/marca", methods=["GET", "POST"])
@@ -379,6 +542,7 @@ def edit():
         return render_template("brand_form.html", state=state,
                                factory=FACTORY, simple=SIMPLE,
                                derived=sorted(DERIVED), advanced=_advanced(),
+                               typefaces=TYPEFACES, roundness=ROUNDNESS,
                                notes=warnings(state["tokens"]))
 
     errors: list[str] = []
@@ -386,18 +550,31 @@ def edit():
     css = _read_css(request.form, errors)
     logo = _read_picture("logo", LOGO_EXTENSIONS, errors)
     favicon = _read_picture("favicon", FAVICON_EXTENSIONS, errors)
+    font = _read_font(errors)
+    typeface = _read_choice(request.form, "typeface", TYPEFACES,
+                            DEFAULT_TYPEFACE, extra=("propia",))
+    roundness = _read_choice(request.form, "roundness", ROUNDNESS, DEFAULT_ROUNDNESS)
     if errors:
         for message in errors:
             flash(message, "error")
         return redirect(url_for("brand.edit"))
 
     state = current()
+    if typeface == "propia" and not (font or state["font_name"]):
+        # Chosen without ever uploading one. Refused rather than silently
+        # falling back, because the site would look unchanged and the setting
+        # would say otherwise.
+        flash("Para usar una tipografía propia hay que subir un archivo .woff2.",
+              "error")
+        return redirect(url_for("brand.edit"))
+
     # Written before the commits: the members area must not depend on the git
     # server being up to change its own colours.
-    _store(stored, css, logo, favicon, state)
+    _store(stored, css, logo, favicon, font, typeface, roundness, state)
     for note in warnings(resolve(stored)):
         flash(note, "error")
 
+    activity.log("brand.saved")
     if _publish():
         flash("Guardado. El sitio público se reconstruye en un par de minutos.", "ok")
     return redirect(url_for("brand.edit"))
@@ -409,15 +586,19 @@ def _advanced() -> tuple:
     return tuple(name for name in FACTORY if name not in simple)
 
 
-def _store(stored: dict, css: str, logo, favicon, state: dict) -> None:
-    """The row, and the two pictures on disk.
+def _store(stored: dict, css: str, logo, favicon, font, typeface: str,
+           roundness: str, state: dict) -> None:
+    """The row, and the three uploaded files on disk.
 
     Files before the row, as `uploads.save` does it and for the same reason: a
     row naming a file that is not there renders as a broken image on every
     future visit, while a file with no row is invisible.
     """
-    names = {"logo_name": state["logo_name"], "favicon_name": state["favicon_name"]}
-    for field, item in (("logo_name", logo), ("favicon_name", favicon)):
+    names = {"logo_name": state["logo_name"],
+             "favicon_name": state["favicon_name"],
+             "font_name": state["font_name"]}
+    uploaded = (("logo_name", logo), ("favicon_name", favicon), ("font_name", font))
+    for field, item in uploaded:
         if item is None:
             continue
         uploads.directory().joinpath(item["stored_name"]).write_bytes(item["data"])
@@ -425,23 +606,28 @@ def _store(stored: dict, css: str, logo, favicon, state: dict) -> None:
 
     get_db().execute(
         """INSERT INTO brand (id, tokens_json, custom_css, logo_name, favicon_name,
+                              font_name, typeface, roundness,
                               updated_by, updated_at, published_at)
-           VALUES (1, ?, ?, ?, ?, ?, datetime('now'), NULL)
+           VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), NULL)
            ON CONFLICT(id) DO UPDATE SET
                tokens_json = excluded.tokens_json,
                custom_css = excluded.custom_css,
                logo_name = excluded.logo_name,
                favicon_name = excluded.favicon_name,
+               font_name = excluded.font_name,
+               typeface = excluded.typeface,
+               roundness = excluded.roundness,
                updated_by = excluded.updated_by,
                updated_at = excluded.updated_at,
                published_at = NULL""",
         (json.dumps(stored, sort_keys=True), css,
-         names["logo_name"], names["favicon_name"], g.member["id"]),
+         names["logo_name"], names["favicon_name"], names["font_name"],
+         typeface, roundness, g.member["id"]),
     )
 
-    # The old pictures, once nothing points at them. After the row, so a
-    # rollback cannot leave the row naming a file that has been deleted.
-    for field, item in (("logo_name", logo), ("favicon_name", favicon)):
+    # The old files, once nothing points at them. After the row, so a rollback
+    # cannot leave the row naming a file that has been deleted.
+    for field, item in uploaded:
         if item is not None and state[field] and state[field] != names[field]:
             uploads.remove(state[field])
 
@@ -465,9 +651,10 @@ def restore():
     """
     state = current()
     get_db().execute("DELETE FROM brand WHERE id = 1")
-    for name in (state["logo_name"], state["favicon_name"]):
+    for name in (state["logo_name"], state["favicon_name"], state["font_name"]):
         if name:
             uploads.remove(name)
+    activity.log("brand.restored")
     flash("Restaurado lo de fábrica.", "ok")
     _publish()
     return redirect(url_for("brand.edit"))
@@ -498,8 +685,16 @@ def picture(stored_name: str):
     if not uploads.STORED_NAME.match(stored_name):
         abort(404)
     state = current()
-    if stored_name not in (state["logo_name"], state["favicon_name"]):
+    if stored_name not in (state["logo_name"], state["favicon_name"],
+                           state["font_name"]):
         abort(404)
+    # The typeface is stored `.bin` — `.woff2` is five characters and
+    # `STORED_NAME` allows three or four — so its type is stated here rather
+    # than guessed from the name. A font served as application/octet-stream
+    # loads anyway, but says nothing true in a network panel.
+    if stored_name == state["font_name"]:
+        return send_from_directory(uploads.directory(), stored_name,
+                                   mimetype="font/woff2")
     return send_from_directory(uploads.directory(), stored_name)
 
 
@@ -512,10 +707,15 @@ def _repo_path(stored_name: str, kind: str) -> str:
     file instead of leaving every previous one in the repository, deployed and
     unreferenced.
     """
-    return f"{REPO_FOLDER}/{kind}.{stored_name.rsplit('.', 1)[-1]}"
+    # The typeface is stored locally as `.bin` — see `_read_font` — but the
+    # repository is a web root, where the extension is what a reader's cache and
+    # a CDN go by. It lands as `.woff2`, which is what it is.
+    extension = "woff2" if kind == "font" else stored_name.rsplit(".", 1)[-1]
+    return f"{REPO_FOLDER}/{kind}.{extension}"
 
 
-def _yaml(state: dict, logo: str | None, favicon: str | None) -> str:
+def _yaml(state: dict, logo: str | None, favicon: str | None,
+          font: str | None = None) -> str:
     """`data/brand.yaml`, written rather than dumped.
 
     By hand because the values are known: colours matched against a hex
@@ -531,6 +731,14 @@ def _yaml(state: dict, logo: str | None, favicon: str | None) -> str:
     for name, value in state["tokens"].items():
         if value != FACTORY[name]:
             lines.append(f"  {name}: \"{value}\"")
+    for name, value in _radius_tokens(state).items():
+        lines.append(f"  {name}: \"{value}\"")
+    stack = font_stack(state)
+    if stack:
+        # Single-quoted because every stack has double quotes inside it.
+        lines.append(f"font_stack: '{stack}'")
+    if font:
+        lines.append(f"font: \"/{font.removeprefix('static/')}\"")
     if logo:
         lines.append(f"logo: \"/{logo.removeprefix('static/')}\"")
     if favicon:
@@ -561,21 +769,21 @@ def _publish() -> bool:
         return False
 
     try:
-        logo_path = favicon_path = None
+        paths = {}
         for kind, name in (("logo", state["logo_name"]),
-                           ("favicon", state["favicon_name"])):
+                           ("favicon", state["favicon_name"]),
+                           ("font", state["font_name"])):
             if not name:
                 continue
             path = _repo_path(name, kind)
             data = uploads.directory().joinpath(name).read_bytes()
             _write(path, data, f"marca: {kind}", token)
             _tidy(kind, path, token)
-            if kind == "logo":
-                logo_path = path
-            else:
-                favicon_path = path
+            paths[kind] = path
 
-        _write(DATA_FILE, _yaml(state, logo_path, favicon_path).encode("utf-8"),
+        _write(DATA_FILE,
+               _yaml(state, paths.get("logo"), paths.get("favicon"),
+                     paths.get("font")).encode("utf-8"),
                "marca: colores", token)
     except (gitea.GiteaError, OSError) as exc:
         current_app.logger.warning("brand publish failed: %s", exc)

@@ -80,7 +80,7 @@
 				<a href="{{ url_for('submissions.index') }}">Publicaciones{% set waiting = pending_review() %}{% if waiting %} <span class="tag">{{ waiting }}</span>{% endif %}</a>
 			</li>
 			<li><a href="{{ url_for('events.month') }}">Calendario</a></li>
-			{% if g.member.role in ('owner', 'admin') %}
+			{% if is_at_least(g.member.role, 'admin') %}
 			<li><a href="{{ url_for('home.gestion') }}">Gestión</a></li>
 			{% endif %}
 		</ul>

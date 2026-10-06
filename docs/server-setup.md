@@ -1045,7 +1045,7 @@ Choosing a picture shows a thumbnail with its name and size before anything is
 uploaded. That is the one reason `blob:` is in the `img-src` policy — a handle to
 bytes already in the page, which reaches no network.
 
-### 11.18 Marca: the admin owns the look
+### 11.18 Marca: the superadministrator owns the look
 
 *Gestión* → **Marca**, admins only. Colours, a logo and a favicon for both
 halves of the site, with an *Avanzado* fold holding every token as a text field
@@ -1099,6 +1099,21 @@ block is where they see them, restyled by `board.js` setting the custom
 properties on that one element (a DOM write, not an inline `style` attribute,
 which is what makes it work under a policy with no `'unsafe-inline'`).
 
+**A typeface and the corners.** Four system-font stacks — nothing is downloaded
+from anywhere, which is deliberate and a GDPR matter: a stylesheet that pulls a
+font from fonts.gstatic.com tells Google the IP address of everyone who reads
+the site. A fifth option takes an uploaded `.woff2`, self-hosted, sniffed by its
+`wOF2` signature and capped at 400 KB; it is named ahead of the old stack in the
+`font-family`, so a font that fails to load leaves a readable site rather than a
+browser default. The screen carries a fold-out warning about missing accented
+glyphs, file size, synthesised bold — and about **licensing**, which is the part
+with a real cost: a font is software, a desktop licence is not a webfont
+licence, and that liability follows the platform to every organisation it is
+installed for. SIL OFL and Apache-2.0 are the safe ones.
+
+Roundness is one setting driving all four `--radius-*` tokens, because a site
+whose cards are round and whose buttons are square looks like two sites.
+
 **No SVG and no ICO.** The logo takes PNG, JPG or WebP and the favicon PNG only,
 both identified from their bytes by the same sniffer the wall uses. An SVG is XML
 that can carry script and would be served from our own origin; ICO would be one
@@ -1110,6 +1125,37 @@ saved in a different format has its predecessor deleted. `scripts/translate.py`
 needs nothing — it walks `content/` only, and `data/` and `static/` are outside
 it. A site with no `data/brand.yaml` builds byte-for-byte the HTML it built
 before any of this existed, which is asserted by building both ways.
+
+### 11.18b Identidad — what the site is called and where to find it
+
+*Gestión* → **Identidad**, superadministrator only. The name and the one-line
+tagline **in the three languages**, the association's accounts elsewhere, a
+public email, a city and street, a default share picture and the footer line.
+
+All of it used to be `config.yaml`, which meant it could only be changed by
+somebody with the repository — the thing this phase exists to end. Same
+architecture as Marca: SQLite first for the members area, then a commit of
+`data/site.yaml`, so a git outage never blocks a change that does not need git.
+
+**Hugo cannot have `config.yaml` overridden by a data file.** The name and
+tagline are therefore read through `partials/site-name.html` and
+`site-tagline.html`, which prefer `site.Data.site` and fall back to the config —
+and every template that shows either calls one of them, so the two cannot drift.
+A site with no `data/site.yaml` builds byte-for-byte what it built before, which
+is asserted by building both ways.
+
+**Only what was actually set is written.** A file repeating the config's own
+values back at it would make the fallback meaningless and freeze today's
+defaults for good, so the form shows them as placeholders rather than as values
+— a prefilled form saves the fallback the first time anybody presses the button.
+
+The contact fields are not decoration: they become `ContactPoint` and
+`PostalAddress` in the `Organization` schema, which is what puts an association
+in a *local* search result rather than only a web one. The social links become
+`sameAs`, which is how a search or answer engine knows an Instagram account and
+this site are the same body. Both are checked on the way in — a link must be
+`https://`, because these render in the footer of every public page and
+`javascript:` in an `href` is a script running on vienalatina.com.
 
 ### 11.19 The chrome on a phone
 
@@ -1146,6 +1192,43 @@ the bar and into the panel.
 In the members area the navigation **wraps** on a phone rather than scrolling:
 six sections over two lines shows all six, where a swipe strip would have left
 Calendario and Gestión off the right edge with nothing to say they were there.
+
+### 11.20 The three admin tools
+
+**Estado del sistema** (superadministrator). WordPress's Site Health, and it
+earns its place for a specific reason: every outage in this project has been a
+configuration fact invisible until somebody hit it. It asks the running system
+rather than a file — the content token is **exercised** against the repository
+rather than checked for emptiness, which is the single most valuable line on the
+page, because "present" was never the problem; the mail host is connected to;
+the newest backup is named with its age and size; free disk is reported; and
+every setting `.env.example` documents that the container does not have is
+listed with what stops working without it. **It changes nothing**, deliberately:
+a diagnostic screen that can also act is one somebody uses to act without
+reading.
+
+**Registro de actividad** (superadministrator). Who changed a role, approved or
+returned a proposal, touched the look or the identity, suspended or erased
+somebody. Deliberately not a general event store — no page views, no successful
+sign-ins; a log that records everything is a log nobody reads. `activity.log()`
+never raises: an administrator who could not be appointed because the note about
+it could not be saved is a worse outcome than a gap in the notes. On erasure the
+actor is **cleared and not cascaded** — that a role was changed is the
+association's record, whose name was on it is the erased person's data.
+
+**Biblioteca de medios** (administrators and above). Every picture the public
+site carries, with the posts that use each. **Orphans are the point**: a picture
+is committed when a post is written, and deleting the post leaves it in the
+repository, deployed, referenced by nothing, for good — there has never been a
+way to see one. They sort to the top and are the only rows with a delete button;
+a picture in use is refused by the handler and not merely hidden, because a
+broken image on a published page is worse than an orphan nobody sees. It reads
+`content_cache.image`, which is what makes "does anything use this?" a query
+rather than a re-read of every post's frontmatter on every page view.
+
+Open to administrators, unlike the other two, because they are the people who
+upload — and the worst an administrator can do here is remove a picture from a
+post they could already have edited.
 
 ## 12. Make Gitea look like the site
 

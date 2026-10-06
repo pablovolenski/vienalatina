@@ -1,0 +1,49 @@
+{# Gestión → Estado del sistema.
+
+   Nothing on this page changes anything, deliberately: a diagnostic screen that
+   can also act is a screen somebody uses to act without reading, and the actions
+   it would offer are the ones with the longest reach on this box. #}
+{% extends "base.html" %}
+{% block title %}Estado{% endblock %}
+
+{% block main %}
+<div class="feed-head">
+	<h1>Estado del sistema</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+</div>
+
+<p class="muted">
+	Lo que es verdad del servidor ahora mismo, preguntado al sistema y no a un
+	archivo. Esta página no cambia nada: sólo responde.
+</p>
+
+{% if worst == 'ok' %}
+<p class="flash flash--ok">Todo responde.</p>
+{% endif %}
+
+{% for title, check in checks %}
+<section class="panel panel--{{ 'attention' if check.state != 'ok' }}">
+	<div class="panel__head">
+		<h2>{{ title }}</h2>
+		<span class="tag tag--{{ check.state }}">
+			{{ {'ok': 'Bien', 'warn': 'Atención', 'bad': 'Mal'}[check.state] }}
+		</span>
+	</div>
+	<p class="panel__row">{{ check.label }}</p>
+	{% if check.detail %}<p class="muted small">{{ check.detail }}</p>{% endif %}
+</section>
+{% endfor %}
+
+<section class="panel">
+	<div class="panel__head"><h2>Cuántas cosas hay</h2></div>
+	<p class="panel__row">
+		{{ counts.members }} miembros · {{ counts.admins }} con algún cargo
+		{% if counts.suspended %} · {{ counts.suspended }} suspendido{{ '' if counts.suspended == 1 else 's' }}{% endif %}
+	</p>
+	<p class="panel__row">
+		{{ counts.posts }} artículos publicados · {{ counts.threads }} hilos en el muro ·
+		{{ counts.events }} eventos en el calendario
+		{% if counts.pending %} · {{ counts.pending }} propuesta{{ '' if counts.pending == 1 else 's' }} esperando{% endif %}
+	</p>
+</section>
+{% endblock %}

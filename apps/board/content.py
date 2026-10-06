@@ -172,17 +172,22 @@ def _cache_read(path: str, sha: str):
 
 def _cache_write(path: str, sha: str, fm: dict) -> None:
     get_db().execute(
-        """INSERT INTO content_cache (path, sha, title, date, generated,
+        """INSERT INTO content_cache (path, sha, title, date, generated, image,
                                       event_date, event_time, event_location)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(path) DO UPDATE SET
                sha = excluded.sha, title = excluded.title, date = excluded.date,
-               generated = excluded.generated,
+               generated = excluded.generated, image = excluded.image,
                event_date = excluded.event_date, event_time = excluded.event_time,
                event_location = excluded.event_location,
                updated_at = datetime('now')""",
         (path, sha, str(fm.get("title", "")), str(fm.get("date", "")),
          1 if fm.get("translated_from") else 0,
+         # Which picture this post carries, for the media library: without it,
+         # answering "does anything use this image?" means re-reading every
+         # post's frontmatter from the git server on every page view — the exact
+         # cost this cache exists to avoid.
+         str(fm.get("image", "") or ""),
          # Cached for the private calendar, which shows public events beside the
          # internal ones and would otherwise read every post's frontmatter on
          # every page view to find out when they are.
