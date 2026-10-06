@@ -258,3 +258,89 @@ def test_the_status_screen_counts_what_is_there(client, db, boss, make_member, r
 
     assert "3 miembros" in body          # the superadministrator and the two
     assert "2 con algún cargo" in body   # superadministrator + moderator
+
+
+# --- the status screen tells the truth about the container it is in --------
+
+def test_the_backup_check_reads_a_path_the_container_can_see(tmp_path, monkeypatch):
+    """The bug this file gained a section for.
+
+    `BACKUP_DIR` was `/srv/board/backups` — a **host** path, read from inside a
+    container that mounts only `./data`. On the real server it reported "no hay
+    carpeta de copias" twenty seconds after `deploy-board.sh` had written one.
+    The compose file now mounts the folder read-only at `/backups`, and this
+    asserts the constant points at the mount rather than at the host.
+    """
+    from apps.board import status
+    assert status.BACKUP_DIR == "/backups", (
+        "BACKUP_DIR must be the path inside the container, not the host's — "
+        "see infra/board/docker-compose.yml")
+
+
+def test_a_backup_is_found_reported_and_dated(app, tmp_path, monkeypatch):
+    from apps.board import status
+    folder = tmp_path / "backups"
+    folder.mkdir()
+    (folder / "board-20261006-030000.db.gz").write_bytes(b"x" * 4096)
+    monkeypatch.setattr(status, "BACKUP_DIR", str(folder))
+
+    with app.app_context():
+        check = status._backups()
+
+    assert check["state"] == "ok"
+    assert "board-20261006-030000.db.gz" in check["detail"]
+    assert "4 KB" in check["detail"]
+
+
+def test_an_empty_backup_folder_is_the_real_alarm(app, tmp_path, monkeypatch):
+    """The folder existing and holding nothing is the state worth shouting
+    about — unlike the folder simply not being visible, which was mine."""
+    from apps.board import status
+    folder = tmp_path / "backups"
+    folder.mkdir()
+    monkeypatch.setattr(status, "BACKUP_DIR", str(folder))
+
+    with app.app_context():
+        assert status._backups()["state"] == "bad"
+
+
+def test_a_setting_with_a_fallback_is_not_reported_as_missing(app, monkeypatch):
+    """`CONTENT_REPO` is unset on the real server and publishing works, because
+    app.py defaults it. Reporting that as a problem is how a panel full of
+    orange teaches somebody to ignore orange.
+
+    The ones with no fallback are set here so that the only thing left absent is
+    the defaulted one — which is the state the real server is in."""
+    from apps.board import status
+    for name, _why, key in status.EXPECTED:
+        if key is None:
+            monkeypatch.setenv(name, "puesto")
+    monkeypatch.delenv("CONTENT_REPO", raising=False)
+
+    with app.test_request_context():
+        check = status._settings()
+
+    assert check["state"] == "ok"
+    assert "CONTENT_REPO" in check["detail"]
+    assert "por defecto" in check["detail"]
+
+
+def test_a_setting_with_no_fallback_still_warns(app, monkeypatch):
+    monkeypatch.delenv("MAIL_HOST", raising=False)
+    from apps.board import status
+    with app.test_request_context():
+        check = status._settings()
+
+    assert check["state"] == "warn"
+    assert "MAIL_HOST" in check["detail"]
+
+
+def test_every_expected_setting_names_a_real_config_key(app):
+    """The third column is read back out of `current_app.config`, so a typo
+    would render «usando None» on the page rather than failing anywhere."""
+    from apps.board import status
+    with app.app_context():
+        for name, _why, key in status.EXPECTED:
+            if key:
+                assert key in app.config, (name, key)
+                assert app.config[key], (name, key)

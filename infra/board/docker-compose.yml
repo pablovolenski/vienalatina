@@ -54,5 +54,15 @@ services:
 
     volumes:
       - ./data:/data
+      # The backups, read-only, so Gestión → Estado del sistema can say whether
+      # there are any and how old they are. Read-only deliberately: that page
+      # reports on these files and must never be able to touch them — a
+      # diagnostic screen that can delete what it measures is a worse failure
+      # than no screen.
+      #
+      # Without this the check reads /srv/board/backups from inside a container
+      # that mounts only ./data, finds nothing, and cries wolf about the one
+      # thing you most want to be true.
+      - ./backups:/backups:ro
     ports:
       - "127.0.0.1:8080:8080"

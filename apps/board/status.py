@@ -40,22 +40,35 @@ from .security import superadmin_required
 
 bp = Blueprint("status", __name__)
 
-# Where deploy-board.sh puts them. Read-only, and missing is an answer.
-BACKUP_DIR = "/srv/board/backups"
+# Where the compose file mounts them, read-only. **Not** the host path: this
+# runs in a container, and `/srv/board/backups` exists on the host and nowhere
+# inside it. Reading the host path from in here reported "no hay carpeta de
+# copias" twenty seconds after deploy-board.sh had written one — a diagnostic
+# page crying wolf about backups is a page you learn to scroll past, which is
+# the one habit it exists to prevent.
+BACKUP_DIR = "/backups"
 
-# Settings whose absence turns a feature off rather than breaking the app. The
-# names are the ones in infra/board/.env.example; the sentence is what stops
-# working. Checked against os.environ because the container cannot read
-# /srv/board/.env — compose substitutes it in and the file never arrives.
+# Settings whose absence matters, and the config key each one lands in — so the
+# value actually in force is read from the app rather than restated here, where
+# the two could disagree.
+#
+# The third column separates the two facts this panel used to merge: **absent
+# and nothing works** from **absent and defaulted**. `CONTENT_REPO` is unset on
+# the real server and publishing works, because app.py defaults it; reporting
+# that as a problem is how a page full of orange teaches you to ignore orange.
+# A config key of None means there is no fallback and the feature is simply off.
+#
+# Checked against os.environ because the container cannot read /srv/board/.env —
+# compose substitutes it in and the file itself never arrives.
 EXPECTED = (
-    ("BOARD_SECRET_KEY", "las sesiones (sin esto la app no arranca)"),
-    ("CONTENT_TOKEN", "publicar en el sitio: el editor y la marca"),
-    ("MAIL_HOST", "invitaciones y recuperar contraseña"),
-    ("MAIL_USER", "autenticarse en el servidor de correo"),
-    ("MAIL_PASSWORD", "autenticarse en el servidor de correo"),
-    ("BOARD_OWNER", "sembrar al superadministrador en el primer arranque"),
-    ("GITEA_URL", "hablar con el servidor de git"),
-    ("CONTENT_REPO", "saber en qué repositorio se publica"),
+    ("BOARD_SECRET_KEY", "las sesiones (sin esto la app no arranca)", None),
+    ("CONTENT_TOKEN", "publicar en el sitio: el editor y la marca", None),
+    ("MAIL_HOST", "invitaciones y recuperar contraseña", None),
+    ("MAIL_USER", "autenticarse en el servidor de correo", None),
+    ("MAIL_PASSWORD", "autenticarse en el servidor de correo", None),
+    ("BOARD_OWNER", "sembrar al superadministrador en el primer arranque", None),
+    ("GITEA_URL", "hablar con el servidor de git", "GITEA_URL"),
+    ("CONTENT_REPO", "saber en qué repositorio se publica", "CONTENT_REPO"),
 )
 
 
@@ -150,12 +163,30 @@ def _disk() -> dict:
 
 
 def _settings() -> dict:
-    missing = [(name, why) for name, why in EXPECTED if not os.environ.get(name)]
-    if not missing:
-        return _ok("Todos los ajustes esperados están puestos")
-    return _warn(
-        f"{len(missing)} ajuste{'s' if len(missing) > 1 else ''} sin poner",
-        "; ".join(f"{name} — {why}" for name, why in missing))
+    """Which expected settings the container does not have, and whether it
+    matters — which are two different questions."""
+    missing, defaulted = [], []
+    for name, why, key in EXPECTED:
+        if os.environ.get(name):
+            continue
+        if key:
+            defaulted.append(f"{name} — usando «{current_app.config.get(key)}» "
+                             "(valor por defecto)")
+        else:
+            missing.append(f"{name} — {why}")
+
+    detail = "; ".join(missing + defaulted)
+    if missing:
+        return _warn(
+            f"{len(missing)} ajuste{'s' if len(missing) > 1 else ''} sin poner",
+            detail)
+    if defaulted:
+        # Green: nothing is broken. The values are still named, because "it
+        # works and here is the value it is working with" is the answer, and
+        # silence would leave somebody wondering which repository it publishes
+        # to.
+        return _ok("Todos los ajustes necesarios están puestos", detail)
+    return _ok("Todos los ajustes esperados están puestos")
 
 
 def _counts() -> dict:

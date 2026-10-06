@@ -1195,7 +1195,20 @@ Calendario and Gestión off the right edge with nothing to say they were there.
 
 ### 11.20 The three admin tools
 
-**Estado del sistema** (superadministrator). WordPress's Site Health, and it
+**Estado del sistema** (superadministrator). The backups panel reads
+`/backups`, **not** `/srv/board/backups`: this runs in a container, the host
+path exists nowhere inside it, and pointing at the host path made the page
+report "no hay carpeta de copias" twenty seconds after `deploy-board.sh` had
+written one. `infra/board/docker-compose.yml` mounts the folder **read-only** —
+a page that reports on backups must never be able to touch them.
+
+The settings panel separates *absent and nothing works* from *absent and
+defaulted*: `CONTENT_REPO` is unset on this server and publishing works, because
+`app.py` defaults it, so the panel names the value in force rather than warning.
+Merging those two facts is how a page full of orange teaches somebody to ignore
+orange.
+
+WordPress's Site Health, and it
 earns its place for a specific reason: every outage in this project has been a
 configuration fact invisible until somebody hit it. It asks the running system
 rather than a file — the content token is **exercised** against the repository
