@@ -309,9 +309,35 @@ textarea { resize: vertical; line-height: 1.55; }
   word-break: break-all;
 }
 
+/* A table on a phone becomes one card per row.
+ *
+ * It used to be `display: block; overflow-x: auto`, which is a sideways scroll
+ * inside the page: on Contenido, four columns at 390px put «Editar» and
+ * «Eliminar» off the right edge with nothing on screen saying they were there,
+ * and the timestamp column of the Registro broke across three lines. Stacking
+ * keeps every cell reachable and costs the markup nothing — the same table
+ * serves both widths.
+ *
+ * The columns that do not describe themselves (a bare date, a bare event date)
+ * carry a `data-label` in the template, drawn here by `attr()`. The ones that
+ * do — a title, a name, a sentence — are left alone, because a label on every
+ * line is a form, not a list. */
 @media (max-width: 640px) {
   .feed-head { flex-direction: column; align-items: flex-start; }
-  .table { display: block; overflow-x: auto; }
+
+  .table, .table tbody, .table tr, .table td { display: block; width: auto; }
+  .table thead { display: none; }
+  .table tr { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-light); }
+  .table tr:last-child { border-bottom: 0; }
+  .table td { padding: 0.15rem 0; border: 0; }
+  /* An empty cell would otherwise be a blank line in the middle of the card —
+     an article with no event date, a row with no actions. */
+  .table td:empty { display: none; }
+  .table td[data-label]::before {
+    content: attr(data-label) " ";
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
 }
 
 /* --- editor ----------------------------------------------------------- */
@@ -709,6 +735,12 @@ input[type="file"] {
 .cal__pad { background: transparent; border-color: transparent; }
 .cal__day--today { border-color: var(--brand); background: var(--brand-softer); }
 .cal__number { color: var(--subtle); font-weight: 700; }
+/* The column header carries the weekday at this width, so saying it again in
+   every one of thirty-one cells would be noise. The phone block below, where
+   there is no header row, is the only place it shows. */
+.cal__weekday { display: none; }
+.cal__events { display: block; }
+.cal__empty { margin: -0.5rem 0 1rem; text-align: center; }
 
 .cal__event {
 	display: block;
@@ -735,15 +767,44 @@ input[type="file"] {
 
 .event-facts p { margin: 0 0 0.25rem; }
 
-/* Seven columns of nothing is what a month grid is on a phone. */
+/* Seven columns of nothing is what a month grid is on a phone, so the month
+ * becomes a column of days — every day, in order, with its weekday beside it.
+ *
+ * Every rule here that decides `display` names the cell's own class, and that
+ * is the point rather than a style preference. The version that shipped opened
+ * with `.cal td { display: block }` — specificity (0,1,1) — which outranked
+ * `.cal__pad { display: none }` at (0,1,0), so the padding cells stayed on
+ * screen as 92px empty boxes; while `.cal__day:not(:has(.cal__event))` at
+ * (0,2,0) won, so every real day disappeared. A month with no events drew four
+ * blank boxes and nothing else, which is exactly what a phone showed. The two
+ * rules were adjacent and had opposite outcomes, which is why reading them
+ * looked right. */
 @media (max-width: 640px) {
-	.cal, .cal tbody, .cal tr, .cal td { display: block; width: auto; }
+	.cal, .cal tbody, .cal tr { display: block; width: auto; }
 	.cal thead { display: none; }
-	.cal__pad { display: none; }
-	.cal__day { height: auto; margin-bottom: 0.4rem; }
-	.cal__day:not(:has(.cal__event)) { display: none; }
-	.cal__number { display: inline-block; margin-right: 0.5rem; }
-	.cal__add { display: inline; }
+	.cal td.cal__pad { display: none; }
+	.cal td.cal__day {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		height: auto;
+		min-height: 44px;
+		margin-bottom: 0.3rem;
+	}
+	/* A week still reads as a week. */
+	.cal tr + tr { margin-top: 0.5rem; }
+	/* Fixed, so the dates line up down the page rather than stepping in and
+	   out as the weekday names change length. */
+	.cal__date { flex: 0 0 4.2rem; }
+	/* `display` and not only the colour: the base rule hides this, because up
+	   there the column header says the weekday. Leaving it out left every row
+	   reading as a bare number — the same shape of mistake as the pads, caught
+	   the same way, by looking at the rendered page. */
+	.cal__weekday { display: inline; color: var(--subtle); }
+	.cal__events { flex: 1; min-width: 0; }
+	/* No hover on a phone, so the + is simply there; `float` would take it out
+	   of the flex row it is now part of. */
+	.cal__add { display: inline-flex; float: none; }
 }
 
 /* --- Gestión → Marca ---------------------------------------------------- */
@@ -879,3 +940,64 @@ input[type="file"] {
 .tag--ok   { background: #e4f2e4; color: #1b5e20; }
 .tag--warn { background: var(--brand-soft); color: var(--brand-dark); }
 .tag--bad  { background: #f6dcdc; color: var(--danger); }
+
+/* --- a thumb is not a mouse --------------------------------------------- */
+/*
+ * A coarse pointer is a touchscreen, not a narrow window — so this is keyed on
+ * the pointer rather than on width, and a phone held in landscape gets it too.
+ *
+ * Everything in here is padding. No type size, colour or spacing changes, so
+ * the desktop is untouched and the pages look identical; only the hit boxes
+ * grow. The numbers come from measuring the rendered pages at 390px: the
+ * navigation links were 37x17, the calendar's + was 7x15, and «Editar»,
+ * «Eliminar» and «Vista previa» were 16px tall.
+ *
+ * `.linkish` is deliberately not raised everywhere: it is used mid-sentence in
+ * several places, where a 44px line box overlaps the lines above and below it.
+ * It is raised where it is a control rather than a word — which covers every
+ * one of the measured cases.
+ */
+@media (pointer: coarse) {
+	.page-nav { gap: 0.1rem 1.5rem; }
+	/* Every number here was measured rather than guessed: the padding is
+	   whatever that control's own line box needs to reach 44px, which is the
+	   part of a fingertip a phone can actually locate. 0.7rem on the
+	   navigation came out at 40, so it is 0.85rem. */
+	.page-nav a { display: inline-block; padding: 0.85rem 0; }
+
+	.account__menu a, .account__menu button { padding: 0.8rem 0.5rem; }
+
+	.actions .linkish,
+	.feed-head .linkish,
+	.cal-bar .linkish,
+	.cal-bar__today a,
+	.pager a {
+		display: inline-block;
+		padding: 0.9rem 0;
+	}
+	.tab { padding: 0.9rem 1.1rem; }
+
+	.md-bar__button { min-height: 44px; min-width: 44px; }
+	.reaction__button { padding: 0.65rem 0.9rem; }
+
+	/* The buttons and the two links that live in the chrome: the brand at the
+	   top left, which is how you get back to the public site, and the footer's
+	   own link to it. Both were a line of text with no padding at all. */
+	.btn { padding-top: 0.85rem; padding-bottom: 0.85rem; }
+	.site-bar__brand { display: inline-block; padding: 0.7rem 0; }
+	.site-foot a { display: inline-block; padding: 0.9rem 0; }
+
+	/* Every fold in the members area — Gestionar on a member, Bloquear, the
+	   typeface warning, Avanzado on Marca. A <summary> is the control, and at
+	   15px it is a control you miss and then press something else. */
+	summary { padding: 0.95rem 0; }
+	.account__name { padding: 0.9rem 0; }
+
+	.cal__add {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 44px;
+		min-height: 44px;
+	}
+}

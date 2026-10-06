@@ -1193,6 +1193,36 @@ In the members area the navigation **wraps** on a phone rather than scrolling:
 six sections over two lines shows all six, where a swipe strip would have left
 Calendario and Gestión off the right edge with nothing to say they were there.
 
+**Both calendars become a column of days below 640px** — every day of the month,
+in order, with its weekday beside it, the days carrying something standing out,
+and a line saying so when the month is empty. The private one
+(`/comunidad/calendario`, a `<table>`) and the public agenda (`/page/agenda/`,
+an `<ol>`) are deliberately the same shape, because the private one lists the
+public events and a member moves between the two.
+
+Both phone blocks are written so that **every rule deciding `display` names the
+cell's own class**, and `apps/board/tests/test_templates.py` fails if one does
+not. That is the shape of the bug it replaces: the calendar's block opened with
+`.cal td { display: block }` — specificity (0,1,1) — which outranked
+`.cal__pad { display: none }` at (0,1,0), while `.cal__day:not(:has(…))` at
+(0,2,0) won and hid every real day. A month with no events therefore drew four
+empty boxes and nothing else, with correct HTML throughout. The guard computes
+the specificity and runs the cascade for a padding cell, a day cell and the
+weekday label, which is as close as pytest gets to looking at a page.
+
+**Tap targets are raised under `@media (pointer: coarse)`** in both stylesheets,
+and both blocks are **padding only** — no type size, colour or spacing changes,
+so the desktop is untouched. The numbers were measured in a headless browser
+rather than guessed: the members-area navigation links were 37×17, the
+calendar's `+` was 7×15, the footer links 16px tall. A link inside a sentence is
+deliberately left alone; a 44px line box mid-paragraph overlaps the lines around
+it, which is why WCAG exempts one.
+
+The theme's coarse block sits at the **end** of `main.css` on purpose:
+`.site-bar__cta` takes its phone padding inside the `max-width: 768px` block, a
+media query changes nothing about specificity, and a coarse rule written before
+it loses silently.
+
 ### 11.20 The three admin tools
 
 **Estado del sistema** (superadministrator). The backups panel reads

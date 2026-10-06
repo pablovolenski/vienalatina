@@ -30,11 +30,13 @@
 				<a href="{{ url_for('content.edit', collection=collection, name=item.name) }}">{{ item.title }}</a>
 				<div class="muted small mono">{{ item.name }}</div>
 			</td>
-			{% if meta.dated %}<td>{{ item.date }}</td>{% endif %}
+			{# data-label is drawn by board.css under 640px, where the header row
+			   is hidden and a bare date in a stacked card says nothing. #}
+			{% if meta.dated %}<td data-label="Fecha">{{ item.date }}</td>{% endif %}
 			{# The column that used to hold the categories. An event date is the
 			   one thing left that changes what a post is, and it is what a
 			   moderator scanning this list is looking for. #}
-			{% if meta.dated %}<td>{{ item.event_date }}</td>{% endif %}
+			{% if meta.dated %}<td data-label="Evento">{{ item.event_date }}</td>{% endif %}
 			{# The flex row goes INSIDE the cell, never on it. `.actions` is
 			   display:flex, and a <td> told to be a flex container stops being a
 			   table cell: it leaves the row's layout and draws its bottom border

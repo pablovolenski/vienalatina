@@ -25,6 +25,13 @@
 	<a href="{{ url_for('events.month', mes=this_month) }}">Ir a este mes</a>
 </p>
 
+{# Said above the grid rather than below it: on a phone the month is a column
+   of days, and a line under thirty-one empty rows is a line nobody reads. The
+   public agenda says the same thing in its own words (agenda.html). #}
+{% if not by_day %}
+<p class="muted cal__empty">No hay nada en {{ label }}.</p>
+{% endif %}
+
 <table class="cal">
 	<thead>
 		<tr>{% for day in weekdays %}<th scope="col">{{ day }}</th>{% endfor %}</tr>
@@ -39,14 +46,26 @@
 			<td class="cal__pad"></td>
 			{% else %}
 			<td class="cal__day {{ 'cal__day--today' if day == today }}">
-				<span class="cal__number">{{ day }}</span>
+				{# The weekday travels with the number because on a phone the
+				   header row is hidden — the grid is a column there, and a day
+				   without its weekday is just an integer. `loop.index0` of this
+				   loop *is* the weekday, since each week is seven cells
+				   starting on Monday, so nothing has to be computed in Python.
+				   Above 640px .cal__weekday is display:none and the column
+				   header says it instead. #}
+				<span class="cal__date">
+					<span class="cal__weekday">{{ weekdays[loop.index0] }}</span>
+					<span class="cal__number">{{ day }}</span>
+				</span>
+				<span class="cal__events">
 				{% for item in by_day.get(day, []) %}
-				<a class="cal__event {{ 'cal__event--public' if item.public }}"
-				   href="{{ item.url }}">
-					{% if item.starts_at %}<time>{{ item.starts_at }}</time> {% endif %}{{ item.title }}
-					{% if item.public %}<span class="tag tag--quiet">público</span>{% endif %}
-				</a>
+					<a class="cal__event {{ 'cal__event--public' if item.public }}"
+					   href="{{ item.url }}">
+						{% if item.starts_at %}<time>{{ item.starts_at }}</time> {% endif %}{{ item.title }}
+						{% if item.public %}<span class="tag tag--quiet">público</span>{% endif %}
+					</a>
 				{% endfor %}
+				</span>
 				{% if may_edit %}
 				{# The day is carried into the form, so adding something to the
 				   24th starts with the 24th already filled in. #}

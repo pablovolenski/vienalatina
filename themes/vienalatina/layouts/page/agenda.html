@@ -80,13 +80,23 @@
 			{{ range $day := seq 1 $days }}
 			{{ $date := printf "%s-%02d" $key $day }}
 			{{ $onThisDay := where $events "Params.event_date" $date }}
+			{{/* The column a day falls in is its weekday, Monday first — the
+			     same arithmetic the padding above is made of. On a phone the
+			     grid becomes one day per row, where a column position says
+			     nothing and the name has to be written out. */}}
+			{{ $weekday := mod (add (sub $day 1) $lead) 7 }}
 			<li class="agenda__day {{ if $onThisDay }}agenda__day--busy{{ end }}">
-				<span class="agenda__number">{{ $day }}</span>
+				<span class="agenda__date">
+					<span class="agenda__weekday">{{ partial "weekday-name.html" (dict "weekday" $weekday "lang" $lang) }}</span>
+					<span class="agenda__number">{{ $day }}</span>
+				</span>
+				<span class="agenda__events">
 				{{ range $onThisDay }}
-				<a class="agenda__event" href="{{ .RelPermalink }}">
-					{{ with .Params.event_time }}<time>{{ . }}</time> {{ end }}{{ .Title }}
-				</a>
+					<a class="agenda__event" href="{{ .RelPermalink }}">
+						{{ with .Params.event_time }}<time>{{ . }}</time> {{ end }}{{ .Title }}
+					</a>
 				{{ end }}
+				</span>
 			</li>
 			{{ end }}
 		</ol>

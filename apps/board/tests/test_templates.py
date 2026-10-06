@@ -211,8 +211,8 @@ def test_the_form_rule_is_an_exclusion_and_not_a_list_of_accepted_types():
 
 # --- the theme's own chrome -----------------------------------------------
 #
-# These two read the Hugo theme rather than the members area, which no other
-# test here does. They are here because the bug they guard against is this
+# These read the Hugo theme rather than the members area, which no other test
+# here does. They are here because the bug they guard against is this
 # suite's recurring shape — CSS that expects markup nobody wrote — and because
 # pytest is the only thing in this repository that runs on every commit.
 
@@ -252,3 +252,139 @@ def test_the_way_into_the_members_area_is_in_the_bar_itself():
     header = (THEME / "layouts" / "partials" / "header.html").read_text(encoding="utf-8")
     bar = header.split('<nav class="site-bar__pages"')[0]
     assert "site-bar__cta" in bar and "/comunidad/" in bar
+
+
+# --- the calendar on a phone ----------------------------------------------
+#
+# A stylesheet guard, like the form rule above, and for the same reason: the
+# bug it is about produced correct HTML and a blank page, so no request-level
+# test in this suite could ever have seen it.
+
+CALENDAR_PHONE_BLOCK = re.compile(
+    r"@media \(max-width: 640px\) \{(?P<body>(?:[^{}]|\{[^{}]*\})*?\.cal(?:[^{}]|\{[^{}]*\})*?)\n\}",
+    re.DOTALL)
+RULE = re.compile(r"(?P<selectors>[^{}]+)\{(?P<body>[^{}]*)\}")
+
+
+def _specificity(selector):
+    """(ids, classes, elements) for one selector, near enough for this guard.
+
+    `:not()` and `:has()` contribute their own contents, which is how the
+    cascade actually counts them.
+    """
+    inner = re.sub(r":(?:not|has|is)\(", " ", selector).replace(")", " ")
+    ids = len(re.findall(r"#[\w-]+", inner))
+    classes = (len(re.findall(r"\.[\w-]+", inner))
+               + len(re.findall(r"\[[^\]]+\]", inner))
+               + len(re.findall(r"(?<!:):[a-z-]+", inner)))
+    elements = len(re.findall(r"(?:^|[\s>+~])([a-z]+)(?![\w-]*\()", inner))
+    return ids, classes, elements
+
+
+def _winning_display(rules, ending_in):
+    """What `display` an element whose last compound is `ending_in` ends up with.
+
+    Only the rules whose own last compound could match it are considered, which
+    is all this guard needs: the question is which of two neighbouring rules
+    wins, not whether the ancestors line up.
+    """
+    winner = None
+    for order, (selector, body) in enumerate(rules):
+        # The pseudo-classes come off before comparing but stay in the
+        # specificity: `.cal__day:not(:has(.cal__event))` is a rule about a day
+        # cell, and it is the one that hid every day on a phone.
+        last = re.sub(r":[\w-]+(\([^()]*(?:\([^()]*\))?[^()]*\))?", "",
+                      selector.strip().split()[-1])
+        if last not in ending_in:
+            continue
+        display = re.search(r"display\s*:\s*([\w-]+)", body)
+        if not display:
+            continue
+        key = (_specificity(selector), order)
+        if winner is None or key > winner[0]:
+            winner = (key, selector.strip(), display.group(1))
+    return winner
+
+
+@pytest.fixture(scope="module")
+def calendar_phone_rules():
+    css = (Path(__file__).resolve().parents[1] / "static" / "board.css").read_text(encoding="utf-8")
+    block = CALENDAR_PHONE_BLOCK.search(css)
+    assert block, "board.css has no phone block for the calendar"
+    body = re.sub(r"/\*.*?\*/", "", block.group("body"), flags=re.DOTALL)
+    rules = []
+    for rule in RULE.finditer(body):
+        for selector in rule.group("selectors").split(","):
+            if selector.strip():
+                rules.append((selector.strip(), rule.group("body")))
+    return rules
+
+
+def test_the_padding_cells_are_actually_hidden_on_a_phone(calendar_phone_rules):
+    """The one that shipped: `.cal td { display: block }` is (0,1,1) and
+    `.cal__pad { display: none }` is (0,1,0), so the padding cells stayed as
+    92px empty boxes — while `.cal__day:not(:has(.cal__event))` at (0,2,0) won
+    and hid every real day. A month with no events drew four blank boxes and
+    nothing else, and the HTML was correct throughout.
+    """
+    winner = _winning_display(calendar_phone_rules, {"td.cal__pad", ".cal__pad", "td"})
+    assert winner, "nothing in the phone block decides what a padding cell does"
+    assert winner[2] == "none", (
+        f"a padding cell ends up `display: {winner[2]}` from `{winner[1]}`. "
+        "A rule naming td outranks one naming only the class, so every cell "
+        "belonging to the neighbouring month is drawn as an empty box."
+    )
+
+
+def test_every_day_of_the_month_is_drawn_on_a_phone(calendar_phone_rules):
+    """The month is a column of days there, not only the days with something in
+    them: an empty day is how you see the month is empty, and how an admin taps
+    the 14th to put something on it."""
+    winner = _winning_display(calendar_phone_rules, {"td.cal__day", ".cal__day"})
+    assert winner and winner[2] != "none", (
+        f"a day cell ends up hidden on a phone (`{winner[1] if winner else '—'}`)."
+    )
+
+
+def test_the_weekday_shows_on_a_phone(calendar_phone_rules):
+    """The header row is hidden at that width, and the base stylesheet hides
+    `.cal__weekday` because up there the header says it. If the phone block
+    only restyles it without turning it back on, every row of the month reads
+    as a bare number — which is how it was first rendered."""
+    winner = _winning_display(calendar_phone_rules, {".cal__weekday", "span.cal__weekday"})
+    assert winner and winner[2] != "none", (
+        "the phone block never gives .cal__weekday a display of its own, so the "
+        "base `display: none` stands and the days lose their weekday."
+    )
+
+
+AGENDA_PHONE_BLOCK = re.compile(
+    r"@media \(max-width: 640px\) \{(?P<body>(?:[^{}]|\{[^{}]*\})*?\.agenda__(?:[^{}]|\{[^{}]*\})*?)\n\}",
+    re.DOTALL)
+
+
+def test_the_public_agenda_draws_every_day_on_a_phone_too():
+    """The same rule as the members area's calendar, in the other stylesheet.
+
+    The two are one feature seen from two sides — the private calendar lists
+    the public events — so a member who moves between them should not meet two
+    designs. The agenda used to show only the days with something in them,
+    which made an empty month a heading and one sentence.
+    """
+    css = (THEME / "assets" / "css" / "main.css").read_text(encoding="utf-8")
+    block = AGENDA_PHONE_BLOCK.search(css)
+    assert block, "main.css has no phone block for the agenda"
+    body = re.sub(r"/\*.*?\*/", "", block.group("body"), flags=re.DOTALL)
+    rules = [(selector.strip(), rule.group("body"))
+             for rule in RULE.finditer(body)
+             for selector in rule.group("selectors").split(",") if selector.strip()]
+
+    day = _winning_display(rules, {".agenda__day", "li.agenda__day"})
+    assert day and day[2] != "none", (
+        f"a day of the month is hidden on a phone (`{day[1] if day else '—'}`)")
+    pad = _winning_display(rules, {".agenda__pad", "li.agenda__pad"})
+    assert pad and pad[2] == "none", "the neighbouring months' padding cells are drawn"
+    weekday = _winning_display(rules, {".agenda__weekday", "span.agenda__weekday"})
+    assert weekday and weekday[2] != "none", (
+        "the phone block never shows .agenda__weekday, so every row of the "
+        "month is a bare number — there is no column header at that width")

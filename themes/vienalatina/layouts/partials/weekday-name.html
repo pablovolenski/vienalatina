@@ -1,0 +1,15 @@
+{{- /* The weekday, abbreviated, in the page's own language.
+
+      Same arrangement as month-name.html and for the same reason: this theme
+      ships no i18n files, and three languages of seven short words is a table
+      rather than a dependency.
+
+      Monday is 0, as in the agenda's own column order — Austria and most of
+      Latin America start the week there. */ -}}
+{{- $names := dict
+	"es" (slice "lun" "mar" "mié" "jue" "vie" "sáb" "dom")
+	"de" (slice "Mo" "Di" "Mi" "Do" "Fr" "Sa" "So")
+	"pt-br" (slice "seg" "ter" "qua" "qui" "sex" "sáb" "dom")
+-}}
+{{- $table := index $names .lang | default (index $names "es") -}}
+{{- index $table (int .weekday) -}}

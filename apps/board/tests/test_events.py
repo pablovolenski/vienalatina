@@ -9,6 +9,7 @@ easy to get subtly wrong and hard to notice.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import pytest
@@ -115,6 +116,52 @@ def test_february_in_a_leap_year_has_twenty_nine_days(client, superadmin_id, sig
     page = client.get("/comunidad/calendario?mes=2028-02").get_data(as_text=True)
     assert ">29<" in page
     assert ">30<" not in page
+
+
+def test_a_month_with_nothing_in_it_says_so_and_still_draws_its_days(
+        client, superadmin_id, sign_in, quiet_gitea):
+    """On a phone the month is a column of days rather than a grid, so an empty
+    month is thirty-one empty rows — which is how you see that it is empty. The
+    line above them says it in words, as the public agenda does.
+
+    The HTML has always been right here; what shipped was a stylesheet that hid
+    every day and kept the cells belonging to the neighbouring months, so the
+    page was six hundred pixels of nothing. The rule that catches that one is in
+    test_templates.py, where it can be seen.
+    """
+    sign_in(superadmin_id)
+    page = client.get("/comunidad/calendario?mes=2026-12").get_data(as_text=True)
+
+    assert "No hay nada en diciembre 2026." in page
+    assert page.count('class="cal__day') == 31
+
+
+def test_a_month_with_something_in_it_does_not_claim_to_be_empty(
+        client, an_event, superadmin_id, sign_in):
+    an_event("Asamblea", "2026-10-24")
+    sign_in(superadmin_id)
+
+    page = client.get("/comunidad/calendario?mes=2026-10").get_data(as_text=True)
+
+    assert "No hay nada" not in page
+    assert "Asamblea" in page
+
+
+def test_every_day_carries_its_weekday_for_the_phone(
+        client, superadmin_id, sign_in, quiet_gitea):
+    """The column header is hidden at phone width, so without this a day is a
+    bare number in a list. It comes from the loop position rather than from a
+    date calculation, which is why this checks the pairing and not the markup:
+    an off-by-one would put Sunday's name on Monday's row."""
+    sign_in(superadmin_id)
+    page = client.get("/comunidad/calendario?mes=2026-10").get_data(as_text=True)
+
+    assert page.count('class="cal__weekday"') == 31
+    # 1 October 2026 is a Thursday, and the grid starts on Monday.
+    assert re.search(r'cal__weekday">jue</span>\s*<span class="cal__number">1</span>',
+                     page)
+    assert re.search(r'cal__weekday">dom</span>\s*<span class="cal__number">4</span>',
+                     page)
 
 
 # --- what the git server does to this ------------------------------------

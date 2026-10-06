@@ -3805,10 +3805,18 @@ a.notif-card__message:hover {
   .cal-event-item__title { font-size: 1.02rem; }
 }
 
-/* Site bar: prevent overflow on very narrow screens */
+/* Site bar: prevent overflow on very narrow screens.
+ *
+ * The ☰ ran off the right edge of a 320px screen on the Portuguese home page
+ * and nowhere else, because «Comunidade» is three letters longer than
+ * «Comunidad» and the bar had no room left to give. A layout that depends on
+ * how long a word is in one of three languages breaks in the language nobody
+ * tests in, so the gap and the button both give way here. */
 @media (max-width: 360px) {
-  .site-bar__inner { padding: 8px 12px; }
+  .site-bar__inner { padding: 8px 12px; gap: 8px; }
   .site-bar__btn { padding: 7px 12px; font-size: 0.82rem; }
+  .site-bar__brand-text { font-size: 1rem; min-width: 0; }
+  .site-bar__cta { padding-left: 10px; padding-right: 10px; font-size: 0.75rem; }
 }
 
 /* --- preguntas frecuentes ---------------------------------------------- */
@@ -4018,6 +4026,11 @@ a.notif-card__message:hover {
 }
 .agenda__pad { background: transparent; border-color: transparent; }
 .agenda__number { color: var(--subtle, #9a7870); font-weight: 700; }
+/* The column a day sits in is its weekday here, so naming it would be saying
+   the same thing twice. The phone block below, where the month is a column of
+   days and a column position means nothing, is the only place it shows. */
+.agenda__weekday { display: none; }
+.agenda__events { display: block; }
 .agenda__day--busy { background: var(--brand-softer, #fdf1ed); border-color: var(--brand-soft, #fbe2db); }
 
 .agenda__event {
@@ -4032,14 +4045,26 @@ a.notif-card__message:hover {
 
 .agenda__empty { text-align: center; margin: -12px 0 24px; }
 
-/* A seven-column grid on a phone is seven columns of nothing. Below 640px the
-   month becomes a list of the days that have something in them. */
+/* A seven-column grid on a phone is seven columns of nothing, so below 640px
+   the month becomes a column: every day, in order, with its weekday beside it
+   and the days that have something in them standing out.
+   It used to show only the busy days, which made an empty month a heading and
+   a sentence — and this is the shape the members area's calendar now has too,
+   because a member who moves between the two should not meet two designs. */
 @media (max-width: 640px) {
   .agenda__grid { display: block; }
   .agenda__pad { display: none; }
-  .agenda__day { display: none; min-height: 0; margin-bottom: 6px; }
-  .agenda__day--busy { display: block; }
-  .agenda__number { display: inline-block; margin-right: 8px; }
+  .agenda__day {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-height: 44px;
+    margin-bottom: 6px;
+  }
+  .agenda__date { flex: 0 0 4.2rem; }     /* the dates line up down the page */
+  .agenda__weekday { display: inline; }
+  .agenda__events { flex: 1; min-width: 0; }
+  .agenda__number { display: inline-block; margin-left: 4px; }
 }
 
 /* The association's accounts elsewhere, in the footer. Set in
@@ -4051,4 +4076,29 @@ a.notif-card__message:hover {
   gap: 14px;
   margin-bottom: 10px;
   font-size: 0.85rem;
+}
+
+/* --- a thumb is not a mouse ---------------------------------------------
+ *
+ * Controls raised to 44px where the pointer is coarse — a touchscreen, not a
+ * narrow window, so a phone in landscape gets it too. Padding only: no type
+ * size, colour or spacing changes, and the desktop is untouched.
+ *
+ * At the end of the file on purpose. `.site-bar__cta` is given its phone
+ * padding inside the max-width: 768px block further up, and a media query
+ * changes nothing about specificity — so a coarse rule written before it
+ * loses, silently, and the button stays 33px tall. Every number here is what
+ * that control's own line box needs, measured in a browser.
+ *
+ * Links inside a paragraph are left alone deliberately. A 44px line box
+ * mid-sentence overlaps the lines around it, which is why WCAG exempts a link
+ * that is part of a line of text.
+ */
+@media (pointer: coarse) {
+  .site-bar__cta { padding-top: 15px; padding-bottom: 15px; }
+  .site-bar__hamburger { min-width: 44px; min-height: 44px; }
+  .page-nav a { display: inline-block; padding: 14px 0; }
+  .site-foot a { display: inline-block; padding: 15px 0; }
+  .back-link { display: inline-block; padding: 14px 0; }
+  .agenda__move { min-width: 44px; min-height: 44px; }
 }
