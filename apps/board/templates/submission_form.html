@@ -48,8 +48,13 @@
 	</fieldset>
 
 	<label for="body">Texto</label>
-	<textarea id="body" data-markdown name="body" rows="16" required
+	<textarea id="body" data-markdown data-rich="full" name="body" rows="16" required
 	          placeholder="Se puede usar Markdown: **negrita**, ## títulos, listas, enlaces.">{{ fields.body if fields else '' }}</textarea>
+	{#- The stored markdown, rendered by the server for the editor to adopt.
+	    There is no markdown parser in the browser: this is how the box can
+	    show the formatting without a second opinion about what somebody's
+	    text means. Ignored entirely when scripting is off. -#}
+	<template data-rich-html="body">{{ to_html(fields.body if fields else '', breaks=False) }}</template>
 
 	<label for="picture">Imagen <span class="muted small">(opcional)</span></label>
 	<input id="picture" name="picture" type="file" accept="image/*">

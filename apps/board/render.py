@@ -20,16 +20,36 @@ from __future__ import annotations
 from markdown_it import MarkdownIt
 from markupsafe import Markup
 
-_md = (
-    MarkdownIt("commonmark", {"html": False, "linkify": True, "breaks": True})
-    .enable("linkify")
-    .enable("table")
-    .enable("strikethrough")
-)
+def _renderer(breaks: bool) -> MarkdownIt:
+    return (
+        MarkdownIt("commonmark", {"html": False, "linkify": True, "breaks": breaks})
+        .enable("linkify")
+        .enable("table")
+        .enable("strikethrough")
+    )
 
 
-def to_html(text: str) -> Markup:
-    return Markup(_md.render(text or ""))
+# Two of them, because a line break means two different things depending on
+# where the text is going.
+#
+# On the wall, in a private message, in a calendar entry — text this app both
+# stores and renders — people write the way they write to each other, and a
+# newline they typed is a newline they meant. `breaks=True`.
+#
+# A public post is a file in the repository rendered by Hugo, whose Goldmark
+# has hardWraps off; and the files are hard-wrapped at about 78 characters,
+# by the pipeline and by anything that has ever edited them. Rendering those
+# with breaks on puts a line break in the middle of every sentence, so the
+# editor would show something the site will never produce. `breaks=False`
+# there, and a break somebody actually wants is written the way CommonMark
+# writes one — two spaces at the end of the line — which both renderers honour.
+_md = _renderer(True)
+_md_site = _renderer(False)
+
+
+def to_html(text: str, breaks: bool = True) -> Markup:
+    """Markdown as HTML. `breaks=False` for anything bound for the public site."""
+    return Markup((_md if breaks else _md_site).render(text or ""))
 
 
 def excerpt(text: str, limit: int = 220) -> str:

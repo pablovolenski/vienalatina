@@ -120,6 +120,18 @@ sitemap:
 markup:
   goldmark:
     renderer:
-      unsafe: true   # WP-migrated content contains inline HTML
+      # Raw HTML in a post is not rendered as HTML. It was on, for content
+      # migrated from WordPress that carried inline markup; that content is
+      # gone — no file under content/ holds a single tag — and leaving it on
+      # had a cost that grew with the members area: a proposal written by a
+      # member is rendered here with `html=False`, so a moderator reviewing
+      # `<img src=x onerror=…>` sees the characters and approves them, and
+      # this flag is what would have run them on the live site.
+      #
+      # hardWraps is deliberately left off: the files are hard-wrapped at
+      # about 78 characters, so turning it on would break every sentence in
+      # half. apps/board/render.py says how the two renderers are kept
+      # honest about that.
+      unsafe: false
 
 enableRobotsTXT: false   # robots.txt is a static file in static/

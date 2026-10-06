@@ -8,6 +8,11 @@
 
 	<label for="body">Mensaje</label>
 	<textarea id="body" data-markdown name="body" rows="10" required>{{ comment.body_md }}</textarea>
+	{#- The stored markdown, rendered by the server for the editor to adopt.
+	    There is no markdown parser in the browser: this is how the box can
+	    show the formatting without a second opinion about what somebody's
+	    text means. Ignored entirely when scripting is off. -#}
+	<template data-rich-html="body">{{ to_html(comment.body_md) }}</template>
 
 	<div class="actions">
 		<button class="btn" type="submit">Guardar</button>

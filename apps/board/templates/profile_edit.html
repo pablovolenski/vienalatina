@@ -21,6 +21,11 @@
 	<label for="bio">Sobre ti</label>
 	<textarea id="bio" data-markdown name="bio" rows="8"
 	          placeholder="Se puede usar Markdown.">{{ g.member.bio or '' }}</textarea>
+	{#- The stored markdown, rendered by the server for the editor to adopt.
+	    There is no markdown parser in the browser: this is how the box can
+	    show the formatting without a second opinion about what somebody's
+	    text means. Ignored entirely when scripting is off. -#}
+	<template data-rich-html="bio">{{ to_html(g.member.bio or '') }}</template>
 
 	<label for="links">Enlaces</label>
 	<textarea id="links" name="links" rows="5"

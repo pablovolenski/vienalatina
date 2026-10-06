@@ -631,7 +631,7 @@ def preview(collection: str):
                            today=date_type.today().isoformat(),
                            parents=possible_parents(collection,
                                                     item["name"] if item else ""),
-                           preview_html=to_html(body))
+                           preview_html=to_html(body, breaks=False))
 
 
 def public_events() -> list[dict]:

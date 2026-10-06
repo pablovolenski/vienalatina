@@ -114,8 +114,13 @@
 	{% endif %}
 
 	<label for="body">Cuerpo</label>
-	<textarea id="body" data-markdown name="body" rows="18" required
+	<textarea id="body" data-markdown data-rich="full" name="body" rows="18" required
 	          placeholder="Markdown: **negrita**, ## títulos, listas, [enlaces](https://…).">{{ body }}</textarea>
+	{#- The stored markdown, rendered by the server for the editor to adopt.
+	    There is no markdown parser in the browser: this is how the box can
+	    show the formatting without a second opinion about what somebody's
+	    text means. Ignored entirely when scripting is off. -#}
+	<template data-rich-html="body">{{ to_html(body, breaks=False) }}</template>
 
 	<label for="faq">Preguntas frecuentes <span class="muted small">(opcional)</span></label>
 	<textarea id="faq" name="faq" rows="5"

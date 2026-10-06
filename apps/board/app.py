@@ -14,6 +14,7 @@ from flask import Flask, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .db import TOMBSTONE_LOGIN, close_db, init_db
+from .render import to_html
 from .security import check_csrf, csrf_token, is_at_least
 
 URL_PREFIX = "/comunidad"
@@ -132,6 +133,10 @@ def create_app(overrides: dict | None = None) -> Flask:
     # from the superadministrator's own navigation — the exact failure
     # `is_at_least` was introduced to end on the Python side.
     app.jinja_env.globals["is_at_least"] = is_at_least
+    # For the writing boxes: each form renders the stored markdown into a
+    # <template> that the editor adopts, so the browser never has to parse
+    # markdown and cannot disagree with the server about what text means.
+    app.jinja_env.globals["to_html"] = to_html
 
     @app.context_processor
     def _year():

@@ -33,8 +33,13 @@
 	<input id="location" name="location" maxlength="200" value="{{ (f.location if f else '') or '' }}">
 
 	<label for="body">Detalles <span class="muted small">(opcional)</span></label>
-	<textarea id="body" name="body" rows="8" data-markdown
+	<textarea id="body" name="body" rows="8" data-markdown data-rich="full"
 	          placeholder="Qué llevar, cómo llegar, a quién avisar.">{{ (f.body_md if event and not fields else (f.body if f else '')) or '' }}</textarea>
+	{#- The stored markdown, rendered by the server for the editor to adopt.
+	    There is no markdown parser in the browser: this is how the box can
+	    show the formatting without a second opinion about what somebody's
+	    text means. Ignored entirely when scripting is off. -#}
+	<template data-rich-html="body">{{ to_html((f.body_md if event and not fields else (f.body if f else '')) or '') }}</template>
 
 	<label for="picture">Imagen <span class="muted small">(opcional)</span></label>
 	<input id="picture" name="picture" type="file" accept="image/*">
