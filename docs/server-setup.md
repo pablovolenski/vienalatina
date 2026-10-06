@@ -39,6 +39,51 @@ Check propagation (repeat until it prints the server IP):
 local$ dig +short git.vienalatina.com
 ```
 
+### 1.1 A second domain that leads here
+
+`vielac.at` is the second name, and it redirects: everything that arrives goes
+to the same path on vienalatina.com. Two A records in that domain's **zone
+editor**, both at the server:
+
+| Name | Type | Value | TTL |
+|---|---|---|---|
+| `@` | A | `<SERVER-IP>` | 300 |
+| `www` | A | `<SERVER-IP>` | 300 |
+
+**Not the nameserver page.** On Hetzner's Konsole H those fields hand the whole
+zone to another provider's DNS, which is a different thing entirely and turns
+off the zone editor you want. *Standard Nameserver eintragen*, save, then edit
+the zone.
+
+Then the block in `infra/caddy/Caddyfile`, which carries both spellings and
+answers with a **301** — a permanent redirect is what folds the two names into
+one site for a search engine rather than two copies of it, and `{uri}` keeps
+the path so a shared link still lands where it was pointing.
+
+**Order matters, and it is the same order as the cutover above**: the A records
+go in first, because Caddy asks Let's Encrypt for the certificate the first time
+the name resolves to this server. A reload before DNS has propagated is not
+harmful — nothing reaches the block — but it does not get a certificate either,
+so reload again afterwards.
+
+```sh
+sudo cp ~/vienalatina/infra/caddy/Caddyfile /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+`validate` before every `reload`, without exception: it is the one command
+between a typo in that file and vienalatina.com going down with it.
+
+```sh
+curl -sI https://vielac.at/ | head -3                           # 301 → vienalatina.com
+curl -sI https://www.vielac.at/page/agenda/ | grep -i location  # the path survives
+curl -sI https://vienalatina.com/ | head -1                     # 200, unchanged
+```
+
+The third is the one that matters. A Caddyfile edit that breaks the site it was
+meant to leave alone is the failure this ordering exists to prevent.
+
 ## 2. First login + basic hardening
 
 ```sh

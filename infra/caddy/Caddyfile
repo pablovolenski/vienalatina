@@ -21,6 +21,22 @@ www.vienalatina.com {
 	redir https://vienalatina.com{uri} 301
 }
 
+# The second name, which leads here rather than somewhere else.
+#
+# Both spellings in one block, and 301 rather than 302: a permanent redirect is
+# what makes a search engine fold the two names into one site instead of
+# indexing them as duplicates of each other, and what makes a browser stop
+# asking after the first visit. `{uri}` carries the path, so a link somebody
+# shared to vielac.at/page/agenda/ lands on the agenda rather than on the home
+# page.
+#
+# Caddy asks Let's Encrypt for this certificate the first time the name
+# resolves to this server, so the A records go in before this file is reloaded.
+# Until they do, the block is harmless: nothing reaches it.
+vielac.at, www.vielac.at {
+	redir https://vienalatina.com{uri} 301
+}
+
 vienalatina.com {
 	root * /var/www/vienalatina.com
 	encode zstd gzip
