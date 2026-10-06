@@ -14,8 +14,13 @@
 {% block title %}{{ member.display_name }}{% endblock %}
 
 {% set me = g.member %}
-{% set is_owner = me.role == 'owner' %}
-{% set is_admin = me.role in ('owner', 'admin') %}
+{# The template mirrors the predicates in members.py rather than restating
+   them: `can_assign` is the same list the handler will accept, so the picker
+   cannot offer a role that comes back 403. #}
+{% set is_super = me.role == 'superadmin' %}
+{% set is_chair = me.role in ('superadmin', 'owner') %}
+{% set is_admin = me.role in ('superadmin', 'owner', 'admin') %}
+{% set can_assign = assignable_roles(me.role) %}
 
 {% block main %}
 <div class="feed-head">
@@ -139,7 +144,7 @@
 {% endif %}
 {% endif %}
 
-{% if is_admin and member.role != 'owner' and not is_me %}
+{% if is_admin and member.role not in ('superadmin', 'owner') and not is_me %}
 {# Moved here from the directory cards. A <details>, not a script: the CSP has
    no 'unsafe-inline'. Every button is still checked in its handler — this block
    being hidden from a moderator is a courtesy, not the rule. #}
@@ -164,36 +169,48 @@
 		</form>
 		{% endif %}
 
-		{% if is_owner or member.role != 'admin' %}
+		{% if member.role in can_assign or member.role not in ('admin',) %}
 		<form class="inline-form" method="post"
 		      action="{{ url_for('members.set_role', member_id=member.id) }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<label class="sr-only" for="role">Rol de {{ member.display_name }}</label>
 			<select id="role" name="role">
-				<option value="user" {{ 'selected' if member.role == 'user' }}>Miembro</option>
-				<option value="moderator" {{ 'selected' if member.role == 'moderator' }}>Moderador</option>
-				{% if is_owner %}
-				<option value="admin" {{ 'selected' if member.role == 'admin' }}>Administrador</option>
-				{% endif %}
+				{% for role in can_assign %}
+				<option value="{{ role }}" {{ 'selected' if member.role == role }}>{{ labels[role] }}</option>
+				{% endfor %}
 			</select>
 			<button class="linkish" type="submit">Cambiar rol</button>
 		</form>
 		{% endif %}
 
-		{% if is_owner %}
-			{% if member.role == 'admin' and member.active %}
-			<form method="post" action="{{ url_for('members.transfer', member_id=member.id) }}"
-			      data-confirm="Vas a dejar de ser el responsable y {{ member.display_name }} pasará a serlo. ¿Seguro?">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<button class="linkish" type="submit">Transferir titularidad</button>
-			</form>
-			{% endif %}
+		{% if is_chair and member.active %}
+		{# Naming the responsable: the association's chair. The superadministrator
+		   can fill it when it is empty — a fresh install has nobody in it — and
+		   the responsable can hand it on. #}
+		<form method="post" action="{{ url_for('members.transfer', member_id=member.id) }}"
+		      data-confirm="{{ member.display_name }} pasará a ser el responsable de la asociación. ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button class="linkish" type="submit">Nombrar responsable</button>
+		</form>
+		{% endif %}
 
-			<form method="post" action="{{ url_for('members.erase', member_id=member.id) }}"
-			      data-confirm="Se borrarán sus datos personales. Sus mensajes quedarán como «Miembro eliminado». ¿Seguro?">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<button class="linkish linkish--danger" type="submit">Eliminar</button>
-			</form>
+		{% if is_super and member.role == 'admin' and member.active %}
+		{# Handing the platform on. Its own button, and its own sentence, because
+		   it is irreversible from this side: the moment it commits you are an
+		   administrator and cannot take it back. #}
+		<form method="post" action="{{ url_for('members.transfer_platform', member_id=member.id) }}"
+		      data-confirm="{{ member.display_name }} pasará a ser el superadministrador y tú pasarás a ser administrador. No podrás deshacerlo tú mismo. ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button class="linkish linkish--danger" type="submit">Entregar la plataforma</button>
+		</form>
+		{% endif %}
+
+		{% if is_chair %}
+		<form method="post" action="{{ url_for('members.erase', member_id=member.id) }}"
+		      data-confirm="Se borrarán sus datos personales. Sus mensajes quedarán como «Miembro eliminado». ¿Seguro?">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button class="linkish linkish--danger" type="submit">Eliminar</button>
+		</form>
 		{% endif %}
 
 		{% if member.email %}<p class="muted small">{{ member.email }}</p>{% endif %}

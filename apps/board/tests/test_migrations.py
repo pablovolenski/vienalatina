@@ -181,28 +181,52 @@ def test_a_moderator_is_accepted_afterwards(old_db):
 
 
 def test_every_member_column_survives_the_rebuild(old_db):
-    """Thirteen columns copied by name. A typo in that list is a member losing
-    their email address, or their password, or their public page."""
-    before = old_db.execute(
-        "SELECT id, gitea_login, display_name, email, role, active, created_by "
-        "FROM members ORDER BY id").fetchall()
+    """Thirteen columns copied by name, twice over now — steps 4 and 7 each
+    rebuild this table. A typo in either list is a member losing their email
+    address, or their password, or their public page.
+
+    `role` is compared separately because step 7 deliberately changes exactly
+    one of them: see the test below."""
+    columns = "id, gitea_login, display_name, email, active, created_by"
+    before = old_db.execute(f"SELECT {columns} FROM members ORDER BY id").fetchall()
 
     migrations.apply(old_db)
 
-    after = old_db.execute(
-        "SELECT id, gitea_login, display_name, email, role, active, created_by "
-        "FROM members ORDER BY id").fetchall()
+    after = old_db.execute(f"SELECT {columns} FROM members ORDER BY id").fetchall()
     assert [tuple(row) for row in after] == [tuple(row) for row in before]
 
 
-def test_the_one_owner_rule_survives_the_rebuild(old_db):
-    """The partial unique index is not copied with the rows, so it has to be
-    recreated by hand. Without it the database silently stops being the thing
-    that guarantees one owner, and a bug in a handler becomes two owners."""
+def test_the_owner_becomes_the_superadmin(old_db):
+    """Step 7's one intended change to the data. The person who could already do
+    everything keeps being able to, nobody types anything, and the responsable
+    chair is left empty for the association to fill."""
+    was_owner = old_db.execute(
+        "SELECT gitea_login FROM members WHERE role = 'owner'").fetchone()["gitea_login"]
+
     migrations.apply(old_db)
+
+    assert old_db.execute(
+        "SELECT role FROM members WHERE gitea_login = ?", (was_owner,)
+    ).fetchone()["role"] == "superadmin"
+    assert old_db.execute("SELECT COUNT(*) FROM members WHERE role = 'owner'"
+                          ).fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("chair", ["superadmin", "owner"])
+def test_both_single_chair_rules_survive_the_rebuild(old_db, chair):
+    """Neither partial unique index is copied with the rows, so both have to be
+    recreated by hand. Without them the database silently stops being the thing
+    that guarantees one of each, and a bug in a handler becomes two."""
+    migrations.apply(old_db)
+    # The superadmin chair is already filled by the promotion; the responsable
+    # chair is empty, so it takes one insert to fill before the rule can bite.
+    if chair == "owner":
+        old_db.execute("INSERT INTO members (gitea_login, display_name, role) "
+                       "VALUES ('primera', 'Primera', 'owner')")
+
     with pytest.raises(sqlite3.IntegrityError):
         old_db.execute("INSERT INTO members (gitea_login, display_name, role) "
-                       "VALUES ('otro', 'Otro', 'owner')")
+                       f"VALUES ('otro', 'Otro', '{chair}')")
 
 
 def test_nothing_pointing_at_a_member_is_left_dangling(old_db):
@@ -266,10 +290,13 @@ def test_the_app_starts_against_a_database_from_before_all_this(tmp_path):
     old_sql = old_sql.replace("  password_hash TEXT,\n", "")
     # …and predates the moderator role, so step 4 has a CHECK to widen here too.
     old_sql = old_sql.replace(
-        "  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'moderator',\n"
+        "  role          TEXT    NOT NULL CHECK (role IN ('superadmin', 'owner', 'admin', 'moderator',\n"
         "                                                 'user', 'tombstone')),",
         "  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'user', 'tombstone')),")
     assert "CHECK (role IN ('owner', 'admin', 'user', 'tombstone'))" in old_sql
+    old_sql = old_sql.replace(
+        "CREATE UNIQUE INDEX IF NOT EXISTS members_one_superadmin\n"
+        "  ON members(role) WHERE role = 'superadmin';\n\n", "")
     old_sql += """
     CREATE TABLE gitea_tokens (
       member_id INTEGER PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
@@ -358,4 +385,58 @@ def test_step_six_drops_the_category_columns_and_keeps_the_rows(tmp_path):
     assert (row["title"], row["event_date"]) == ("Feria", "2026-11-07")
     assert db.execute("PRAGMA user_version").fetchone()[0] == max(
         number for number, _, _ in migrations.STEPS)
+    db.close()
+
+
+def test_a_restart_does_not_demote_the_superadmin(tmp_path):
+    """The one that would have shipped silently.
+
+    `_seed_superadmin` ends with `ON CONFLICT(gitea_login) DO UPDATE SET role =
+    …`. While owner was the top of the tree that line was right. Left as it was
+    after step 7, it would have matched BOARD_OWNER's login on every container
+    restart and set the role back to `owner` — a privilege *reduction* arriving
+    at no particular moment, caused by nothing anybody did, and leaving
+    `members_one_superadmin` free for somebody else to take the chair.
+
+    Nothing about a single start-up catches that; it takes a second one.
+    """
+    from apps.board.app import create_app
+    from apps.board.db import connect
+
+    path = str(tmp_path / "board.db")
+    settings = {"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "pablo",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True}
+
+    create_app(settings)
+    create_app(settings)          # the restart
+    create_app(settings)          # and another, because containers do that
+
+    db = connect(path)
+    rows = db.execute(
+        "SELECT gitea_login, role FROM members WHERE role IN ('superadmin', 'owner')"
+    ).fetchall()
+    assert [(r["gitea_login"], r["role"]) for r in rows] == [("pablo", "superadmin")]
+    db.close()
+
+
+def test_a_second_superadmin_is_not_seeded_over_the_first(tmp_path):
+    """Changing BOARD_OWNER must not hand the platform to whoever can edit the
+    environment — a quieter escalation than it looks, since editing a compose
+    file draws far less attention than asking for access."""
+    from apps.board.app import create_app
+    from apps.board.db import connect
+
+    path = str(tmp_path / "board.db")
+    base = {"SECRET_KEY": "x", "DB_PATH": path,
+            "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True}
+
+    create_app({**base, "OWNER_LOGIN": "pablo"})
+    create_app({**base, "OWNER_LOGIN": "intruso"})
+
+    db = connect(path)
+    assert db.execute(
+        "SELECT gitea_login FROM members WHERE role = 'superadmin'"
+    ).fetchone()["gitea_login"] == "pablo"
+    assert db.execute(
+        "SELECT COUNT(*) FROM members WHERE gitea_login = 'intruso'").fetchone()[0] == 0
     db.close()

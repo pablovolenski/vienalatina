@@ -249,6 +249,70 @@ def _no_more_categories(db: sqlite3.Connection) -> None:
             db.execute(f"ALTER TABLE {table} DROP COLUMN categories")
 
 
+def _a_superadmin_above_the_owner(db: sqlite3.Connection) -> None:
+    """Add the `superadmin` role, and give it to whoever is the owner today.
+
+    The same rebuild as step 4, for the same reason — `role` carries a CHECK and
+    SQLite has no DROP CONSTRAINT — so the notes there about the eight tables
+    that reference `members`, about the rename, and about foreign keys being off
+    outside the transaction all apply here unchanged. Two things are particular
+    to this step:
+
+    * **Both partial unique indexes have to be created afterwards.** The copy
+      carries neither. Losing `members_one_owner` would quietly allow a second
+      responsable, and never creating `members_one_superadmin` would allow two
+      superadministrators — which is the one rule this whole phase rests on.
+    * **The existing owner is promoted.** Nobody has to type anything, nothing
+      is erased, and the person who could already do everything keeps being able
+      to. It leaves the responsable chair empty, which breaks nothing: a
+      superadministrator passes every check an owner passes, and the chair is
+      filled from inside the app whenever there is somebody to put in it.
+    """
+    if "superadmin" in _role_check(db):
+        return
+
+    db.execute("""
+        CREATE TABLE members_new (
+          id            INTEGER PRIMARY KEY,
+          gitea_login   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+          display_name  TEXT    NOT NULL DEFAULT '',
+          email         TEXT    NOT NULL DEFAULT '',
+          password_hash TEXT,
+          profile_published INTEGER NOT NULL DEFAULT 0 CHECK (profile_published IN (0, 1)),
+          bio           TEXT,
+          links         TEXT,
+          photo_name    TEXT,
+          role          TEXT    NOT NULL CHECK (role IN ('superadmin', 'owner', 'admin',
+                                                         'moderator', 'user', 'tombstone')),
+          active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+          created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+          created_by    INTEGER REFERENCES members(id),
+          last_seen_at  TEXT
+        )""")
+    db.execute("""
+        INSERT INTO members_new
+            (id, gitea_login, display_name, email, password_hash,
+             profile_published, bio, links, photo_name,
+             role, active, created_at, created_by, last_seen_at)
+        SELECT id, gitea_login, display_name, email, password_hash,
+               profile_published, bio, links, photo_name,
+               role, active, created_at, created_by, last_seen_at
+          FROM members""")
+    db.execute("DROP TABLE members")
+    db.execute("ALTER TABLE members_new RENAME TO members")
+    # Promoted before the indexes exist, so the row is never momentarily both
+    # the only owner and the only superadmin under two rules at once.
+    db.execute("UPDATE members SET role = 'superadmin' WHERE role = 'owner'")
+    db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS members_one_superadmin
+                    ON members(role) WHERE role = 'superadmin'""")
+    db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS members_one_owner
+                    ON members(role) WHERE role = 'owner'""")
+
+    broken = db.execute("PRAGMA foreign_key_check").fetchall()
+    if broken:
+        raise RuntimeError(f"migration left dangling references: {broken}")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
@@ -258,6 +322,7 @@ STEPS = [
     (4, "members can be moderators", _members_can_moderate),
     (5, "events carry a date of their own", _rooms_for_a_date_of_its_own),
     (6, "there are no categories any more", _no_more_categories),
+    (7, "a superadministrator above the responsable", _a_superadmin_above_the_owner),
 ]
 
 

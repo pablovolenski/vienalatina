@@ -101,8 +101,8 @@ def test_the_count_and_my_own_mark_show_on_the_page(client, post, thread,
 
 
 def test_reacting_to_something_that_is_gone_is_a_404(db, post, thread,
-                                                     owner_id, make_member, sign_in):
-    sign_in(owner_id)
+                                                     superadmin_id, make_member, sign_in):
+    sign_in(superadmin_id)
     post(f"/comunidad/tema/{thread}/eliminar")
 
     sign_in(make_member("maria"))
@@ -138,13 +138,13 @@ def test_the_button_comes_back_to_the_comment_it_was_pressed_on(
     assert response.headers["Location"].endswith(f"/comunidad/tema/{thread}#c1")
 
 
-def test_erasing_a_member_takes_their_reactions(db, post, thread, owner_id,
+def test_erasing_a_member_takes_their_reactions(db, post, thread, superadmin_id,
                                                 make_member, sign_in):
     maria = make_member("maria")
     sign_in(maria)
     react(post, "thread", thread)
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{maria}/eliminar")
 
     assert db.execute("SELECT COUNT(*) AS n FROM reactions").fetchone()["n"] == 0

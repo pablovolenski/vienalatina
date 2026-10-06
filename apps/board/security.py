@@ -43,12 +43,38 @@ def login_required(view):
     return wrapped
 
 
+# Most trusted first. Every decorator below is "this role or anything above it",
+# which is the one rule worth keeping in a list rather than in four functions:
+# adding a tier then means adding a word here, not auditing every check.
+LADDER = ("superadmin", "owner", "admin", "moderator", "user")
+
+
+def _at_least(rank: str):
+    """The roles that pass a check for `rank` — it and everything above it."""
+    return LADDER[:LADDER.index(rank) + 1]
+
+
+def is_at_least(role: str, rank: str) -> bool:
+    """`role` is `rank` or anything above it.
+
+    Exported because seven places outside this module had the same question
+    written as a literal tuple — `g.member["role"] in ("owner", "admin")` — and
+    every one of them silently excluded the superadministrator the moment a tier
+    was added above owner. A tuple is a copy of a rule; this is the rule.
+    """
+    return role in _at_least(rank)
+
+
 def admin_required(view):
-    """Owner counts as an admin. Admin does not count as owner."""
+    """The superadministrator and the responsable both count as admins.
+
+    Not the other way round: an admin is not a responsable, and neither is a
+    responsable the superadministrator.
+    """
     @wraps(view)
     @login_required
     def wrapped(*args, **kwargs):
-        if g.member["role"] not in ("owner", "admin"):
+        if g.member["role"] not in _at_least("admin"):
             abort(403)
         return view(*args, **kwargs)
     return wrapped
@@ -65,17 +91,39 @@ def moderator_required(view):
     @wraps(view)
     @login_required
     def wrapped(*args, **kwargs):
-        if g.member["role"] not in ("owner", "admin", "moderator"):
+        if g.member["role"] not in _at_least("moderator"):
             abort(403)
         return view(*args, **kwargs)
     return wrapped
 
 
 def owner_required(view):
+    """The association's chair. The superadministrator passes it too.
+
+    Everything the responsable may do, the superadministrator may do; the
+    reverse is the whole point of there being two roles, and is
+    `superadmin_required` below.
+    """
     @wraps(view)
     @login_required
     def wrapped(*args, **kwargs):
-        if g.member["role"] != "owner":
+        if g.member["role"] not in _at_least("owner"):
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def superadmin_required(view):
+    """The platform: admin accounts, the look, the identity, the system tools.
+
+    The only check with nothing above it. A responsable who wants one of these
+    screens is a responsable who should be asking the person who installed this,
+    which is exactly the line the two roles are drawn along.
+    """
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if g.member["role"] != "superadmin":
             abort(403)
         return view(*args, **kwargs)
     return wrapped

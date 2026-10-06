@@ -66,8 +66,22 @@ def make_member(db):
 
 
 @pytest.fixture
+def superadmin_id(db):
+    """The account BOARD_OWNER seeds: the superadministrator, who runs the
+    platform and passes every check below them."""
+    return db.execute(
+        "SELECT id FROM members WHERE role = 'superadmin'").fetchone()["id"]
+
+
+@pytest.fixture
 def owner_id(db):
-    return db.execute("SELECT id FROM members WHERE role = 'owner'").fetchone()["id"]
+    """A responsable — the association's chair, which is empty on a fresh
+    install. Minted here because the two roles are deliberately different
+    people, and a test that means one should not reach for the other."""
+    return db.execute(
+        """INSERT INTO members (gitea_login, display_name, email, role)
+           VALUES ('presidenta', 'Presidenta', 'presidenta@example.com', 'owner')"""
+    ).lastrowid
 
 
 @pytest.fixture

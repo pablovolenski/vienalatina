@@ -33,7 +33,7 @@ from flask import (Blueprint, abort, current_app, flash, g, redirect,
 from . import gitea
 from .db import get_db
 from .render import to_html
-from .security import moderator_required
+from .security import is_at_least, moderator_required
 # One list of accepted formats for the whole app, kept in the module that
 # knows what each one looks like on the wire, so the editor and the board
 # cannot drift apart about what a picture is.
@@ -233,7 +233,7 @@ def _collection_or_404(collection: str) -> dict:
     if collection not in COLLECTIONS:
         abort(404)
     meta = COLLECTIONS[collection]
-    if meta["role"] == "admin" and g.member["role"] not in ("owner", "admin"):
+    if meta["role"] == "admin" and not is_at_least(g.member["role"], "admin"):
         abort(403)
     return meta
 
@@ -242,7 +242,7 @@ def visible_collections() -> dict:
     """The collections this member may write to, for the tabs. A tab that only
     ever produces a 403 is worse than no tab."""
     return {name: meta for name, meta in COLLECTIONS.items()
-            if meta["role"] != "admin" or g.member["role"] in ("owner", "admin")}
+            if meta["role"] != "admin" or is_at_least(g.member["role"], "admin")}
 
 
 def _name_or_404(name: str) -> str:

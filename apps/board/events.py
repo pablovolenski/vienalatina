@@ -32,7 +32,7 @@ from flask import (Blueprint, Response, abort, flash, g, redirect,
 from . import content, gitea, uploads
 from .db import get_db
 from .render import to_html
-from .security import admin_required, login_required
+from .security import admin_required, is_at_least, login_required
 
 bp = Blueprint("events", __name__)
 
@@ -129,7 +129,7 @@ def month():
         this_month=f"{today.year:04d}-{today.month:02d}",
         today=today.day if (today.year, today.month) == (year, number) else 0,
         public_missing=public_missing,
-        may_edit=g.member["role"] in ("owner", "admin"),
+        may_edit=is_at_least(g.member["role"], "admin"),
     )
 
 
@@ -140,7 +140,7 @@ def show(event_id: int):
     return render_template("event.html", event=row,
                            body_html=to_html(row["body_md"] or ""),
                            when=_spoken_date(row["starts_on"]),
-                           may_edit=g.member["role"] in ("owner", "admin"))
+                           may_edit=is_at_least(g.member["role"], "admin"))
 
 
 @bp.route("/calendario/<int:event_id>.ics")

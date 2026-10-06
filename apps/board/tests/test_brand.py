@@ -99,10 +99,12 @@ def test_an_unreadable_pair_warns_and_a_readable_one_does_not():
 # --- the form -------------------------------------------------------------
 
 @pytest.fixture
-def admin(make_member, sign_in):
-    member_id = make_member("admina", role="admin")
-    sign_in(member_id)
-    return member_id
+def admin(superadmin_id, sign_in):
+    """The superadministrator. Named `admin` because every test below reads
+    "signed in as the person who may change this", and that person is no longer
+    an administrator: the look and the identity are the platform's."""
+    sign_in(superadmin_id)
+    return superadmin_id
 
 
 # Arguments for the test client rather than fields of the form. Separated by
@@ -125,8 +127,11 @@ def save(post, **fields):
     return post("/comunidad/gestion/marca", data, **sent)
 
 
-def test_only_admins_reach_it(client, post, make_member, sign_in):
-    for role in ("user", "moderator"):
+def test_only_the_superadmin_reaches_it(client, post, make_member, sign_in):
+    """An administrator is refused too, which is the change: the colours and the
+    identity belong to whoever runs the platform, not to the association's
+    committee."""
+    for role in ("user", "moderator", "admin", "owner"):
         sign_in(make_member(f"persona-{role}", role=role))
         assert client.get("/comunidad/gestion/marca").status_code == 403
         assert save(post, **{"token-brand": "#1b5e20"}).status_code == 403
@@ -370,17 +375,20 @@ def test_restoring_empties_the_row_and_the_disk(app, client, db, post, admin):
 
 # --- erasure --------------------------------------------------------------
 
-def test_erasing_the_admin_leaves_the_brand_standing(client, db, post, owner_id,
-                                                     make_member, sign_in):
+def test_erasing_whoever_set_the_brand_leaves_it_standing(client, db, post, admin,
+                                                          make_member):
     """The colours belong to the association, like an event in the calendar.
-    An admin leaving is not a reason for the site to look like a default
-    install again."""
-    admin_id = make_member("admina", role="admin")
-    sign_in(admin_id)
-    save(post, **{"token-brand": "#1b5e20"})
+    Whoever set them leaving is not a reason for the site to look like a default
+    install again.
 
-    sign_in(owner_id)
-    post(f"/comunidad/miembros/{admin_id}/eliminar")
+    The row erased is a former superadministrator who has since handed the
+    platform on and is an admin again — which is the only way a row that set the
+    brand can become erasable at all, since neither chair can be erased."""
+    former = make_member("anterior", role="admin")
+    save(post, **{"token-brand": "#1b5e20"})
+    db.execute("UPDATE brand SET updated_by = ? WHERE id = 1", (former,))
+
+    post(f"/comunidad/miembros/{former}/eliminar")
 
     row = db.execute("SELECT tokens_json, updated_by FROM brand").fetchone()
     assert json.loads(row["tokens_json"]) == {"brand": "#1b5e20"}

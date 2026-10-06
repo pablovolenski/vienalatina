@@ -53,6 +53,7 @@
 	</p>
 </section>
 
+{% if g.member.role == 'superadmin' %}
 <section class="panel">
 	<div class="panel__head">
 		<h2>Marca</h2>
@@ -67,6 +68,7 @@
 		volver a lo de fábrica.
 	</p>
 </section>
+{% endif %}
 
 {% if counts.pending %}
 <section class="panel panel--attention">

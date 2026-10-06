@@ -364,7 +364,7 @@ def test_an_approved_one_cannot_be_edited_or_withdrawn(
 # --- erasure --------------------------------------------------------------
 
 def test_erasing_the_author_takes_their_submissions_and_photos(
-        app, repo, db, post, owner_id, maria, sign_in):
+        app, repo, db, post, superadmin_id, maria, sign_in):
     """A submission is private writing, so it goes the way private messages do.
     What remains of an approved one is the post in the repository, which carries
     their name in a commit that is not ours to rewrite from here."""
@@ -372,14 +372,14 @@ def test_erasing_the_author_takes_their_submissions_and_photos(
     propose(post, picture=(io.BytesIO(PNG), "feria.png"))
     stored = only_submission(db)["photo_name"]
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{maria}/eliminar")
 
     assert db.execute("SELECT COUNT(*) AS n FROM submissions").fetchone()["n"] == 0
     assert not (Path(app.config["UPLOAD_DIR"]) / stored).exists()
 
 
-def test_erasing_a_reviewer_keeps_the_submission(db, post, owner_id, maria,
+def test_erasing_a_reviewer_keeps_the_submission(db, post, superadmin_id, maria,
                                                  make_member, sign_in):
     """Who reviewed something is a fact about the submission, not personal data
     of the reviewer, so the name goes and the row stays."""
@@ -390,7 +390,7 @@ def test_erasing_a_reviewer_keeps_the_submission(db, post, owner_id, maria,
     sign_in(reviewer)
     post(f"/comunidad/publicaciones/{submission_id}/rechazar", {"note": "Falta el dónde."})
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{reviewer}/eliminar")
 
     row = only_submission(db)

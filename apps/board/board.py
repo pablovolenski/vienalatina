@@ -21,7 +21,7 @@ from flask import (Blueprint, abort, current_app, flash, g, redirect,
 from . import auth, uploads
 from .db import get_db
 from .render import excerpt, to_html
-from .security import admin_required, login_required
+from .security import admin_required, is_at_least, login_required
 
 bp = Blueprint("board", __name__)
 
@@ -31,7 +31,7 @@ BODY_MAX = 20_000
 
 
 def is_admin() -> bool:
-    return g.member["role"] in ("owner", "admin")
+    return is_at_least(g.member["role"], "admin")
 
 
 def may_delete(row) -> bool:

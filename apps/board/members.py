@@ -1,11 +1,14 @@
 """Members and roles.
 
-Four roles, and the rules between them are short enough to state in full:
+Five roles, and the rules between them are short enough to state in full:
 
-* exactly one **owner**, who creates and removes admins and can hand ownership
-  on; nobody can deactivate or demote them, including themselves
-* **admins** create, deactivate and promote members, moderate the board, and
-  publish and edit the static pages of the public site
+* exactly one **superadministrador**, who runs the platform: admin accounts,
+  the look, the identity and the system tools. Nobody can deactivate, demote or
+  erase them, including themselves
+* exactly one **responsable**, who runs the association: members, moderators
+  and invitations. They cannot touch an admin, the look or the identity
+* **admins** create, deactivate and promote members and moderators, moderate
+  the board, and publish and edit the static pages of the public site
 * **moderators** approve or reject what members propose for the public site,
   and publish their own posts without waiting for anybody. They have no power
   over people: moderating content is not the same authority, and giving one the
@@ -30,7 +33,8 @@ from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
 from . import auth, invites, mail, messages, profiles, uploads
 from .db import TOMBSTONE_LOGIN, get_db
 from .render import to_html
-from .security import admin_required, login_required, owner_required
+from .security import (admin_required, login_required, owner_required,
+                       superadmin_required)
 
 bp = Blueprint("members", __name__)
 
@@ -41,20 +45,35 @@ LOGIN_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]{0,38}[A-Za-z0-9])?$")
 # "Miembro" rather than "Usuario" on the screens, while the stored value stays
 # `user`: renaming the value would mean a migration and rewriting every role
 # check for a word nobody types.
-ROLE_LABELS = {"owner": "Responsable", "admin": "Administrador",
-               "moderator": "Moderador", "user": "Miembro"}
+ROLE_LABELS = {"superadmin": "Superadministrador", "owner": "Responsable",
+               "admin": "Administrador", "moderator": "Moderador",
+               "user": "Miembro"}
 
-# Who may be given which role on the Miembros screen, most trusted first, so
-# the form and the predicates below cannot disagree about the list.
-ASSIGNABLE_ROLES = ("admin", "moderator", "user")
+# Who may be given which role, by whom. A function rather than the constant it
+# used to be, because the answer now depends on who is asking: the role picker
+# must never offer what the handler will refuse, and with two levels above admin
+# a single list can only be right for one of them.
+def assignable_roles(actor_role: str) -> tuple[str, ...]:
+    return tuple(role for role in ("admin", "moderator", "user")
+                 if may_create(actor_role, role))
 
 
 def may_create(actor_role: str, target_role: str) -> bool:
-    """Who may bring whom in. Admins cannot mint more admins."""
+    """Who may bring whom in.
+
+    **An admin account is the superadministrator's alone** — that is the line
+    this phase exists to draw. The responsable runs the association and can fill
+    it with members and moderators; who administers the platform is not theirs
+    to decide, which is what makes it safe to hand the responsable chair to a
+    customer organisation's president.
+
+    Nobody creates a superadministrator or a responsable here. Both are single
+    chairs held by a unique index, and both change hands by transfer, below.
+    """
     if target_role == "admin":
-        return actor_role == "owner"
+        return actor_role == "superadmin"
     if target_role in ("moderator", "user"):
-        return actor_role in ("owner", "admin")
+        return actor_role in ("superadmin", "owner", "admin")
     return False
 
 
@@ -64,12 +83,20 @@ def may_manage(actor_role: str, target_role: str) -> bool:
     A moderator appears nowhere in this function, deliberately: they approve
     posts and nothing else. Being trusted to judge what the public reads is not
     the same as being trusted to suspend the person who wrote it.
+
+    The two chairs are out of reach by the same rule that put them there. A
+    superadministrator cannot be suspended or demoted by anybody, themselves
+    included — the way out is to hand the platform on. The responsable is out of
+    reach of everyone below, and of the superadministrator too: the chair is the
+    association's, and a platform administrator quietly removing the president
+    of the organisation they host is exactly the move this separation exists to
+    make impossible. Transferring it is the association's own act.
     """
-    if target_role == "owner":
-        return False  # the owner is out of reach of everyone, themselves included
+    if target_role in ("superadmin", "owner"):
+        return False
     if target_role == "admin":
-        return actor_role == "owner"
-    return actor_role in ("owner", "admin")
+        return actor_role == "superadmin"
+    return actor_role in ("superadmin", "owner", "admin")
 
 
 def tombstone_id(db: sqlite3.Connection) -> int:
@@ -77,17 +104,28 @@ def tombstone_id(db: sqlite3.Connection) -> int:
     return row["id"]
 
 
-def transfer_ownership(db: sqlite3.Connection, owner_id: int, target_id: int) -> None:
-    """Hand ownership to an admin, atomically.
+def transfer_ownership(db: sqlite3.Connection, holder_id: int, target_id: int,
+                       chair: str) -> None:
+    """Hand one of the two chairs on, atomically.
 
     The demotion has to come first. With the partial unique index in place, a
-    promote-then-demote order would momentarily ask for two owners and the
-    database would refuse — correctly, but confusingly.
+    promote-then-demote order would momentarily ask for two holders of the chair
+    and the database would refuse — correctly, but confusingly.
+
+    `chair` is 'superadmin' or 'owner' and comes from the route, never from a
+    request. The person giving it up becomes an admin, which is the most they
+    can be left with: there is no role above the one they just gave away.
+
+    Filling an empty chair is the same call with nobody to demote — the first
+    UPDATE matches no row and the transaction is one statement shorter.
     """
+    if chair not in ("superadmin", "owner"):
+        raise ValueError(f"not a chair: {chair!r}")
     db.execute("BEGIN IMMEDIATE")
     try:
-        db.execute("UPDATE members SET role = 'admin' WHERE id = ?", (owner_id,))
-        db.execute("UPDATE members SET role = 'owner' WHERE id = ?", (target_id,))
+        db.execute("UPDATE members SET role = 'admin' WHERE id = ? AND role = ?",
+                   (holder_id, chair))
+        db.execute("UPDATE members SET role = ? WHERE id = ?", (chair, target_id))
         db.execute("COMMIT")
     except Exception:
         db.execute("ROLLBACK")
@@ -319,7 +357,7 @@ def new():
     if request.method == "GET":
         return render_template(
             "member_new.html",
-            can_make_admin=g.member["role"] == "owner",
+            can_make_admin=may_create(g.member["role"], "admin"),
             # Without mail the invitation cannot leave the building, so the
             # admin has to pass the link on by hand. Worth knowing before
             # filling the form rather than after.
@@ -454,7 +492,7 @@ def set_role(member_id: int):
     """
     target = _load(member_id)
     role = request.form.get("role", "")
-    if role not in ASSIGNABLE_ROLES:
+    if role not in assignable_roles(g.member["role"]):
         abort(403)
     if not may_manage(g.member["role"], target["role"]):
         abort(403)
@@ -468,12 +506,34 @@ def set_role(member_id: int):
 @bp.route("/miembros/<int:member_id>/transferir", methods=["POST"])
 @owner_required
 def transfer(member_id: int):
+    """Hand the association on. The responsable's own act, or the
+    superadministrator filling an empty chair."""
+    target = _load(member_id)
+    if target["role"] not in ("admin", "moderator", "user") or not target["active"]:
+        flash("Solo puedes nombrar responsable a un miembro activo.", "error")
+        return redirect(_page(target))
+    transfer_ownership(get_db(), g.member["id"], target["id"], "owner")
+    flash(f"{target['display_name']} es ahora el responsable.", "ok")
+    return redirect(_page(target))
+
+
+@bp.route("/miembros/<int:member_id>/transferir-plataforma", methods=["POST"])
+@superadmin_required
+def transfer_platform(member_id: int):
+    """Hand the platform on.
+
+    Separate from the route above because they are different jobs, and because
+    conflating them is how somebody hands away more than they meant to: this one
+    is irreversible from the giver's side — the moment it commits, the person
+    running it is an admin and cannot take it back.
+    """
     target = _load(member_id)
     if target["role"] != "admin" or not target["active"]:
-        flash("Solo puedes transferir la titularidad a un administrador activo.", "error")
+        flash("Solo puedes entregar la plataforma a un administrador activo.", "error")
         return redirect(_page(target))
-    transfer_ownership(get_db(), g.member["id"], target["id"])
-    flash(f"{target['display_name']} es ahora el responsable. Tú eres administrador.", "ok")
+    transfer_ownership(get_db(), g.member["id"], target["id"], "superadmin")
+    flash(f"{target['display_name']} es ahora el superadministrador. "
+          "Tú eres administrador.", "ok")
     return redirect(_page(target))
 
 
@@ -481,7 +541,10 @@ def transfer(member_id: int):
 @owner_required
 def erase(member_id: int):
     target = _load(member_id)
-    if target["role"] == "owner":
+    # Through the predicate rather than a bare role test: the two chairs are
+    # unreachable by exactly the rule that protects them everywhere else, and a
+    # second spelling of it here is a second place to get it wrong.
+    if not may_manage(g.member["role"], target["role"]):
         abort(403)
     # Files only after the transaction has committed: a rollback can put the
     # rows back, and nothing can put the pictures back.

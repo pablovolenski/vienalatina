@@ -18,7 +18,7 @@ from flask import Blueprint, g, jsonify, render_template, request, url_for
 from . import submissions
 from .db import TOMBSTONE_LOGIN, get_db
 from .render import excerpt, to_html
-from .security import admin_required, csrf_token, login_required
+from .security import admin_required, csrf_token, is_at_least, login_required
 
 bp = Blueprint("home", __name__)
 
@@ -126,7 +126,7 @@ def session_state():
         {"label": "Publicaciones", "url": url_for("submissions.index")},
         {"label": "Calendario", "url": url_for("events.month")},
     ]
-    if g.member["role"] in ("owner", "admin"):
+    if is_at_least(g.member["role"], "admin"):
         sections.append({"label": "Gestión", "url": url_for("home.gestion")})
 
     return _no_store(jsonify({

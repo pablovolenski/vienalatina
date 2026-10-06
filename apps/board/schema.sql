@@ -20,9 +20,10 @@ CREATE TABLE IF NOT EXISTS members (
   bio           TEXT,
   links         TEXT,          -- JSON array of {label, url}
   photo_name    TEXT,
-  -- 'moderator' arrived with migration 4, which had to rebuild this table:
-  -- SQLite has no DROP CONSTRAINT, so widening a CHECK is never an ALTER.
-  role          TEXT    NOT NULL CHECK (role IN ('owner', 'admin', 'moderator',
+  -- 'moderator' arrived with migration 4 and 'superadmin' with migration 7,
+  -- each of which had to rebuild this table: SQLite has no DROP CONSTRAINT, so
+  -- widening a CHECK is never an ALTER.
+  role          TEXT    NOT NULL CHECK (role IN ('superadmin', 'owner', 'admin', 'moderator',
                                                  'user', 'tombstone')),
   active        INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -30,9 +31,17 @@ CREATE TABLE IF NOT EXISTS members (
   last_seen_at  TEXT
 );
 
--- The one-owner rule, held by the database rather than by the application, so
--- a mistake in a handler cannot produce a second owner. SQLite enforces a
--- partial unique index exactly like a full one.
+-- Two chairs, one person each, held by the database rather than by the
+-- application, so a mistake in a handler cannot produce a second of either.
+-- SQLite enforces a partial unique index exactly like a full one.
+-- The superadministrator runs the platform — admin accounts, the look
+-- and the identity — and the responsable runs the association — the members,
+-- the moderators and the invitations. Installed for a second organisation, the
+-- first is whoever maintains the box and the second is their president, which
+-- is the whole reason the two are separate rows rather than one.
+CREATE UNIQUE INDEX IF NOT EXISTS members_one_superadmin
+  ON members(role) WHERE role = 'superadmin';
+
 CREATE UNIQUE INDEX IF NOT EXISTS members_one_owner
   ON members(role) WHERE role = 'owner';
 

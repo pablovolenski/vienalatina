@@ -11,31 +11,53 @@ from apps.board.members import may_create, may_manage
 
 # --- the rules as plain functions ---------------------------------------
 
-def test_only_the_owner_makes_admins():
-    assert may_create("owner", "admin")
+def test_only_the_superadmin_makes_admins():
+    """The line this phase draws. An admin account is the platform's, not the
+    association's — which is what makes it safe to hand the responsable chair to
+    a customer organisation's president."""
+    assert may_create("superadmin", "admin")
+    assert not may_create("owner", "admin")
     assert not may_create("admin", "admin")
     assert not may_create("user", "admin")
 
 
-def test_admins_and_the_owner_make_users():
+def test_everyone_above_a_moderator_makes_users():
+    assert may_create("superadmin", "user")
     assert may_create("owner", "user")
     assert may_create("admin", "user")
     assert not may_create("user", "user")
 
 
-def test_the_owner_is_beyond_everyone_including_themselves():
-    assert not may_manage("owner", "owner")
-    assert not may_manage("admin", "owner")
+def test_neither_chair_can_be_touched_by_anybody():
+    """Both single chairs, both unreachable, for different reasons. The
+    superadministrator because there is nothing above them; the responsable
+    because the chair belongs to the association, and a platform administrator
+    quietly removing the president of the organisation they host is the move the
+    separation exists to prevent."""
+    for actor in ("superadmin", "owner", "admin", "moderator", "user"):
+        assert not may_manage(actor, "superadmin"), actor
+        assert not may_manage(actor, "owner"), actor
 
 
-def test_only_the_owner_manages_admins():
-    assert may_manage("owner", "admin")
+def test_only_the_superadmin_manages_admins():
+    assert may_manage("superadmin", "admin")
+    assert not may_manage("owner", "admin")
     assert not may_manage("admin", "admin")
+
+
+def test_the_role_picker_offers_exactly_what_the_handler_allows():
+    """They used to be one constant and one predicate, which could only agree
+    for one actor once there were two levels above admin."""
+    from apps.board.members import assignable_roles
+    for actor in ("superadmin", "owner", "admin", "moderator", "user"):
+        for role in ("admin", "moderator", "user"):
+            assert (role in assignable_roles(actor)) == may_create(actor, role), (actor, role)
 
 
 # --- the moderator, who curates content and not people -------------------
 
-def test_admins_and_the_owner_make_moderators():
+def test_admins_and_the_chairs_make_moderators():
+    assert may_create("superadmin", "moderator")
     assert may_create("owner", "moderator")
     assert may_create("admin", "moderator")
     assert not may_create("moderator", "moderator")
@@ -46,7 +68,7 @@ def test_a_moderator_has_no_power_over_anybody():
     """The line the whole role rests on. Being trusted to judge what the public
     reads is not being trusted to suspend the person who wrote it, and a
     moderator who could do both would be a second kind of admin."""
-    for target in ("owner", "admin", "moderator", "user"):
+    for target in ("superadmin", "owner", "admin", "moderator", "user"):
         assert not may_manage("moderator", target), target
         assert not may_create("moderator", target), target
 
@@ -64,9 +86,8 @@ def test_an_admin_may_promote_a_member_to_moderator(client, db, post, make_membe
 
 def test_an_admin_still_cannot_mint_an_admin_through_the_role_form(
         client, db, post, make_member, sign_in):
-    """`set_role` moved from owner-only to admin-level so moderators can be
-    appointed routinely. That must not quietly hand admins the one power the
-    owner keeps."""
+    """`set_role` is admin-level so moderators can be appointed routinely. That
+    must not quietly hand admins the one power the superadministrator keeps."""
     admin = make_member("admina", role="admin")
     maria = make_member("maria")
     sign_in(admin)
@@ -84,10 +105,10 @@ def test_a_moderator_cannot_change_a_role_at_all(client, db, post, make_member, 
 
 
 def test_the_role_form_refuses_a_role_that_is_not_offered(
-        client, db, post, owner_id, make_member, sign_in):
+        client, db, post, superadmin_id, make_member, sign_in):
     """`tombstone` is a real value in the CHECK constraint and would make the
     member vanish from every listing while keeping their row."""
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     maria = make_member("maria")
 
     assert post(f"/comunidad/miembros/{maria}/rol", {"role": "tombstone"}).status_code == 403
@@ -96,24 +117,44 @@ def test_the_role_form_refuses_a_role_that_is_not_offered(
 
 # --- the database holds the line ----------------------------------------
 
-def test_a_second_owner_is_impossible(db):
+def test_a_second_superadmin_is_impossible(db, superadmin_id):
     """Not a route check — a direct insert, because the point of the partial
     unique index is to survive a bug in the code above it."""
     with pytest.raises(sqlite3.IntegrityError):
         db.execute(
-            "INSERT INTO members (gitea_login, role) VALUES ('usurpador', 'owner')"
+            "INSERT INTO members (gitea_login, role) VALUES ('usurpador', 'superadmin')"
         )
 
 
-def test_transfer_leaves_exactly_one_owner(app, db, owner_id, make_member):
-    from apps.board.members import transfer_ownership
-    admin_id = make_member("segunda", role="admin")
-    transfer_ownership(db, owner_id, admin_id)
+def test_a_second_owner_is_impossible(db, owner_id):
+    with pytest.raises(sqlite3.IntegrityError):
+        db.execute(
+            "INSERT INTO members (gitea_login, role) VALUES ('usurpadora', 'owner')"
+        )
 
-    owners = db.execute("SELECT id FROM members WHERE role = 'owner'").fetchall()
-    assert [row["id"] for row in owners] == [admin_id]
+
+@pytest.mark.parametrize("chair", ["superadmin", "owner"])
+def test_transfer_leaves_exactly_one_holder(app, db, superadmin_id, make_member, chair):
+    """Both chairs hand on the same way. The demotion comes first, or the unique
+    index refuses the promotion halfway through."""
+    from apps.board.members import transfer_ownership
+    holder = superadmin_id if chair == "superadmin" else make_member("presi", role="owner")
+    admin_id = make_member("segunda", role="admin")
+
+    transfer_ownership(db, holder, admin_id, chair)
+
+    holders = db.execute("SELECT id FROM members WHERE role = ?", (chair,)).fetchall()
+    assert [row["id"] for row in holders] == [admin_id]
     assert db.execute("SELECT role FROM members WHERE id = ?",
-                      (owner_id,)).fetchone()["role"] == "admin"
+                      (holder,)).fetchone()["role"] == "admin"
+
+
+def test_a_transfer_to_something_that_is_not_a_chair_is_refused(db, superadmin_id, make_member):
+    """`chair` comes from the route and never from a request, and this is what
+    keeps that true if somebody ever wires it to one."""
+    from apps.board.members import transfer_ownership
+    with pytest.raises(ValueError):
+        transfer_ownership(db, superadmin_id, make_member("otra"), "admin")
 
 
 # --- the routes ----------------------------------------------------------
@@ -127,8 +168,8 @@ def test_admin_cannot_create_an_admin(client, post, make_member, sign_in):
     assert response.status_code == 403
 
 
-def test_owner_can_create_an_admin(client, db, post, owner_id, sign_in):
-    sign_in(owner_id)
+def test_the_superadmin_can_create_an_admin(client, db, post, superadmin_id, sign_in):
+    sign_in(superadmin_id)
     post("/comunidad/miembros/nuevo", {
         "login": "nueva", "display_name": "Nueva", "email": "n@example.com",
         "role": "admin",
@@ -142,15 +183,15 @@ def test_a_plain_user_cannot_reach_the_admin_screens(client, make_member, sign_i
     assert client.get("/comunidad/miembros/nuevo").status_code == 403
 
 
-def test_the_owner_cannot_be_suspended(client, post, owner_id, make_member, sign_in):
+def test_the_superadmin_cannot_be_suspended(client, post, superadmin_id, make_member, sign_in):
     sign_in(make_member("admina", role="admin"))
-    response = post(f"/comunidad/miembros/{owner_id}/estado", {"active": "0"})
+    response = post(f"/comunidad/miembros/{superadmin_id}/estado", {"active": "0"})
     assert response.status_code == 403
 
 
-def test_the_owner_cannot_suspend_themselves(client, post, owner_id, sign_in):
-    sign_in(owner_id)
-    response = post(f"/comunidad/miembros/{owner_id}/estado", {"active": "0"})
+def test_the_superadmin_cannot_suspend_themselves(client, post, superadmin_id, sign_in):
+    sign_in(superadmin_id)
+    response = post(f"/comunidad/miembros/{superadmin_id}/estado", {"active": "0"})
     assert response.status_code == 403
 
 
@@ -165,11 +206,11 @@ def test_an_admin_cannot_demote_another_admin(client, post, make_member, sign_in
 
 
 
-def test_erasing_a_member_keeps_their_threads_readable(app, db, post, owner_id, make_member, sign_in):
+def test_erasing_a_member_keeps_their_threads_readable(app, db, post, superadmin_id, make_member, sign_in):
     author = make_member("saliente")
     db.execute("INSERT INTO threads (author_id, title, body_md) VALUES (?, 'Hola', 'Texto')",
                (author,))
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{author}/eliminar")
 
     assert db.execute("SELECT 1 FROM members WHERE id = ?", (author,)).fetchone() is None
@@ -180,36 +221,52 @@ def test_erasing_a_member_keeps_their_threads_readable(app, db, post, owner_id, 
     assert row["display_name"] == "Miembro eliminado"
 
 
-def test_the_member_page_renders_for_each_role(client, db, owner_id, make_member, sign_in):
-    """Every role takes a different branch through member.html — the owner sees
-    transfer and erase, an admin sees suspend, a plain member sees neither — so
-    each one is rendered here rather than trusted.
+def test_the_member_page_renders_for_each_role(client, db, superadmin_id, owner_id,
+                                               make_member, sign_in):
+    """Every role takes a different branch through member.html — the
+    superadministrator alone sees «Entregar la plataforma», both chairs see
+    «Eliminar», an admin sees «Suspender» and a plain member sees none of it —
+    so each one is rendered here rather than trusted.
 
-    These controls used to be on the cards in the directory and are on the
-    person's page now, which is what this looks at. The owner's branch needs an
-    admin to transfer to, so the page opened is the admin's.
+    The page opened is always somebody else's: nobody manages themselves, the
+    block is not drawn on your own page, and a test looking at it would pass for
+    the wrong reason.
     """
     admin_id = make_member("admina", role="admin")
+    cases = [
+        (superadmin_id, "admina", ["Entregar la plataforma", "Eliminar", "Suspender"]),
+        (owner_id, "admina", ["Eliminar", "Suspender"]),
+        (admin_id, "usuaria", ["Suspender"]),
+        (make_member("usuaria"), "admina", []),
+    ]
+    forbidden = {"Entregar la plataforma", "Eliminar", "Suspender"}
 
-    for member_id, expected in ((owner_id, "Transferir titularidad"),
-                                (admin_id, "Suspender"),
-                                (make_member("usuaria"), None)):
+    for member_id, who, expected in cases:
         sign_in(member_id)
-        # Never your own page: nobody manages themselves, so the block is not
-        # drawn there and the test would pass for the wrong reason.
-        who = "usuaria" if member_id == admin_id else "admina"
         body = client.get(f"/comunidad/miembro/{who}").get_data(as_text=True)
         assert who.title() in body
-        if expected:
-            assert expected in body
-        else:
-            assert "Transferir titularidad" not in body
-            assert "Suspender" not in body
+        for phrase in expected:
+            assert phrase in body, (member_id, phrase)
+        for phrase in forbidden - set(expected):
+            assert phrase not in body, (member_id, phrase)
+
+
+def test_the_responsable_cannot_reach_an_admin_from_their_page(
+        client, owner_id, make_member, sign_in):
+    """The association's chair runs the association. An admin account is the
+    platform's, so the whole management block is absent from their page."""
+    make_member("admina", role="admin")
+    sign_in(owner_id)
+
+    body = client.get("/comunidad/miembro/admina").get_data(as_text=True)
+
+    assert "Gestionar" in body          # it is drawn — an admin is manageable…
+    assert "Administrador" not in body.split("Gestionar")[1]   # …but not into or out of admin
 
 
 def test_the_new_member_form_hides_the_role_choice_from_admins(
-        client, owner_id, make_member, sign_in):
-    sign_in(owner_id)
+        client, superadmin_id, make_member, sign_in):
+    sign_in(superadmin_id)
     assert "Administrador" in client.get("/comunidad/miembros/nuevo").get_data(as_text=True)
 
     sign_in(make_member("admina", role="admin"))
@@ -236,7 +293,7 @@ def test_the_export_is_only_your_own_writing(client, db, make_member, sign_in):
 
 # --- erasing somebody who has left traces --------------------------------
 
-def test_erasing_a_member_who_posted_a_picture(app, db, post, owner_id, make_member, sign_in):
+def test_erasing_a_member_who_posted_a_picture(app, db, post, superadmin_id, make_member, sign_in):
     """This failed in production with a 500 the first time it was tried.
 
     `attachments.uploaded_by` is NOT NULL and does not cascade, so with a
@@ -251,7 +308,7 @@ def test_erasing_a_member_who_posted_a_picture(app, db, post, owner_id, make_mem
            VALUES (1, 'foto-abc123abc123.jpg', 'foto.jpg', 'image/jpeg', 10, ?)""",
         (author,),
     )
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     response = post(f"/comunidad/miembros/{author}/eliminar")
 
@@ -297,11 +354,11 @@ def test_every_table_pointing_at_members_is_accounted_for(db):
 # --- onboarding, now that there is only one account to make --------------
 
 def test_a_new_member_has_no_password_until_they_choose_one(
-        client, db, post, owner_id, sign_in, monkeypatch):
+        client, db, post, superadmin_id, sign_in, monkeypatch):
     """No password is generated and none is shown. Until the invitation is
     used, password_hash is NULL — and a NULL hash cannot be signed in with."""
     monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "María", "email": "m@example.com",
@@ -314,10 +371,10 @@ def test_a_new_member_has_no_password_until_they_choose_one(
     assert row["password_hash"] is None
 
 
-def test_an_address_is_required(client, db, post, owner_id, sign_in):
+def test_an_address_is_required(client, db, post, superadmin_id, sign_in):
     """It is the only way the invitation reaches anybody, so a member without
     one is a row that can never be used."""
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "María", "email": "", "role": "user",
     })
@@ -325,12 +382,12 @@ def test_an_address_is_required(client, db, post, owner_id, sign_in):
 
 
 def test_a_duplicate_is_refused_before_anything_is_written(
-        client, db, post, owner_id, make_member, sign_in, monkeypatch):
+        client, db, post, superadmin_id, make_member, sign_in, monkeypatch):
     """The error that started this: "ya están en uso" for somebody who was not
     on the list. There is one list now, so the message and the screen agree."""
     monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
     make_member("maria")
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     response = post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "Otra", "email": "otra@example.com",
@@ -344,11 +401,11 @@ def test_a_duplicate_is_refused_before_anything_is_written(
 
 
 def test_erasing_a_member_lets_the_name_be_used_again(
-        client, db, post, owner_id, make_member, sign_in, monkeypatch):
+        client, db, post, superadmin_id, make_member, sign_in, monkeypatch):
     """Deleting used to leave an account behind on the other server, so the
     name stayed taken somewhere invisible. With one store, gone means gone."""
     monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{make_member('salvador')}/eliminar")
 
     post("/comunidad/miembros/nuevo", {
@@ -477,3 +534,105 @@ def test_a_moderator_gets_no_controls_either(client, make_member, sign_in):
     assert client.post(f"/comunidad/miembros/{maria}/estado",
                        data={"csrf_token": "token-for-tests", "active": "0"}
                        ).status_code == 403
+
+
+# --- the two chairs, from the routes --------------------------------------
+
+def test_an_admin_cannot_make_promote_or_erase_another_admin(
+        client, db, post, make_member, sign_in):
+    """Four doors into the same power, checked at each one. A hidden button is a
+    courtesy; these are the rules."""
+    other = make_member("otra", role="admin")
+    sign_in(make_member("admina", role="admin"))
+
+    assert post("/comunidad/miembros/nuevo", {
+        "login": "tercera", "display_name": "Tercera",
+        "email": "t@example.com", "role": "admin"}).status_code == 403
+    assert post(f"/comunidad/miembros/{other}/rol", {"role": "user"}).status_code == 403
+    assert post(f"/comunidad/miembros/{other}/estado", {"active": "0"}).status_code == 403
+    assert post(f"/comunidad/miembros/{other}/eliminar").status_code == 403
+    assert db.execute("SELECT role, active FROM members WHERE id = ?",
+                      (other,)).fetchone()["role"] == "admin"
+
+
+def test_the_responsable_cannot_touch_an_admin_either(
+        client, db, post, owner_id, make_member, sign_in):
+    """The chair this phase exists to make safe to hand over. A customer
+    organisation's president runs their association and does not administer the
+    platform that hosts it."""
+    admin_id = make_member("admina", role="admin")
+    sign_in(owner_id)
+
+    assert post("/comunidad/miembros/nuevo", {
+        "login": "nueva", "display_name": "Nueva",
+        "email": "n@example.com", "role": "admin"}).status_code == 403
+    assert post(f"/comunidad/miembros/{admin_id}/rol", {"role": "user"}).status_code == 403
+    assert post(f"/comunidad/miembros/{admin_id}/estado", {"active": "0"}).status_code == 403
+
+
+def test_nobody_reaches_the_superadmin_through_a_route(
+        client, post, superadmin_id, owner_id, make_member, sign_in):
+    for actor in (owner_id, make_member("admina", role="admin"), superadmin_id):
+        sign_in(actor)
+        assert post(f"/comunidad/miembros/{superadmin_id}/estado",
+                    {"active": "0"}).status_code == 403, actor
+        assert post(f"/comunidad/miembros/{superadmin_id}/rol",
+                    {"role": "user"}).status_code == 403, actor
+        assert post(f"/comunidad/miembros/{superadmin_id}/eliminar").status_code == 403, actor
+
+
+def test_the_superadmin_cannot_erase_the_responsable(client, post, superadmin_id,
+                                                     owner_id, sign_in):
+    """Deliberate, and the less obvious half of the separation: a platform
+    administrator quietly removing the president of the organisation they host
+    is exactly what two chairs are for."""
+    sign_in(superadmin_id)
+    assert post(f"/comunidad/miembros/{owner_id}/eliminar").status_code == 403
+
+
+def test_handing_the_platform_on_is_the_superadmins_alone(
+        client, db, post, superadmin_id, owner_id, make_member, sign_in):
+    admin_id = make_member("admina", role="admin")
+
+    for actor in (owner_id, admin_id):
+        sign_in(actor)
+        assert post(f"/comunidad/miembros/{admin_id}/transferir-plataforma"
+                    ).status_code == 403
+
+    sign_in(superadmin_id)
+    post(f"/comunidad/miembros/{admin_id}/transferir-plataforma")
+
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (admin_id,)).fetchone()["role"] == "superadmin"
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (superadmin_id,)).fetchone()["role"] == "admin"
+
+
+def test_the_platform_only_goes_to_an_active_admin(client, db, post, superadmin_id,
+                                                   make_member, sign_in):
+    sign_in(superadmin_id)
+    maria = make_member("maria")
+    suspended = make_member("dormida", role="admin", active=0)
+
+    post(f"/comunidad/miembros/{maria}/transferir-plataforma")
+    post(f"/comunidad/miembros/{suspended}/transferir-plataforma")
+
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (superadmin_id,)).fetchone()["role"] == "superadmin"
+
+
+def test_the_superadmin_can_fill_an_empty_responsable_chair(
+        client, db, post, superadmin_id, make_member, sign_in):
+    """A fresh install has nobody in it — migration 7 promotes the owner and
+    leaves the chair open — so somebody has to be able to seat the first one."""
+    maria = make_member("maria")
+    sign_in(superadmin_id)
+
+    post(f"/comunidad/miembros/{maria}/transferir")
+
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (maria,)).fetchone()["role"] == "owner"
+    # And the superadministrator is still the superadministrator: filling a
+    # chair you do not sit in costs you nothing.
+    assert db.execute("SELECT role FROM members WHERE id = ?",
+                      (superadmin_id,)).fetchone()["role"] == "superadmin"

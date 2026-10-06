@@ -301,7 +301,7 @@ def test_an_empty_message_with_no_picture_is_refused(client, db, post, make_memb
 # --- erasure --------------------------------------------------------------
 
 def test_erasing_a_member_takes_their_private_messages(
-        app, client, db, post, owner_id, make_member, sign_in):
+        app, client, db, post, superadmin_id, make_member, sign_in):
     """Unlike a thread, which survives its author as "Miembro eliminado". A
     two-party exchange has no remainder to preserve, and keeping half of
     somebody's erased correspondence is what erasure exists to prevent."""
@@ -311,7 +311,7 @@ def test_erasing_a_member_takes_their_private_messages(
          content_type="multipart/form-data")
     name = db.execute("SELECT stored_name FROM attachments").fetchone()["stored_name"]
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{maria}/eliminar")
 
     for table in ("conversations", "conversation_members", "messages", "attachments"):
@@ -320,14 +320,14 @@ def test_erasing_a_member_takes_their_private_messages(
 
 
 def test_erasing_a_member_removes_blocks_either_way(
-        client, db, post, owner_id, make_member, sign_in):
+        client, db, post, superadmin_id, make_member, sign_in):
     maria, jose = make_member("maria"), make_member("jose")
     sign_in(maria)
     post(f"/comunidad/privados/bloquear/{jose}")
     sign_in(jose)
     post(f"/comunidad/privados/bloquear/{maria}")
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{maria}/eliminar")
 
     assert db.execute("SELECT COUNT(*) AS n FROM blocks").fetchone()["n"] == 0

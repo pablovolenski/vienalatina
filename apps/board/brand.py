@@ -12,6 +12,14 @@ drifts from it. That is what retires the comment: not by merging the two files �
 they are served by different things and each has to stand on its own — but by
 making a divergence fail the build instead of going unnoticed for a month.
 
+### Whose screen this is
+
+**The superadministrator's, not an admin's.** The look and the identity are the
+platform's, and an admin is the association's committee — the same line that
+makes an admin account the superadministrator's to grant. An admin who wants the
+colours changed asks the person who installed this, which is the correct
+conversation to be having.
+
 ### The two destinations
 
 One form, saved to two places, because the two halves cannot read the same
@@ -47,7 +55,7 @@ from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
 
 from . import gitea, uploads
 from .db import get_db
-from .security import admin_required
+from .security import superadmin_required
 
 bp = Blueprint("brand", __name__)
 
@@ -364,7 +372,7 @@ def _read_picture(field: str, allowed: tuple[str, ...], errors: list[str]):
 # --- routes ----------------------------------------------------------------
 
 @bp.route("/gestion/marca", methods=["GET", "POST"])
-@admin_required
+@superadmin_required
 def edit():
     if request.method == "GET":
         state = current()
@@ -439,7 +447,7 @@ def _store(stored: dict, css: str, logo, favicon, state: dict) -> None:
 
 
 @bp.route("/gestion/marca/publicar", methods=["POST"])
-@admin_required
+@superadmin_required
 def publish():
     """Try the commits again after the git server was unreachable."""
     if _publish():
@@ -448,7 +456,7 @@ def publish():
 
 
 @bp.route("/gestion/marca/restaurar", methods=["POST"])
-@admin_required
+@superadmin_required
 def restore():
     """Back to the colours the site was built with.
 

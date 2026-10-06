@@ -118,6 +118,10 @@ def create_app(overrides: dict | None = None) -> Flask:
     # For _person.html: the one login with no page behind it. A literal in the
     # template would be the same string written twice, in two languages.
     app.jinja_env.globals["tombstone_login"] = TOMBSTONE_LOGIN
+    # For member.html's role picker. The template asking the predicate is what
+    # keeps the picker from offering a role the handler will refuse — with two
+    # levels above admin, a hardcoded list can only be right for one of them.
+    app.jinja_env.globals["assignable_roles"] = members.assignable_roles
 
     @app.context_processor
     def _year():

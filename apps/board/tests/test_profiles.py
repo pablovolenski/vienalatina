@@ -121,13 +121,13 @@ def test_the_bio_cannot_smuggle_html(client, published):
 
 @pytest.mark.parametrize("name", ["de", "pt-br", "categories", "admin",
                                   "comunidad", "robots", "DE"])
-def test_a_name_the_site_already_uses_is_refused(client, db, post, owner_id,
+def test_a_name_the_site_already_uses_is_refused(client, db, post, superadmin_id,
                                                  sign_in, name, monkeypatch):
     """Not because it would break the site — Caddy gives the static site every
     collision — but because their page would never load and nobody would know
     why."""
     monkeypatch.setattr("apps.board.mail.send", lambda to, subject, body: None)
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post("/comunidad/miembros/nuevo", {
         "login": name, "display_name": "X", "email": "x@example.com", "role": "user",
     })
@@ -187,7 +187,7 @@ def test_a_board_picture_cannot_be_served_as_a_profile_photo(
 
 
 def test_erasing_a_member_takes_the_photo_off_disk(
-        app, client, db, post, owner_id, sign_in, published):
+        app, client, db, post, superadmin_id, sign_in, published):
     member_id = published()
     sign_in(member_id)
     post("/comunidad/mi-perfil", {"published": "on", "bio": "Hola",
@@ -197,7 +197,7 @@ def test_erasing_a_member_takes_the_photo_off_disk(
                       (member_id,)).fetchone()["photo_name"]
     assert (Path(app.config["UPLOAD_DIR"]) / name).exists()
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{member_id}/eliminar")
 
     assert not (Path(app.config["UPLOAD_DIR"]) / name).exists()
@@ -264,7 +264,7 @@ def test_their_page_links_out_to_the_public_one_when_there_is_one(
     assert 'href="/maria"' in client.get("/comunidad/miembro/maria").get_data(as_text=True)
 
 
-def test_an_erased_members_name_is_not_a_link(client, post, owner_id,
+def test_an_erased_members_name_is_not_a_link(client, post, superadmin_id,
                                               make_member, sign_in):
     """The one name with no page behind it. An erased member's writing is
     reassigned to the tombstone, which is not a person and has nothing to
@@ -274,7 +274,7 @@ def test_an_erased_members_name_is_not_a_link(client, post, owner_id,
     sign_in(maria)
     post("/comunidad/nuevo", {"title": "Hola", "body": "Qué tal"})
 
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     post(f"/comunidad/miembros/{maria}/eliminar")
 
     body = client.get("/comunidad/muro").get_data(as_text=True)

@@ -33,7 +33,7 @@ from flask import (Blueprint, abort, current_app, flash, g, redirect,
 from . import content, gitea, uploads
 from .db import get_db
 from .render import excerpt, to_html
-from .security import login_required, moderator_required
+from .security import is_at_least, login_required, moderator_required
 
 bp = Blueprint("submissions", __name__)
 
@@ -54,7 +54,7 @@ STATE_LABELS = {
 
 def may_moderate(member=None) -> bool:
     member = member or g.member
-    return member is not None and member["role"] in ("owner", "admin", "moderator")
+    return member is not None and is_at_least(member["role"], "moderator")
 
 
 def pending_count() -> int:

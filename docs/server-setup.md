@@ -521,43 +521,75 @@ has been archiving air" are otherwise the same empty line.
 
 ### 11.6 Who can do what
 
-| | Responsable | Administrador | Moderador | Miembro |
-|---|---|---|---|---|
-| Wall: post, comment, edit own | ✓ | ✓ | ✓ | ✓ |
-| Private messages, own profile | ✓ | ✓ | ✓ | ✓ |
-| Propose a public post | ✓ | ✓ | ✓ | ✓ |
-| Publish a public post directly | ✓ | ✓ | ✓ | — |
-| Approve or return a proposal | ✓ | ✓ | ✓ | — |
-| Edit and delete published posts | ✓ | ✓ | ✓ | — |
-| Static pages of the site | ✓ | ✓ | — | — |
-| Delete any wall post | ✓ | ✓ | — | — |
-| Edit someone else's post | — | — | — | — |
-| Pin and close threads | ✓ | ✓ | — | — |
-| Create members and moderators | ✓ | ✓ | — | — |
-| Change a role (below admin) | ✓ | ✓ | — | — |
-| Create admins, promote to admin | ✓ | — | — | — |
-| Suspend a member or moderator | ✓ | ✓ | — | — |
-| Suspend an admin | ✓ | — | — | — |
-| Transfer ownership, erase a member | ✓ | — | — | — |
+Five roles, and **two of them are single chairs held by the database** rather
+than by the application: a partial unique index each, so a bug in a handler
+cannot produce a second of either.
+
+| | Superadministrador | Responsable | Administrador | Moderador | Miembro |
+|---|---|---|---|---|---|
+| Wall: post, comment, edit own | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Private messages, own profile | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Propose a public post | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Publish a public post directly | ✓ | ✓ | ✓ | ✓ | — |
+| Approve or return a proposal | ✓ | ✓ | ✓ | ✓ | — |
+| Edit and delete published posts | ✓ | ✓ | ✓ | ✓ | — |
+| Static pages of the site | ✓ | ✓ | ✓ | — | — |
+| Delete any wall post, pin and close | ✓ | ✓ | ✓ | — | — |
+| Edit someone else's post | — | — | — | — | — |
+| Create members and moderators | ✓ | ✓ | ✓ | — | — |
+| Change a role below admin | ✓ | ✓ | ✓ | — | — |
+| Suspend a member or moderator | ✓ | ✓ | ✓ | — | — |
+| Erase a member | ✓ | ✓ | — | — | — |
+| Name the responsable | ✓ | ✓ | — | — | — |
+| **Create, promote, suspend an admin** | ✓ | — | — | — | — |
+| **Marca: the look and the identity** | ✓ | — | — | — | — |
+| **Estado del sistema, Registro** | ✓ | — | — | — | — |
+| **Hand the platform on** | ✓ | — | — | — | — |
+
+**The two chairs do different jobs, and that is the point.** The
+*superadministrador* runs the **platform**: admin accounts, the look, the
+identity, the system tools. The *responsable* runs the **association**: members,
+moderators, invitations, erasure. Installed for a second organisation, the first
+is whoever maintains the box and the second is their president — which is what
+makes the responsable chair safe to hand to a customer, and why an admin account
+is not theirs to grant.
+
+**Neither chair can be touched by anybody, including themselves.** The
+superadministrator because there is nothing above them; the responsable because
+the chair belongs to the association, and a platform administrator quietly
+removing the president of the organisation they host is exactly the move this
+separation exists to prevent. Each steps down by handing their own chair on, and
+whoever gives one up becomes an administrator — there is no role above the one
+they just gave away.
 
 **A moderator has no power over people.** They decide what the public reads and
 nothing else: no creating, suspending, promoting or erasing anybody. That line is
 the whole point of having the role — a moderator who could also suspend the
 author of a post they had just returned would be a second kind of administrator.
 
-Admins can appoint moderators; only the owner can appoint admins. That rule lives
-in one place (`may_create` in `apps/board/members.py`) and the role form on
-*Miembros* checks it twice: once for reaching the person, once for the role being
-given.
+Both rules live in one place each — `may_create` and `may_manage` in
+`apps/board/members.py` — and the role picker on a member's page is built from
+`assignable_roles(actor)`, the same predicate, so it can never offer a role the
+handler will refuse. "This role or anything above it" is `is_at_least` in
+`apps/board/security.py`, over one ordered `LADDER`: it replaced seven literal
+tuples scattered through the app, each of which had silently excluded the
+superadministrator the moment a tier appeared above owner.
 
 Nobody edits anyone else's words, administrators included. Taking a post down is
 visible to the person who wrote it; rewriting it is not, and an admin who could
 do that could leave a sentence attributed to a member who never wrote it.
 
-There is exactly one owner, and the database enforces it with a unique index
-rather than trusting the application to remember. The owner cannot be suspended
-or demoted by anyone, themselves included — to step down, transfer ownership to
-an admin.
+**On upgrade**, migration 7 promotes the existing owner — Pablo — to
+superadministrator and leaves the responsable chair empty. Nothing is erased and
+nobody has to type anything: a superadministrator passes every check an owner
+passed. The chair is filled from *Miembros* → somebody's page → **Nombrar
+responsable** whenever there is somebody to put in it.
+
+`BOARD_OWNER` keeps its name and now seeds a superadministrator. It refuses to
+change an existing one, so editing the environment cannot hand anybody the
+platform — and the `ON CONFLICT` clause that writes the role is pinned to
+`superadmin` for a reason worth knowing: left saying `owner`, it would have
+demoted the superadministrator on every container restart.
 
 ### 11.7 Personal data
 

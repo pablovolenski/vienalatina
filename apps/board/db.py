@@ -65,7 +65,7 @@ def init_db(app) -> None:
         for step in migrations.apply(db):
             app.logger.info("Applied migration %s", step)
         _ensure_tombstone(db)
-        _seed_owner(db, app)
+        _seed_superadmin(db, app)
     finally:
         db.close()
 
@@ -79,35 +79,49 @@ def _ensure_tombstone(db: sqlite3.Connection) -> None:
     )
 
 
-def _seed_owner(db: sqlite3.Connection, app) -> None:
-    """Create the first owner from BOARD_OWNER, once.
+def _seed_superadmin(db: sqlite3.Connection, app) -> None:
+    """Create the first superadministrator from BOARD_OWNER, once.
 
-    Deliberately refuses to change an existing owner. Were this to overwrite,
-    anyone who could edit the environment could hand themselves ownership by
-    restarting the container — which is a quieter privilege escalation than it
-    looks, since editing a compose file draws far less attention than asking
-    the owner for access.
+    Still `BOARD_OWNER` rather than a new name: it is the variable the server's
+    `.env` already carries, and an install that has to edit its environment to
+    survive an upgrade is an install that breaks on upgrade.
+
+    Deliberately refuses to change an existing superadministrator. Were this to
+    overwrite, anyone who could edit the environment could hand themselves the
+    platform by restarting the container — a quieter privilege escalation than
+    it looks, since editing a compose file draws far less attention than asking
+    for access.
+
+    **The `ON CONFLICT` below is the half worth reading twice.** It used to end
+    `SET role = 'owner'`, which was right while owner was the top of the tree.
+    Left that way after migration 7 it would have found the superadministrator's
+    login, matched the conflict, and demoted them back to owner on every
+    container restart — a privilege *reduction* arriving at the least convenient
+    moment and attributable to nothing anybody did. `members_one_superadmin`
+    would then have let somebody else take the chair.
     """
     login = (app.config.get("OWNER_LOGIN") or "").strip()
-    existing = db.execute("SELECT gitea_login FROM members WHERE role = 'owner'").fetchone()
+    existing = db.execute(
+        "SELECT gitea_login FROM members WHERE role = 'superadmin'").fetchone()
 
     if existing:
         if login and existing["gitea_login"].lower() != login.lower():
             app.logger.warning(
-                "BOARD_OWNER is %r but the owner is %r; leaving it alone. "
-                "Transfer ownership from inside the app instead.",
+                "BOARD_OWNER is %r but the superadministrator is %r; leaving it "
+                "alone. Hand the platform on from inside the app instead.",
                 login, existing["gitea_login"],
             )
         return
 
     if not login:
-        app.logger.warning("No owner yet and BOARD_OWNER is unset — nobody can sign in.")
+        app.logger.warning("No superadministrator yet and BOARD_OWNER is unset — "
+                           "nobody can sign in.")
         return
 
     db.execute(
         """INSERT INTO members (gitea_login, display_name, role, active)
-           VALUES (?, ?, 'owner', 1)
-           ON CONFLICT(gitea_login) DO UPDATE SET role = 'owner', active = 1""",
+           VALUES (?, ?, 'superadmin', 1)
+           ON CONFLICT(gitea_login) DO UPDATE SET role = 'superadmin', active = 1""",
         (login, login),
     )
-    app.logger.info("Seeded %r as owner.", login)
+    app.logger.info("Seeded %r as superadministrator.", login)

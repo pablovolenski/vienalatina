@@ -222,10 +222,10 @@ def test_a_suspended_member_gets_no_reset(client, post, make_member, outbox):
 # --- inviting from the members screen -------------------------------------
 
 def test_creating_a_member_emails_them_instead_of_showing_a_password(
-        app, client, post, owner_id, sign_in, outbox, monkeypatch):
+        app, client, post, superadmin_id, sign_in, outbox, monkeypatch):
     monkeypatch.setattr(gitea, "admin_create_user",
                         lambda login, email, name, password: None)
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     response = post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "María", "email": "m@example.com",
@@ -241,7 +241,7 @@ def test_creating_a_member_emails_them_instead_of_showing_a_password(
 
 
 def test_when_mail_fails_the_admin_is_given_the_link(
-        app, client, post, owner_id, sign_in, monkeypatch):
+        app, client, post, superadmin_id, sign_in, monkeypatch):
     """Otherwise the account exists and the member simply never gets in."""
     monkeypatch.setattr(gitea, "admin_create_user",
                         lambda login, email, name, password: None)
@@ -249,7 +249,7 @@ def test_when_mail_fails_the_admin_is_given_the_link(
     def explode(to, subject, body):
         raise mail.MailFailed("connection refused")
     monkeypatch.setattr(mail, "send", explode)
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     response = post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "María", "email": "m@example.com",
@@ -265,13 +265,13 @@ def test_when_mail_fails_the_admin_is_given_the_link(
 # --- when the server cannot send at all -----------------------------------
 
 def test_an_unconfigured_server_does_not_blame_the_mail_server(
-        app, client, post, owner_id, sign_in, monkeypatch):
+        app, client, post, superadmin_id, sign_in, monkeypatch):
     """No MAIL_HOST is not a failure, and saying "no se pudo enviar" sends the
     admin hunting for an SMTP error that was never produced."""
     monkeypatch.setattr(gitea, "admin_create_user",
                         lambda login, email, name, password: None)
     app.config["MAIL_HOST"] = ""
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     page = post("/comunidad/miembros/nuevo", {
         "login": "maria", "display_name": "María", "email": "m@example.com",
@@ -283,9 +283,9 @@ def test_an_unconfigured_server_does_not_blame_the_mail_server(
     assert "/comunidad/invitacion/" in page
 
 
-def test_the_form_warns_before_it_is_filled_in(app, client, owner_id, sign_in):
+def test_the_form_warns_before_it_is_filled_in(app, client, superadmin_id, sign_in):
     app.config["MAIL_HOST"] = ""
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     assert "no envía correo" in client.get(
         "/comunidad/miembros/nuevo").get_data(as_text=True)
 
@@ -323,13 +323,13 @@ def test_recovery_is_always_offered_now(app, client):
 # member added any other way had no route in at all: no invitation was ever
 # issued for them and nothing could issue one later.
 
-def test_an_existing_member_can_be_invited(app, client, post, owner_id, make_member,
+def test_an_existing_member_can_be_invited(app, client, post, superadmin_id, make_member,
                                            sign_in, outbox):
     """The case that prompted this: the admin made the account by hand, added
     the member with the box unticked, and nobody could reach the account —
     including the admin, who never knew the password."""
     member_id = make_member("salvador")
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     post(f"/comunidad/miembros/{member_id}/invitar")
 
@@ -339,12 +339,12 @@ def test_an_existing_member_can_be_invited(app, client, post, owner_id, make_mem
         assert invites.lookup(token_in(outbox[0]["body"])) is not None
 
 
-def test_re_inviting_kills_the_previous_link(app, client, post, owner_id, make_member,
+def test_re_inviting_kills_the_previous_link(app, client, post, superadmin_id, make_member,
                                              sign_in, outbox):
     """A link that was forwarded, or is sitting in a mailbox somebody else can
     read, must stop working the moment a replacement is sent."""
     member_id = make_member("salvador")
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     post(f"/comunidad/miembros/{member_id}/invitar")
     post(f"/comunidad/miembros/{member_id}/invitar")
@@ -370,13 +370,13 @@ def test_a_plain_user_cannot_invite(client, post, make_member, sign_in, outbox):
 
 
 def test_a_member_with_no_address_is_refused_before_a_token_is_made(
-        app, client, db, post, owner_id, sign_in, outbox):
+        app, client, db, post, superadmin_id, sign_in, outbox):
     """Issuing the token first would invalidate a previous, working invitation
     in exchange for one that cannot be delivered."""
     member_id = db.execute(
         "INSERT INTO members (gitea_login, display_name, role) VALUES ('sincorreo', 'Sin', 'user')"
     ).lastrowid
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     post(f"/comunidad/miembros/{member_id}/invitar", follow_redirects=True)
 
@@ -384,9 +384,9 @@ def test_a_member_with_no_address_is_refused_before_a_token_is_made(
     assert db.execute("SELECT 1 FROM invites").fetchone() is None
 
 
-def test_a_suspended_member_cannot_be_invited(client, post, owner_id, make_member,
+def test_a_suspended_member_cannot_be_invited(client, post, superadmin_id, make_member,
                                               sign_in, outbox):
-    sign_in(owner_id)
+    sign_in(superadmin_id)
     response = post(f"/comunidad/miembros/{make_member('fuera', active=0)}/invitar")
 
     assert response.status_code == 403
@@ -394,11 +394,11 @@ def test_a_suspended_member_cannot_be_invited(client, post, owner_id, make_membe
 
 
 def test_when_the_mail_fails_the_admin_is_handed_the_link(
-        app, client, post, owner_id, make_member, sign_in, monkeypatch):
+        app, client, post, superadmin_id, make_member, sign_in, monkeypatch):
     def explode(to, subject, body):
         raise mail.MailFailed("connection refused")
     monkeypatch.setattr(mail, "send", explode)
-    sign_in(owner_id)
+    sign_in(superadmin_id)
 
     page = post(f"/comunidad/miembros/{make_member('salvador')}/invitar",
                 follow_redirects=True).get_data(as_text=True)
