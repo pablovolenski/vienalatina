@@ -440,3 +440,50 @@ def test_a_second_superadmin_is_not_seeded_over_the_first(tmp_path):
     assert db.execute(
         "SELECT COUNT(*) FROM members WHERE gitea_login = 'intruso'").fetchone()[0] == 0
     db.close()
+
+
+def test_step_nine_gives_every_post_somewhere_to_say_a_machine_wrote_it(tmp_path):
+    """Three plain ADD COLUMNs, and the rows around them untouched.
+
+    Built on the current schema and then wound back, like step six's test: the
+    question here is not whether an old database survives — steps 5 and 7 cover
+    that — but that a database with threads and proposals already in it gains
+    the flag without losing any of them.
+    """
+    from apps.board.app import create_app
+    from apps.board.db import connect
+
+    path = str(tmp_path / "board.db")
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    member = db.execute("SELECT id FROM members WHERE role = 'superadmin'").fetchone()["id"]
+    db.execute("INSERT INTO threads (author_id, title, body_md) VALUES (?, ?, ?)",
+               (member, "Un tema de antes", "Escrito antes de todo esto."))
+    db.execute("""INSERT INTO submissions (author_id, title, body_md, description)
+                  VALUES (?, 'Una propuesta', 'Texto.', '')""", (member,))
+    db.execute("""INSERT INTO content_cache (path, sha, title, date)
+                  VALUES ('content/post/2026-01-01-algo.es.md', 'abc', 'Algo', '2026-01-01')""")
+    # Wind the version back and drop the columns, as a server that has been
+    # running since before this phase has it.
+    for table in ("threads", "submissions", "content_cache"):
+        db.execute(f"ALTER TABLE {table} DROP COLUMN ai_generated")
+    db.execute("PRAGMA user_version = 8")
+    db.commit()
+    db.close()
+
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    for table in ("threads", "submissions", "content_cache"):
+        columns = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+        assert "ai_generated" in columns, table
+    # Nothing written before the step is marked, and nothing is missing.
+    assert db.execute("SELECT title, ai_generated FROM threads").fetchone()[:] == (
+        "Un tema de antes", 0)
+    assert db.execute("SELECT count(*) FROM submissions").fetchone()[0] == 1
+    assert db.execute("PRAGMA user_version").fetchone()[0] == max(
+        number for number, _, _ in migrations.STEPS)
+    db.close()

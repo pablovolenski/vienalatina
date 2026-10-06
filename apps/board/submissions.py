@@ -97,6 +97,11 @@ def _read_proposal() -> tuple[dict, list[str]]:
         "title": request.form.get("title", "").strip()[:TITLE_MAX],
         "body": request.form.get("body", "").strip()[:BODY_MAX],
         "description": request.form.get("description", "").strip()[:300],
+        # Said by the member about their own text, and carried through the queue
+        # unchanged. A moderator can see it and can refuse the proposal; what
+        # they cannot do is quietly publish it without the line, which is the
+        # only way this disclosure is worth anything.
+        "ai_generated": request.form.get("ai_generated") == "on",
         # The same three fields the editor asks for, read by the same function:
         # a member's event and a moderator's have to produce the same post.
         **content.read_event_fields(request.form, errors),
@@ -176,11 +181,12 @@ def propose():
     get_db().execute(
         """INSERT INTO submissions
                (author_id, title, body_md, description, photo_name,
-                event_date, event_time, event_location)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                event_date, event_time, event_location, ai_generated)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (g.member["id"], fields["title"], fields["body"], fields["description"],
          photo_name,
-         fields["event_date"], fields["event_time"], fields["event_location"]),
+         fields["event_date"], fields["event_time"], fields["event_location"],
+         1 if fields["ai_generated"] else 0),
     )
     flash("Enviado. Un moderador lo leerá antes de publicarlo.", "ok")
     return redirect(url_for("submissions.index"))
@@ -242,13 +248,15 @@ def edit(submission_id: int):
         """UPDATE submissions
               SET title = ?, body_md = ?, description = ?,
                   photo_name = ?, event_date = ?, event_time = ?,
-                  event_location = ?, state = 'pending', note = NULL,
+                  event_location = ?, ai_generated = ?,
+                  state = 'pending', note = NULL,
                   reviewed_by = NULL, reviewed_at = NULL,
                   updated_at = datetime('now')
             WHERE id = ?""",
         (fields["title"], fields["body"], fields["description"],
          photo_name, fields["event_date"],
-         fields["event_time"], fields["event_location"], submission_id),
+         fields["event_time"], fields["event_location"],
+         1 if fields["ai_generated"] else 0, submission_id),
     )
     # Back to pending on every edit, including one made after a rejection: a
     # rejected post that has been rewritten is waiting again, and leaving it
@@ -322,6 +330,10 @@ def approve(submission_id: int):
         "event_date": row["event_date"] or "",
         "event_time": row["event_time"] or "",
         "event_location": row["event_location"] or "",
+        # The one field here the author set about their own writing. It has to
+        # survive the queue or the disclosure is lost at the exact moment the
+        # text stops being private.
+        "ai_generated": bool(row["ai_generated"]),
     }
     # Read the picture before the try, and catch only the error that means what
     # it says. The first version wrapped everything in `except OSError`, which

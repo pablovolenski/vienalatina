@@ -145,3 +145,41 @@ def test_the_preview_is_never_cached(post, make_member, sign_in):
     sign_in(make_member("maria"))
     response = post("/comunidad/previsualizar", {"body": "hola"})
     assert response.headers["Cache-Control"] == "no-store"
+
+
+# --- said out loud on the wall too ----------------------------------------
+
+def test_a_thread_can_say_a_machine_wrote_it(client, post, make_member, sign_in):
+    """The same disclosure inside the members area as on the public site. The
+    people here know each other, which makes it more useful rather than less:
+    nobody wants to answer a machine thinking they are answering a neighbour.
+    """
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "Resumen de la reunión",
+                              "body": "Lo que se decidió.", "ai_generated": "on"})
+
+    page = client.get("/comunidad/muro").get_data(as_text=True)
+    assert "Generado con IA" in page
+    assert "Generado con IA" in client.get("/comunidad/tema/1").get_data(as_text=True)
+
+
+def test_an_ordinary_thread_says_nothing_of_the_kind(client, post, make_member, sign_in):
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "Resumen", "body": "Escrito a mano."})
+    assert "Generado con IA" not in client.get("/comunidad/muro").get_data(as_text=True)
+
+
+def test_editing_a_thread_can_add_or_remove_the_disclosure(client, post, make_member, sign_in):
+    """It is the author's statement about their own text, so it stays theirs
+    to change — and an edit that forgets the field must not silently keep a
+    mark the author has taken off."""
+    member = make_member("maria")
+    sign_in(member)
+    post("/comunidad/nuevo", {"title": "Resumen", "body": "Primera versión.",
+                              "ai_generated": "on"})
+    post("/comunidad/tema/1/editar", {"title": "Resumen", "body": "Reescrito a mano."})
+    assert "Generado con IA" not in client.get("/comunidad/tema/1").get_data(as_text=True)
+
+    post("/comunidad/tema/1/editar", {"title": "Resumen", "body": "Otra vez con ayuda.",
+                                      "ai_generated": "on"})
+    assert "Generado con IA" in client.get("/comunidad/tema/1").get_data(as_text=True)

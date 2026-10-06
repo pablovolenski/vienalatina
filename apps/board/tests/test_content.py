@@ -629,3 +629,72 @@ def test_an_event_keeps_its_date_when_edited(repo, editor, post, client):
     front = yaml.safe_load(
         repo.files["content/post/2026-10-03-feria.es.md"].decode().split("---")[1])
     assert front["event_date"] == "2026-10-24"
+
+
+# --- said out loud: a machine wrote this ----------------------------------
+
+def test_a_post_marked_as_ai_says_so_in_its_own_frontmatter(repo, editor, post):
+    """The file in the repository is the record of what was published, so the
+    disclosure travels with it rather than living in a database the public
+    site cannot read."""
+    publish(post, ai_generated="on")
+    path, = repo.files
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert fm["ai_generated"] is True
+
+
+def test_an_ordinary_post_carries_no_such_line(repo, editor, post):
+    """`ai_generated: false` on every post ever written is noise in the
+    repository and a question in the mind of whoever reads the file."""
+    publish(post)
+    path, = repo.files
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert "ai_generated" not in fm
+
+
+def test_correcting_a_typo_does_not_quietly_remove_the_disclosure(
+        repo, editor, post, client):
+    """The failure this is shaped around: a flag loaded into the form but not
+    written back out again survives exactly until somebody fixes a comma.
+    """
+    publish(post, ai_generated="on")
+    path, = repo.files
+    name = path.rsplit("/", 1)[1]
+
+    form = client.get(f"/comunidad/contenido/post/editar/{name}").get_data(as_text=True)
+    assert 'name="ai_generated" checked' in form.replace("  ", " ")
+
+    post(f"/comunidad/contenido/post/editar/{name}",
+         {"title": "Sabores del barrio", "body": "Texto corregido.",
+          "date": "2026-09-25", "sha": repo._sha(repo.files[path]), "ai_generated": "on"})
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert fm["ai_generated"] is True
+
+
+def test_the_disclosure_can_be_taken_off_again(repo, editor, post, client):
+    """Somebody rewrites the text themselves. The switch is theirs to turn
+    off, and the line goes with it."""
+    publish(post, ai_generated="on")
+    path, = repo.files
+    name = path.rsplit("/", 1)[1]
+    post(f"/comunidad/contenido/post/editar/{name}",
+         {"title": "Sabores del barrio", "body": "Reescrito a mano.",
+          "date": "2026-09-25", "sha": repo._sha(repo.files[path])})
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert "ai_generated" not in fm
+
+
+def test_the_disclosure_is_not_one_of_the_keys_translation_rewrites(repo, editor, post):
+    """A translated post was still machine-written, so the flag has to reach
+    the German and Portuguese siblings untouched.
+
+    `translate_file` copies the whole frontmatter (`new_fm = dict(fm)`) and
+    rewrites only TRANSLATED_KEYS, so this needs no change to the pipeline —
+    asserted against the real list rather than assumed, because a key quietly
+    added to it would send the flag through a translation engine.
+    """
+    publish(post, ai_generated="on")
+    path, = repo.files
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert fm["ai_generated"] is True
+    assert "ai_generated" not in translate.TRANSLATED_KEYS

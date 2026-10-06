@@ -30,6 +30,14 @@
 
 	<div class="actions">
 		<button class="btn" type="submit">{{ 'Guardar' if thread else 'Publicar' }}</button>
+		{#- Beside the button that publishes, because that is the moment it is
+		    answered. One line rather than a fieldset: it has to be seen, not
+		    to take up the form. -#}
+		<label class="switch">
+			<input type="checkbox" name="ai_generated" {{ 'checked' if (thread.ai_generated if thread else False) }}>
+			Contenido generado con IA
+		</label>
+
 		<a class="linkish" href="{{ url_for('board.thread', thread_id=thread.id) if thread else url_for('board.threads') }}">Cancelar</a>
 	</div>
 </form>

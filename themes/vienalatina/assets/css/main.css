@@ -4140,3 +4140,23 @@ a.notif-card__message:hover {
   .back-link { display: inline-block; padding: 14px 0; }
   .agenda__move { min-width: 44px; min-height: 44px; }
 }
+
+/* --- said out loud: a machine wrote this -------------------------------- */
+/*
+ * Beside the date on the post and on its card. Quiet enough not to shout and
+ * placed above the text rather than under it: a disclosure somebody meets
+ * after reading the thing is not a disclosure. The words are in t.html, in
+ * the three languages, because a post translated by the pipeline was still
+ * machine-written and the label travels with it.
+ */
+.tag-ai {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--border-light, #e0cec8);
+  border-radius: 999px;
+  background: var(--surface-soft, #faf2ef);
+  color: var(--muted, #5c3d37);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}

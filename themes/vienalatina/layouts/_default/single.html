@@ -27,6 +27,14 @@
 						{{ end }}
 					</span>
 					{{ end }}
+					{{/* Said where the post is read, beside the date — not under the text,
+					     where a disclosure arrives after the thing it discloses. Written by
+					     whoever published it, in the frontmatter; translate.py copies the key
+					     into the German and Portuguese siblings by itself, which is right:
+					     a translated post was still machine-written. */}}
+					{{ if .Params.ai_generated }}
+					<span class="tag-ai" title="{{ partial "t.html" (dict "key" "aifull" "lang" .Site.Language.Lang) }}">{{ partial "t.html" (dict "key" "ai" "lang" .Site.Language.Lang) }}</span>
+					{{ end }}
 				</div>
 			</div>
 		</header>

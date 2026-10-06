@@ -20,6 +20,7 @@
 	<div class="card__meta">
 		{% if t.pinned %}<span class="tag">Fijado</span>{% endif %}
 		{% if t.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
+		{% if t.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
 		<span>{{ person(t.author, t.author_login) }}</span> · <time>{{ t.created_at }}</time>
 	</div>
 	<h2 class="card__title">

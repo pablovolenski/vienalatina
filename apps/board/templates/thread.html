@@ -9,6 +9,7 @@
 	<div class="card__meta">
 		{% if thread.pinned %}<span class="tag">Fijado</span>{% endif %}
 		{% if thread.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
+		{% if thread.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
 		<span>{{ person(author.display_name, author.gitea_login) }}</span> · <time>{{ thread.created_at }}</time>
 		{% if thread.edited_at %}<span class="muted small">(editado)</span>{% endif %}
 	</div>

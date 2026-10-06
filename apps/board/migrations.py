@@ -338,6 +338,32 @@ def _room_for_identity_and_a_typeface(db: sqlite3.Connection) -> None:
                 db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
 
 
+def _room_to_say_a_machine_wrote_it(db: sqlite3.Connection) -> None:
+    """One flag per place a post can live, so the disclosure survives the trip.
+
+    Plain ADD COLUMNs again. A public post carries the flag in its own
+    frontmatter — the file in the repository is the record, not this database —
+    and `content_cache.ai_generated` is only the copy that lets the editor's
+    list show it without re-reading every file from the git server.
+
+    `submissions.ai_generated` is the one that has to exist rather than be
+    derived: a proposal is a draft in SQLite for as long as it is in the queue,
+    and the flag has to survive moderation to reach the frontmatter of the post
+    it becomes.
+    """
+    for table, columns in (("threads", ("ai_generated",)),
+                           ("submissions", ("ai_generated",)),
+                           ("content_cache", ("ai_generated",))):
+        existing = _columns(db, table)
+        if not existing:
+            continue
+        for column in columns:
+            if column not in existing:
+                db.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {column} "
+                    "INTEGER NOT NULL DEFAULT 0")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
@@ -350,6 +376,7 @@ STEPS = [
     (7, "a superadministrator above the responsable", _a_superadmin_above_the_owner),
     (8, "room for the identity, a typeface and the media library",
      _room_for_identity_and_a_typeface),
+    (9, "a post can say a machine wrote it", _room_to_say_a_machine_wrote_it),
 ]
 
 

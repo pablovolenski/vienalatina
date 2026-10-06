@@ -159,6 +159,11 @@ def frontmatter_for(collection: str, form: dict) -> dict:
             fields["author"] = form["author"]
         if form.get("author_url"):
             fields["author_url"] = form["author_url"]
+    # Only when true, for both collections: a line reading `ai_generated: false`
+    # on every post ever written is noise in the repository and a question in
+    # the mind of anybody reading the file.
+    if form.get("ai_generated"):
+        fields["ai_generated"] = True
     return fields
 
 
@@ -173,13 +178,15 @@ def _cache_read(path: str, sha: str):
 def _cache_write(path: str, sha: str, fm: dict) -> None:
     get_db().execute(
         """INSERT INTO content_cache (path, sha, title, date, generated, image,
-                                      event_date, event_time, event_location)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                      event_date, event_time, event_location,
+                                      ai_generated)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(path) DO UPDATE SET
                sha = excluded.sha, title = excluded.title, date = excluded.date,
                generated = excluded.generated, image = excluded.image,
                event_date = excluded.event_date, event_time = excluded.event_time,
                event_location = excluded.event_location,
+               ai_generated = excluded.ai_generated,
                updated_at = datetime('now')""",
         (path, sha, str(fm.get("title", "")), str(fm.get("date", "")),
          1 if fm.get("translated_from") else 0,
@@ -192,7 +199,8 @@ def _cache_write(path: str, sha: str, fm: dict) -> None:
          # internal ones and would otherwise read every post's frontmatter on
          # every page view to find out when they are.
          str(fm.get("event_date", "") or ""), str(fm.get("event_time", "") or ""),
-         str(fm.get("event_location", "") or "")),
+         str(fm.get("event_location", "") or ""),
+         1 if fm.get("ai_generated") else 0),
     )
 
 
@@ -220,6 +228,7 @@ def listing(collection: str) -> list[dict]:
             "name": name, "path": path, "sha": sha,
             "title": row["title"] or name,
             "date": row["date"],
+            "ai_generated": bool(row["ai_generated"]),
             "event_date": row["event_date"] or "",
             "event_time": row["event_time"] or "",
             "event_location": row["event_location"] or "",
@@ -320,6 +329,10 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         "description": request.form.get("description", "").strip(),
         "image": image,
         "manual_translation": request.form.get("manual_translation") == "on",
+        # Said by whoever is publishing, about this post. It travels in the
+        # frontmatter rather than in a database, because the file in the
+        # repository is the record of what was published.
+        "ai_generated": request.form.get("ai_generated") == "on",
         "author": author, "author_url": author_url,
         "parent": parent, "weight": weight,
         "faq": faq, "image_alt": image_alt,
@@ -551,6 +564,11 @@ def edit(collection: str, name: str):
             "description": fm.get("description", ""),
             "image": fm.get("image", ""),
             "manual_translation": bool(fm.get("manual_translation")),
+            # Loaded so the switch comes back the way it was left. A flag read
+            # into the form but not written back out again is a flag that one
+            # correction quietly removes — which is the whole failure the
+            # byline below was given its comment for.
+            "ai_generated": bool(fm.get("ai_generated")),
             # Carried through the form untouched. Correcting a typo in somebody
             # else's post must not re-sign it with the name of whoever is
             # fixing it — the same rule the board has about editing other

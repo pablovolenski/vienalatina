@@ -1018,6 +1018,12 @@ input[type="file"] {
 	summary { padding: 0.95rem 0; }
 	.account__name { padding: 0.9rem 0; }
 
+	/* The disclosure switch: 16px of words and a 13px box before this. The
+	   checkbox itself grows too — a label you can hit around a box you
+	   cannot is a control that looks broken when it misses. */
+	.switch { padding: 0.7rem 0; }
+	.switch input { width: 20px; height: 20px; }
+
 	.cal__add {
 		display: inline-flex;
 		align-items: center;

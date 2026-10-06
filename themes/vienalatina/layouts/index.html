@@ -5,6 +5,7 @@
 	<article class="article-card">
 		<div class="article-card__meta">
 			<time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 Jan 2006" }}</time>
+			{{ if .Params.ai_generated }}<span class="tag-ai" title="{{ partial "t.html" (dict "key" "aifull" "lang" .Site.Language.Lang) }}">{{ partial "t.html" (dict "key" "ai" "lang" .Site.Language.Lang) }}</span>{{ end }}
 		</div>
 		<h2 class="article-card__title"><a href="{{ .Permalink }}">{{ .Title }}</a></h2>
 		<p class="article-card__excerpt">{{ .Description | default (.Summary | plainify | truncate 200) }}</p>

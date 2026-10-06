@@ -66,6 +66,14 @@
 
 	<div class="actions">
 		<button class="btn" type="submit">{{ 'Guardar' if item else 'Enviar a revisión' }}</button>
+		{#- Beside the button that publishes, because that is the moment it is
+		    answered. One line rather than a fieldset: it has to be seen, not
+		    to take up the form. -#}
+		<label class="switch">
+			<input type="checkbox" name="ai_generated" {{ 'checked' if (fields.ai_generated if fields else False) }}>
+			Contenido generado con IA
+		</label>
+
 		<a class="linkish" href="{{ url_for('submissions.index') }}">Cancelar</a>
 	</div>
 </form>

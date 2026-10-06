@@ -29,6 +29,7 @@
 			<td>
 				<a href="{{ url_for('content.edit', collection=collection, name=item.name) }}">{{ item.title }}</a>
 				<div class="muted small mono">{{ item.name }}</div>
+				{% if item.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
 			</td>
 			{# data-label is drawn by board.css under 640px, where the header row
 			   is hidden and a bare date in a stacked card says nothing. #}

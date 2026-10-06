@@ -501,3 +501,55 @@ def test_a_proposal_with_a_nonsense_event_date_is_refused(db, post, maria, sign_
 
     assert response.status_code == 400
     assert db.execute("SELECT COUNT(*) AS n FROM submissions").fetchone()["n"] == 0
+
+
+# --- the disclosure through the queue -------------------------------------
+
+def test_a_members_disclosure_survives_moderation(repo, db, post, maria, luisa,
+                                                  sign_in):
+    """The member says it about their own writing; the moderator publishes it.
+
+    This is the only place the flag has to be carried by hand — a proposal is
+    a draft in SQLite until it is approved, so the frontmatter it ends up in
+    does not exist yet while the decision is being made. Losing it here would
+    lose it at the exact moment the text stops being private.
+    """
+    import yaml
+    sign_in(maria)
+    propose(post, ai_generated="on")
+    submission_id = only_submission(db)["id"]
+    assert only_submission(db)["ai_generated"] == 1
+
+    sign_in(luisa)
+    post(f"/comunidad/publicaciones/{submission_id}/aprobar")
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode("utf-8").split("---")[1])
+    assert front["ai_generated"] is True
+
+
+def test_a_proposal_nobody_marked_publishes_without_the_line(repo, db, post,
+                                                             maria, luisa, sign_in):
+    import yaml
+    sign_in(maria)
+    propose(post)
+    submission_id = only_submission(db)["id"]
+
+    sign_in(luisa)
+    post(f"/comunidad/publicaciones/{submission_id}/aprobar")
+
+    path, = repo.files
+    front = yaml.safe_load(repo.files[path].decode("utf-8").split("---")[1])
+    assert "ai_generated" not in front
+
+
+def test_the_moderator_can_see_what_they_are_approving(client, db, post, maria,
+                                                       luisa, sign_in):
+    """A disclosure the reviewer cannot see is one they cannot weigh."""
+    sign_in(maria)
+    propose(post, ai_generated="on")
+    submission_id = only_submission(db)["id"]
+
+    sign_in(luisa)
+    page = client.get(f"/comunidad/publicaciones/{submission_id}").get_data(as_text=True)
+    assert "IA" in page

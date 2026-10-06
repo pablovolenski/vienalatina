@@ -204,8 +204,10 @@ def new_thread():
 
     title, body = cleaned
     cursor = get_db().execute(
-        "INSERT INTO threads (author_id, title, body_md) VALUES (?, ?, ?)",
-        (g.member["id"], title, body),
+        """INSERT INTO threads (author_id, title, body_md, ai_generated)
+           VALUES (?, ?, ?, ?)""",
+        (g.member["id"], title, body,
+         1 if request.form.get("ai_generated") == "on" else 0),
     )
     uploads.save(staged, g.member["id"], thread_id=cursor.lastrowid)
     return redirect(url_for("board.thread", thread_id=cursor.lastrowid))
@@ -225,8 +227,11 @@ def edit_thread(thread_id: int):
         return redirect(url_for("board.edit_thread", thread_id=thread_id))
     title, body = cleaned
     get_db().execute(
-        "UPDATE threads SET title = ?, body_md = ?, edited_at = datetime('now') WHERE id = ?",
-        (title, body, thread_id),
+        """UPDATE threads SET title = ?, body_md = ?, ai_generated = ?,
+                              edited_at = datetime('now')
+            WHERE id = ?""",
+        (title, body, 1 if request.form.get("ai_generated") == "on" else 0,
+         thread_id),
     )
     return redirect(url_for("board.thread", thread_id=thread_id))
 

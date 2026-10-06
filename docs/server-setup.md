@@ -1034,16 +1034,76 @@ the `|` survives.
 ### 11.17 Writing boxes
 
 Every box where somebody writes prose — the wall, a comment, a private message, a
-proposal, the editor, a profile bio — carries a markdown toolbar and a *Vista
-previa*, opted in with `data-markdown` and attached by `static/board.js`. The
-preview POSTs to `/comunidad/previsualizar`, which renders with `render.to_html`:
-the same function the board and the site use, so the preview cannot promise
-something publishing will not deliver. A markdown parser in the browser would be
-a second opinion about what somebody's text means.
+proposal, the editor, a profile bio — shows the formatting while it is being
+typed. Bold is bold, a heading is a heading. Opted in with `data-markdown` and
+attached by `static/board.js`; `data-rich="full"` on the four boxes that hold a
+post adds the three heading levels, both kinds of list and the quote, and the
+rest get bold, italic, link and clear formatting.
+
+**Markdown is still the only thing stored.** That is what keeps the file in git,
+the pipeline, Decap and the XSS defence exactly as they were — and the two
+directions are deliberately not symmetrical:
+
+- **opening** something to edit: the *server* renders the stored markdown into a
+  `<template>` beside the box, which the editor adopts. There is no markdown
+  parser in the browser, so there is no second opinion about what text means;
+- **saving**: the browser walks a closed set of elements back into markdown.
+  Anything it does not recognise contributes its text and nothing else, and a
+  paste arrives as plain text — so nothing anybody pastes brings markup in.
+
+The **Markdown** button swaps the box for the raw text and back. It is the
+escape hatch if the editor ever mangles something, and the way to write a table
+or anything else the buttons do not offer. Coming back renders through
+`/comunidad/previsualizar` — the same `render.to_html`, for the same reason
+opening does. The editor's own *Vista previa*, which returns a whole page, is
+unrelated and still there: it needs no JavaScript and shows the published look.
+
+**With scripting off the plain `<textarea>` is still there** and still the field
+that submits. Nothing is hidden by CSS; the script hides the textarea itself,
+and moves `required` off it first, because a hidden required field makes the
+browser refuse to submit and report the error on an element nobody can see.
+
+The serializer is tested by running `static/board.js` in node against a table of
+documents (`apps/board/tests/test_editor.py`), including a round trip asserting
+markdown → HTML → markdown renders identically. Those tests skip where node is
+not installed.
+
+**A line break means two different things**, so `render.py` has two renderers.
+Text this app stores and renders — the wall, messages, events — uses
+`breaks=True`: a newline somebody typed is a newline they meant. A public post
+is a file Hugo renders with hardWraps off, and the files are hard-wrapped at
+about 78 characters, so rendering those with breaks on would show a line break
+in the middle of every sentence. The editor writes the break CommonMark means,
+two spaces at the end of a line, which survives either way.
 
 Choosing a picture shows a thumbnail with its name and size before anything is
 uploaded. That is the one reason `blob:` is in the `img-src` policy — a handle to
 bytes already in the page, which reaches no network.
+
+### 11.17b «Contenido generado con IA»
+
+A switch beside the button that publishes, on the three boxes that hold a post:
+the editor, a member's proposal and a wall thread. Where the post is read it is
+a pill next to the date — on the article, on the cards in the listings, on the
+thread and in the wall's list — because a disclosure somebody meets after
+reading the thing is not a disclosure.
+
+| Where | How it is stored |
+|---|---|
+| A public post or page | `ai_generated: true` in the frontmatter, written only when true. The file in the repository is the record |
+| A member's proposal | `submissions.ai_generated`, carried into the published post on approval — the only place it has to be carried by hand, because a proposal is a draft in SQLite until the frontmatter exists |
+| A wall thread | `threads.ai_generated` |
+| The editor's list | `content_cache.ai_generated`, a copy so *Contenido* can show it without re-reading every file from the git server |
+
+Migration 9, three plain `ADD COLUMN`s. The pipeline needs nothing: `translate.py`
+copies the whole frontmatter and rewrites only `TRANSLATED_KEYS`, so the flag
+reaches the German and Portuguese siblings by itself — which is right, since a
+translated post was still machine-written. The three words are in
+`partials/t.html` with the theme's other labels.
+
+This is also the shape the EU AI Act's Article 50 asks for — telling people when
+they are reading machine-generated material — which is worth knowing for whoever
+installs this for the second organisation.
 
 ### 11.18 Marca: the superadministrator owns the look
 

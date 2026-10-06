@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS threads (
   edited_at   TEXT,
   pinned      INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   locked      INTEGER NOT NULL DEFAULT 0 CHECK (locked IN (0, 1)),
+  -- Said out loud where the post is read. The association's own words and a
+  -- machine's are both welcome here; which is which is not the reader's job
+  -- to guess.
+  ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (ai_generated IN (0, 1)),
   -- Soft delete: a moderator's mistake stays recoverable, and removing one
   -- comment does not tear a hole in the conversation around it.
   deleted_at  TEXT
@@ -202,6 +206,10 @@ CREATE TABLE IF NOT EXISTS content_cache (
   -- draft. Recorded here so the listing can skip them without re-reading
   -- every file to find out what it already knew.
   generated   INTEGER NOT NULL DEFAULT 0 CHECK (generated IN (0, 1)),
+  -- A copy of the post's own frontmatter flag, so the editor's list can show
+  -- it without re-reading every file from the git server. The file is the
+  -- record; this is the cache.
+  ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (ai_generated IN (0, 1)),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -260,6 +268,10 @@ CREATE TABLE IF NOT EXISTS submissions (
   event_time     TEXT,
   event_location TEXT,
   photo_name     TEXT,
+  -- Carried through moderation into the published post's frontmatter: a
+  -- proposal is a draft in this database until it is approved, so the flag
+  -- has nowhere else to wait.
+  ai_generated   INTEGER NOT NULL DEFAULT 0 CHECK (ai_generated IN (0, 1)),
   state          TEXT    NOT NULL DEFAULT 'pending'
                  CHECK (state IN ('pending', 'approved', 'rejected')),
   -- Why it was rejected, in the moderator's words, shown to the author. A
