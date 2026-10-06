@@ -41,8 +41,10 @@ local$ dig +short git.vienalatina.com
 
 ### 1.1 A second domain that leads here
 
-`vielac.at` is the second name, and it redirects: everything that arrives goes
-to the same path on vienalatina.com. Two A records in that domain's **zone
+`vielac.at` is where the WordPress site this project replaced used to live, and
+it redirects: everything that arrives goes to the same path on vienalatina.com,
+where the 301s for old WordPress paths catch it. Pointing it here is also what
+takes the last traffic off the old box. Two A records in that domain's **zone
 editor**, both at the server:
 
 | Name | Type | Value | TTL |

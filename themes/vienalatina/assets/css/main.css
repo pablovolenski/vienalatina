@@ -1548,16 +1548,6 @@ a.group-pill:hover {
 }
 
 /* =========================================================
-   WordPress core image alignment
-   ========================================================= */
-
-.alignleft  { float: left;  margin: 0 1.5em 1em 0; }
-.alignright { float: right; margin: 0 0 1em 1.5em; }
-.aligncenter { display: block; margin: 0 auto 1em; }
-.wp-caption  { max-width: 100%; }
-.wp-caption-text { font-size: 0.85rem; color: var(--muted); }
-
-/* =========================================================
    Clickable avatar wrapper (post cards + single post)
    ========================================================= */
 

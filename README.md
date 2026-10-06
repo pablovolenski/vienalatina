@@ -234,15 +234,12 @@ a file it cannot parse publishes in Spanish and is never translated, silently.
 - `llms.txt` — generated at build time from `layouts/index.llms.txt`
 - `sitemap.xml` — Hugo native, multilingual
 
-## One-shot content migration
+## The site this replaced
 
-```sh
-pip install requests html2text
-python scripts/wp-to-hugo.py https://<old-wp-site>
-```
-
-Converts every WP post (with Polylang siblings) to
-`content/post/<slug>.<lang>.md`, downloads images into `static/uploads/`,
-and preserves existing slugs. Spot-check ~10 articles before committing.
-Add Caddy 301s for WP URL patterns that don't map cleanly
-(`?p=123`, `/categoria/...` → `/categories/...`).
+The content came from a WordPress install, once, with a disposable script that
+has been deleted along with it. What remains of that site is a handful of 301s
+in `infra/caddy/Caddyfile` — old permalinks, `/categoria/…`, author archives
+and the WordPress media library — so links shared before the cutover still
+land somewhere. Everything beginning with `/wp-` answers with a redirect home
+rather than reaching the members area, which is where `/wp-cron.php` used to
+end up.

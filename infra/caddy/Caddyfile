@@ -21,14 +21,18 @@ www.vienalatina.com {
 	redir https://vienalatina.com{uri} 301
 }
 
-# The second name, which leads here rather than somewhere else.
+# The old site's own domain. vielac.at is where the WordPress install this
+# project replaced used to live — it is the address in every link shared before
+# the cutover, in every search result that has not been recrawled, and in the
+# bookmarks of everybody who read it.
 #
 # Both spellings in one block, and 301 rather than 302: a permanent redirect is
 # what makes a search engine fold the two names into one site instead of
 # indexing them as duplicates of each other, and what makes a browser stop
 # asking after the first visit. `{uri}` carries the path, so a link somebody
 # shared to vielac.at/page/agenda/ lands on the agenda rather than on the home
-# page.
+# page — and an old WordPress path arrives at vienalatina.com and is caught by
+# the 301s further down, which is one set of rules rather than two.
 #
 # Caddy asks Let's Encrypt for this certificate the first time the name
 # resolves to this server, so the A records go in before this file is reloaded.
@@ -98,9 +102,11 @@ vienalatina.com {
 	}
 	redir @wp_query_permalink / 301
 
-	# WP category base was /categoria/… (Spanish slugs); Hugo uses /categories/…
+	# The old category base, which now has nowhere to land: the taxonomy was
+	# removed from this site, so /categories/… is a 404 and a 301 into it would
+	# be sending somebody from one dead address to another. Home instead.
 	@old_category path_regexp oldcat ^/categoria/(.*)$
-	redir @old_category /categories/{re.oldcat.1} 301
+	redir @old_category / 301
 
 	# WP author archives have no Hugo equivalent → home
 	@old_author path /autor/*
@@ -110,8 +116,18 @@ vienalatina.com {
 	@old_uploads path_regexp oldup ^/wp-content/uploads/(?:\d{4}/\d{2}/)?(.*)$
 	redir @old_uploads /uploads/{re.oldup.1} 301
 
-	# Anything else that starts with /wp- doesn't exist anymore
-	@wp_leftovers path /wp-admin/* /wp-login.php /wp-json/* /xmlrpc.php
+	# Anything else beginning with /wp- is gone. Written as a wildcard rather
+	# than a list, because the list was missing the one that mattered:
+	# /wp-cron.php fell through to the single-segment profile matcher below —
+	# it looks exactly like a member's name — reached the Flask app, and was
+	# answered with a 400 by the CSRF hook. A WordPress install elsewhere was
+	# POSTing it every few minutes, so the members area was being woken up by
+	# the site it replaced.
+	#
+	# After the uploads rule above, never before it: these are `redir`
+	# directives and Caddy keeps them in the order they are written, so
+	# /wp-content/uploads/… still maps to the migrated pictures.
+	@wp_leftovers path /wp-* /xmlrpc.php
 	redir @wp_leftovers / 301
 
 	# Custom 404 falls back to Hugo's 404 page
