@@ -553,3 +553,19 @@ def test_the_moderator_can_see_what_they_are_approving(client, db, post, maria,
     sign_in(luisa)
     page = client.get(f"/comunidad/publicaciones/{submission_id}").get_data(as_text=True)
     assert "IA" in page
+
+
+def test_an_untitled_proposal_is_named_rather_than_refused(db, post, maria, sign_in):
+    """Same rule as the wall: the text is the post, the headline is optional."""
+    sign_in(maria)
+    propose(post, title="")
+    assert only_submission(db)["title"] == "Sin Título"
+
+
+def test_untitled_proposals_are_numbered(db, post, maria, sign_in):
+    sign_in(maria)
+    propose(post, title="")
+    propose(post, title="")
+    rows = [row["title"] for row in
+            db.execute("SELECT title FROM submissions ORDER BY id")]
+    assert rows == ["Sin Título", "Sin Título 2"]

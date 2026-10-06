@@ -30,7 +30,7 @@
 	<h1>{{ ('Editar ' ~ meta.singular|lower) if item else meta.new_label }}</h1>
 
 	<label for="title">Título</label>
-	<input id="title" name="title" maxlength="140" required value="{{ f.title or '' }}">
+	<input id="title" name="title" maxlength="140" value="{{ f.title or '' }}">
 
 	{% if meta.dated %}
 	<label for="date">Fecha</label>
@@ -69,8 +69,12 @@
 	{# An event's own date, which is not the day the post goes up. The date is
 	   also what makes this post an event: there is nothing to tick first, so
 	   there is no way to say "this is an event" and then not say when. #}
-	<fieldset class="fieldset">
-		<legend>Si es un evento</legend>
+	{#- A fold rather than a fieldset: most posts are not events, and six
+	    inches of date pickers between the title and the text is six inches
+	    most people scroll past. Open by itself when the post already has a
+	    date, so editing an event does not hide the thing being edited. -#}
+	<details class="fold" {{ 'open' if f.event_date }}>
+		<summary>Si es un evento <span class="muted small">(fecha, hora, lugar)</span></summary>
 		<p class="muted small">
 			Pon la fecha y será un evento: aparecerá en la agenda del sitio, con el
 			día y el lugar destacados, y se podrá añadir al calendario del móvil.
@@ -88,7 +92,7 @@
 		<input id="event_location" name="event_location" maxlength="200"
 		       value="{{ f.event_location or '' }}">
 		<p class="muted small">Dónde es: el sitio, la calle, el barrio.</p>
-	</fieldset>
+	</details>
 
 	<label for="description">Resumen</label>
 	<textarea id="description" name="description" rows="2">{{ f.description or '' }}</textarea>
@@ -141,16 +145,22 @@
 		{#- Beside the button that publishes, because that is the moment it is
 		    answered. One line rather than a fieldset: it has to be seen, not
 		    to take up the form. -#}
-		<label class="switch">
+		<label class="toggle">
 			<input type="checkbox" name="ai_generated" {{ 'checked' if f.ai_generated }}>
-			Contenido generado con IA
+			{#- The switch itself is drawn by board.css from the checkbox's own
+			    state. No script: a control that needs one is a control that
+			    does nothing under this Content-Security-Policy. -#}
+			<span class="toggle__track" aria-hidden="true"></span>
+			<span class="toggle__text">Contenido generado con IA</span>
 		</label>
 
-		<button class="linkish" type="submit"
+		{#- Beside Cancelar and shaped like it: both are things you press in this
+		    row, and a bare link wedged between two buttons reads as unfinished. -#}
+		<button class="btn btn--quiet" type="submit"
 		        formaction="{{ url_for('content.preview', collection=collection) }}">
 			Vista previa
 		</button>
-		<a class="linkish" href="{{ url_for('content.index', collection=collection) }}">Cancelar</a>
+		<a class="btn btn--quiet" href="{{ url_for('content.index', collection=collection) }}">Cancelar</a>
 	</div>
 </form>
 {% endblock %}

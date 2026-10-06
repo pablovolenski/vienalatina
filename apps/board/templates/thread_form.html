@@ -8,7 +8,7 @@
 	<h1>{{ 'Editar tema' if thread else 'Nuevo tema' }}</h1>
 
 	<label for="title">Título</label>
-	<input id="title" name="title" maxlength="140" required
+	<input id="title" name="title" maxlength="140"
 	       value="{{ thread.title if thread else '' }}">
 
 	<label for="body">Mensaje</label>
@@ -33,12 +33,16 @@
 		{#- Beside the button that publishes, because that is the moment it is
 		    answered. One line rather than a fieldset: it has to be seen, not
 		    to take up the form. -#}
-		<label class="switch">
+		<label class="toggle">
 			<input type="checkbox" name="ai_generated" {{ 'checked' if (thread.ai_generated if thread else False) }}>
-			Contenido generado con IA
+			{#- The switch itself is drawn by board.css from the checkbox's own
+			    state. No script: a control that needs one is a control that
+			    does nothing under this Content-Security-Policy. -#}
+			<span class="toggle__track" aria-hidden="true"></span>
+			<span class="toggle__text">Contenido generado con IA</span>
 		</label>
 
-		<a class="linkish" href="{{ url_for('board.thread', thread_id=thread.id) if thread else url_for('board.threads') }}">Cancelar</a>
+		<a class="btn btn--quiet" href="{{ url_for('board.thread', thread_id=thread.id) if thread else url_for('board.threads') }}">Cancelar</a>
 	</div>
 </form>
 {% endblock %}

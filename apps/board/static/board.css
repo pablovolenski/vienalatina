@@ -249,6 +249,23 @@ textarea { resize: vertical; line-height: 1.55; }
 }
 .btn:hover { background: var(--brand-dark); }
 
+/* The second button in a row of them — Cancelar, mostly. It was a link, which
+   made leaving look like a footnote next to a filled pill; it is the other
+   half of a decision and should be the same size and shape as the half beside
+   it. Quiet rather than loud: same geometry, no fill, so the eye still knows
+   which one publishes. */
+.btn--quiet {
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: calc(0.6rem - 1px) calc(1.4rem - 1px);   /* the border, given back */
+}
+.btn--quiet:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+  border-color: var(--brand);
+}
+
 /* A button sitting straight in a card, rather than in an .actions row, still
  * needs air above it. Five of them did not have any — the one under the "escribir
  * a" picker was flush against the select — because the space every other form
@@ -381,6 +398,33 @@ textarea { resize: vertical; line-height: 1.55; }
 }
 .fieldset legend { padding: 0 0.4rem; font-weight: 600; font-size: 0.9rem; }
 .fieldset .check { margin: 0.35rem 0; }
+
+/* The same box, folded shut. Most posts are not events, and three date
+   pickers between the title and the text are three fields most people scroll
+   past — the form should ask what it needs and keep the rest within reach
+   rather than in the way. A <details>, like the account menu: no script, and
+   it opens by itself when the post already has a date. */
+.fold {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0 1rem;
+  margin: 1rem 0 0;
+  background: var(--surface);
+}
+.fold > summary {
+  cursor: pointer;
+  padding: 0.8rem 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.fold > summary:hover { color: var(--brand-dark); }
+.fold[open] > summary {
+  color: var(--text);
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 0.75rem;
+}
+.fold > :last-child { margin-bottom: 1rem; }
 
 input[type="file"] {
   width: 100%;
@@ -1021,8 +1065,10 @@ input[type="file"] {
 	/* The disclosure switch: 16px of words and a 13px box before this. The
 	   checkbox itself grows too — a label you can hit around a box you
 	   cannot is a control that looks broken when it misses. */
-	.switch { padding: 0.7rem 0; }
-	.switch input { width: 20px; height: 20px; }
+	/* The switch and its words, which were 16px of line box before this. The
+	   track is already 22px tall and does not need to grow — the label around
+	   it does, so the whole thing is one target. */
+	.toggle { padding: 0.65rem 0; }
 
 	.cal__add {
 		display: inline-flex;
@@ -1045,16 +1091,67 @@ input[type="file"] {
 	border: 1px solid var(--border-light);
 }
 
-/* The switch in the form's action row. A checkbox and its words on one line,
-   beside the button that publishes — visible at the moment of publishing,
-   which is when it is answered, and costing one line rather than a fieldset. */
-.switch {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.45rem;
-	font-size: 0.9rem;
-	color: var(--muted);
-	cursor: pointer;
+/* A real switch rather than a checkbox, because what it says is not a detail
+ * of the form — it is a statement about the text, made at the moment of
+ * publishing, and it should look like something that is on or off.
+ *
+ * Drawn entirely from the checkbox's own `:checked` state. There is no script
+ * anywhere near it: under a policy with no 'unsafe-inline' a control that
+ * needs one is a control that silently does nothing. The input is visually
+ * hidden but not `display: none` — it keeps its place in the tab order and is
+ * still announced with its label, so the switch works from a keyboard.
+ */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  /* So the hidden input below is positioned against this label and not
+     against whatever happens to be the nearest positioned ancestor — a 1px
+     invisible control adrift somewhere else on the page is a thing that gets
+     clicked by accident exactly once and is never explained. */
+  position: relative;
 }
-.switch input { margin: 0; }
-.switch:has(input:checked) { color: var(--brand-dark); font-weight: 600; }
+.toggle input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.toggle__track {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 140ms ease;
+}
+.toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 140ms ease;
+}
+.toggle input:checked + .toggle__track { background: var(--brand); }
+.toggle input:checked + .toggle__track::after { transform: translateX(18px); }
+/* Focus has to land somewhere visible: the thing with the outline is hidden. */
+.toggle input:focus-visible + .toggle__track {
+  outline: 2px solid var(--brand-dark);
+  outline-offset: 2px;
+}
+.toggle input:checked ~ .toggle__text { color: var(--brand-dark); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle__track, .toggle__track::after { transition: none; }
+}

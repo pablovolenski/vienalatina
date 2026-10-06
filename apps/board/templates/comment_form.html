@@ -16,7 +16,7 @@
 
 	<div class="actions">
 		<button class="btn" type="submit">Guardar</button>
-		<a class="linkish" href="{{ url_for('board.thread', thread_id=comment.thread_id) }}">Cancelar</a>
+		<a class="btn btn--quiet" href="{{ url_for('board.thread', thread_id=comment.thread_id) }}">Cancelar</a>
 	</div>
 </form>
 {% endblock %}

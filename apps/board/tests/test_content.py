@@ -698,3 +698,63 @@ def test_the_disclosure_is_not_one_of_the_keys_translation_rewrites(repo, editor
     fm, _ = translate.split_frontmatter(repo.files[path].decode())
     assert fm["ai_generated"] is True
     assert "ai_generated" not in translate.TRANSLATED_KEYS
+
+
+# --- a post nobody titled -------------------------------------------------
+
+def test_an_untitled_post_is_named_when_it_is_published(repo, editor, post):
+    publish(post, title="")
+    path, = repo.files
+    assert path == "content/post/2026-09-25-sin-titulo.es.md"
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert fm["title"] == "Sin Título"
+
+
+def test_two_untitled_posts_on_one_day_do_not_collide(repo, editor, post):
+    """The filename is what collides in a repository, not the title: both
+    would be `<fecha>-sin-titulo.es.md`, and the second would come back as
+    "somebody else saved this file while you were editing it" — a message
+    about a conflict that never happened. So the numbering is done against
+    the names already in the folder."""
+    publish(post, title="")
+    publish(post, title="")
+    assert sorted(repo.files) == [
+        "content/post/2026-09-25-sin-titulo-2.es.md",
+        "content/post/2026-09-25-sin-titulo.es.md",
+    ]
+    fm, _ = translate.split_frontmatter(
+        repo.files["content/post/2026-09-25-sin-titulo-2.es.md"].decode())
+    assert fm["title"] == "Sin Título 2"
+
+
+def test_the_same_name_is_free_again_on_another_day(repo, editor, post):
+    """A dated collection only collides within its own day, so the number
+    starts over rather than counting up forever."""
+    publish(post, title="", date="2026-09-25")
+    publish(post, title="", date="2026-10-25")
+    assert sorted(repo.files) == [
+        "content/post/2026-09-25-sin-titulo.es.md",
+        "content/post/2026-10-25-sin-titulo.es.md",
+    ]
+
+
+def test_clearing_the_title_on_an_edit_does_not_walk_the_number_up(
+        repo, editor, post):
+    """The post being edited must not count as the collision it has to avoid,
+    or every save would rename it one higher."""
+    publish(post, title="")
+    path, = repo.files
+    name = path.rsplit("/", 1)[1]
+    for _ in range(3):
+        post(f"/comunidad/contenido/post/editar/{name}",
+             {"title": "", "body": "Otra corrección.", "date": "2026-09-25",
+              "sha": repo._sha(repo.files[path])})
+        fm, _ = translate.split_frontmatter(repo.files[path].decode())
+        assert fm["title"] == "Sin Título"
+    assert list(repo.files) == [path]
+
+
+def test_a_post_still_needs_a_body(repo, editor, post):
+    response = publish(post, title="", body="")
+    assert not repo.files
+    assert "cuerpo no puede estar vacío" in response.get_data(as_text=True)

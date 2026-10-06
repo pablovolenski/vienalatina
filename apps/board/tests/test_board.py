@@ -183,3 +183,62 @@ def test_editing_a_thread_can_add_or_remove_the_disclosure(client, post, make_me
     post("/comunidad/tema/1/editar", {"title": "Resumen", "body": "Otra vez con ayuda.",
                                       "ai_generated": "on"})
     assert "Generado con IA" in client.get("/comunidad/tema/1").get_data(as_text=True)
+
+
+# --- a post nobody titled -------------------------------------------------
+
+def test_a_thread_with_no_title_gets_one(client, post, make_member, sign_in):
+    """Asking for a headline before a sentence is how a form stops somebody
+    writing. The ones people leave blank are often the best writing on a
+    wall — somebody answering a question, somebody saying a thing happened."""
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "", "body": "Ya está arreglado, gracias."})
+
+    page = client.get("/comunidad/tema/1").get_data(as_text=True)
+    assert "Sin Título" in page
+    assert "Ya está arreglado" in page
+
+
+def test_untitled_threads_are_numbered_so_they_can_be_told_apart(
+        client, post, make_member, sign_in):
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "", "body": "Uno."})
+    post("/comunidad/nuevo", {"title": "", "body": "Dos."})
+    post("/comunidad/nuevo", {"title": "Con título", "body": "Tres."})
+    post("/comunidad/nuevo", {"title": "", "body": "Cuatro."})
+
+    wall = client.get("/comunidad/muro").get_data(as_text=True)
+    for expected in ("Sin Título", "Sin Título 2", "Sin Título 3"):
+        assert expected in wall
+    assert "Sin Título 4" not in wall
+
+
+def test_a_deleted_untitled_thread_does_not_give_its_number_back(
+        client, post, db, make_member, sign_in):
+    """A number that comes back is a thread that looks like one somebody
+    remembers reading. The soft-deleted row keeps its title, and counting it
+    is what prevents that."""
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "", "body": "Uno."})
+    post("/comunidad/nuevo", {"title": "", "body": "Dos."})
+    post("/comunidad/tema/2/eliminar")
+
+    post("/comunidad/nuevo", {"title": "", "body": "Tres."})
+    titles = [row["title"] for row in db.execute("SELECT title FROM threads ORDER BY id")]
+    assert titles == ["Sin Título", "Sin Título 2", "Sin Título 3"]
+
+
+def test_a_title_that_only_looks_numbered_is_left_alone(client, post, db,
+                                                        make_member, sign_in):
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "Sin Título ni ganas", "body": "Uno."})
+    post("/comunidad/nuevo", {"title": "", "body": "Dos."})
+    titles = [row["title"] for row in db.execute("SELECT title FROM threads ORDER BY id")]
+    assert titles == ["Sin Título ni ganas", "Sin Título"]
+
+
+def test_a_thread_still_needs_something_to_say(client, post, make_member, sign_in):
+    """The title is optional; the message is the post."""
+    sign_in(make_member("maria"))
+    post("/comunidad/nuevo", {"title": "Solo el título", "body": "   "})
+    assert client.get("/comunidad/tema/1").status_code == 404

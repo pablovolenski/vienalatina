@@ -20,6 +20,7 @@ from flask import (Blueprint, abort, current_app, flash, g, redirect,
 
 from . import auth, uploads
 from .db import get_db
+from . import titles
 from .render import excerpt, to_html
 from .security import admin_required, is_at_least, login_required
 
@@ -69,9 +70,16 @@ def cooldown_remaining() -> int:
 def _clean(title: str, body: str) -> tuple[str, str] | None:
     title = title.strip()[:TITLE_MAX]
     body = body.strip()[:BODY_MAX]
-    if not title or not body:
-        flash("El título y el mensaje no pueden estar vacíos.", "error")
+    if not body:
+        flash("El mensaje no puede estar vacío.", "error")
         return None
+    if not title:
+        # Counting the deleted ones too: a number that comes back is a thread
+        # that looks like one somebody remembers reading. See titles.py.
+        rows = get_db().execute(
+            "SELECT title FROM threads WHERE title LIKE ?",
+            (titles.UNTITLED + "%",)).fetchall()
+        title = titles.next_untitled(row["title"] for row in rows)
     return title, body
 
 

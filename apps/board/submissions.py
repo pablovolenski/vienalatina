@@ -30,7 +30,7 @@ from datetime import date as date_type
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, send_from_directory, url_for)
 
-from . import activity, content, gitea, uploads
+from . import activity, content, gitea, titles, uploads
 from .db import get_db
 from .render import excerpt, to_html
 from .security import is_at_least, login_required, moderator_required
@@ -107,7 +107,12 @@ def _read_proposal() -> tuple[dict, list[str]]:
         **content.read_event_fields(request.form, errors),
     }
     if not fields["title"]:
-        errors.append("El título no puede estar vacío.")
+        # Not an error: a proposal without a headline is named when it is sent,
+        # the same way a thread is. See titles.py.
+        rows = get_db().execute(
+            "SELECT title FROM submissions WHERE title LIKE ?",
+            (titles.UNTITLED + "%",)).fetchall()
+        fields["title"] = titles.next_untitled(row["title"] for row in rows)
     if not fields["body"]:
         errors.append("El texto no puede estar vacío.")
     return fields, errors

@@ -30,7 +30,7 @@ import yaml
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import gitea
+from . import gitea, titles
 from .db import get_db
 from .render import to_html
 from .security import is_at_least, moderator_required
@@ -97,6 +97,34 @@ def filename_for(collection: str, title: str, when: date_type | None) -> str:
     if COLLECTIONS[collection]["dated"]:
         return f"{when:%Y-%m-%d}-{slug}.es.md"
     return f"{slug}.es.md"
+
+
+def untitled_for(collection: str, when, skip: str = "") -> str:
+    """A name for a post nobody titled, free in the folder it is going into.
+
+    Numbered against the *filenames* rather than against the titles, because in
+    a repository the filename is what collides: two «Sin Título» posts on one
+    day would both be `<fecha>-sin-titulo.es.md`, and the second would come back
+    as "somebody else saved this file while you were editing it" — a message
+    about a conflict that never happened.
+
+    A git server that cannot be reached gives the plain name. Publishing fails
+    in that case anyway, and the failure should say what it is rather than be a
+    naming error wearing its coat.
+    """
+    try:
+        names = {entry["name"] for entry in gitea.list_directory(
+            COLLECTIONS[collection]["folder"], gitea.content_token())}
+    except gitea.GiteaError:
+        return titles.UNTITLED
+    names.discard(skip)          # editing a post does not collide with itself
+
+    number = 1
+    while True:
+        title = titles.UNTITLED if number == 1 else f"{titles.UNTITLED} {number}"
+        if filename_for(collection, title, when) not in names:
+            return title
+        number += 1
 
 
 def split_frontmatter(text: str) -> tuple[dict, str]:
@@ -319,8 +347,8 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         errors.append("La imagen no es válida.")
         image = ""
 
-    if not title:
-        errors.append("El título no puede estar vacío.")
+    # A title is not required. An untitled post is named when it is saved, by
+    # untitled_for() — see titles.py for why the form does not insist.
     if not body:
         errors.append("El cuerpo no puede estar vacío.")
 
@@ -487,6 +515,8 @@ def publish(collection: str, fields: dict, body: str, author) -> str:
     approved submission keeps the member's name in git history.
     """
     fields = dict(fields, **byline(author))
+    if not fields.get("title"):
+        fields["title"] = untitled_for(collection, fields["date"])
     name = filename_for(collection, fields["title"], fields["date"])
     path = f"{COLLECTIONS[collection]['folder']}/{name}"
     document = build_document(frontmatter_for(collection, fields), body)
@@ -601,6 +631,11 @@ def edit(collection: str, name: str):
             fields["image"] = picture
         # Deliberately not through publish(): that stamps the byline of whoever
         # is publishing, and an edit keeps the author the file already names.
+        if not fields.get("title"):
+            # `skip` is this post's own file: a title cleared on an edit must
+            # not count the thing being edited as the collision it has to
+            # avoid, or every save would walk the number up by one.
+            fields["title"] = untitled_for(collection, fields["date"], skip=name)
         document = build_document(frontmatter_for(collection, fields), body)
         gitea.write_file(path, document.encode("utf-8"),
                          f"content: actualizar «{fields['title']}»",

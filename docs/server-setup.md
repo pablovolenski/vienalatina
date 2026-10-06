@@ -1125,9 +1125,34 @@ Choosing a picture shows a thumbnail with its name and size before anything is
 uploaded. That is the one reason `blob:` is in the `img-src` policy — a handle to
 bytes already in the page, which reaches no network.
 
+### 11.17a A title is optional
+
+Nowhere a member writes insists on a headline — not the wall, not a proposal,
+not the editor. The ones people leave blank are often the best writing on a
+wall: somebody answering a question, somebody saying a thing happened. Asking
+for a title first is how a form stops a person mid-sentence, and the field says
+nothing about being optional, because a field labelled *(opcional)* is a field
+asking to be filled in.
+
+An untitled post is called **Sin Título**, and the next one **Sin Título 2**.
+`apps/board/titles.py` holds the rule; the numbering is done per place, against
+what is already there:
+
+| Where | Numbered against |
+|---|---|
+| The wall, the queue | Every title in that table, **including deleted rows** — a number that comes back is a thread that looks like one somebody remembers reading |
+| A public post | The **filenames** in the folder, not the titles: two untitled posts on one day would both be `<fecha>-sin-titulo.es.md`, and the second would fail as "somebody else saved this file while you were editing it" — a message about a conflict that never happened |
+
+A post deliberately called «Sin Título ni ganas» is left alone: the pattern is
+anchored, so it is not read as a number and does not take one. Editing a post
+and clearing its title does not walk the number up either — the file being
+edited is excluded from its own collision check.
+
 ### 11.17b «Contenido generado con IA»
 
-A switch beside the button that publishes, on the three boxes that hold a post:
+A real switch — drawn by `board.css` from the checkbox's own `:checked` state,
+with no script anywhere near it — beside the button that publishes, on the
+three boxes that hold a post:
 the editor, a member's proposal and a wall thread. Where the post is read it is
 a pill next to the date — on the article, on the cards in the listings, on the
 thread and in the wall's list — because a disclosure somebody meets after
