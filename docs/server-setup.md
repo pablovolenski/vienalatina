@@ -39,18 +39,34 @@ Check propagation (repeat until it prints the server IP):
 local$ dig +short git.vienalatina.com
 ```
 
-### 1.1 A second domain that leads here
+### 1.1 The other two domains
 
-`vielac.at` is where the WordPress site this project replaced used to live, and
-it redirects: everything that arrives goes to the same path on vienalatina.com,
-where the 301s for old WordPress paths catch it. Pointing it here is also what
-takes the last traffic off the old box. Two A records in that domain's **zone
-editor**, both at the server:
+`vielac.at` is where the WordPress site this project replaced used to live;
+`vienalatina.net` is the .com's sibling. Both redirect: everything that arrives
+goes to the same path on vienalatina.com, where the 301s for old WordPress paths
+catch it. Pointing them here is also what takes the last traffic off the old box.
 
-| Name | Type | Value | TTL |
+In **each** of those two zones, four rows change and **nothing else**:
+
+| Name | Type | Was | Becomes |
 |---|---|---|---|
-| `@` | A | `<SERVER-IP>` | 300 |
-| `www` | A | `<SERVER-IP>` | 300 |
+| `@` | A | the old box | `<SERVER-IP>`, TTL 300 |
+| `www` | A | the old box | `<SERVER-IP>`, TTL 300 |
+| `@` | AAAA | the old box's IPv6 | **deleted** |
+| `www` | AAAA | the old box's IPv6 | **deleted** |
+
+**The AAAA rows are the trap.** A browser with IPv6 prefers it to IPv4, so
+leaving them behind means the A records change, the old site keeps appearing,
+and nothing on screen explains why. Delete them unless this server has an IPv6
+address of its own (`ip -6 addr show scope global`), in which case use that.
+
+**Leave the mail rows exactly as they are** — `MX`, the four `SRV`s, `CNAME
+autoconfig`, the SPF `TXT`, and the DKIM `TXT` that vienalatina.net carries.
+They point at Hetzner's mail server and have nothing to do with which machine
+serves the website. **And never copy** `NS` or `SOA` between zones (every zone
+has its own), nor the `ci` and `git` A rows, which are vienalatina.com
+subdomains with their own site blocks: a `git.vielac.at` would resolve here,
+find no block, and fail the TLS handshake.
 
 **Not the nameserver page.** On Hetzner's Konsole H those fields hand the whole
 zone to another provider's DNS, which is a different thing entirely and turns
@@ -78,13 +94,17 @@ sudo systemctl reload caddy
 between a typo in that file and vienalatina.com going down with it.
 
 ```sh
-curl -sI https://vielac.at/ | head -3                           # 301 → vienalatina.com
-curl -sI https://www.vielac.at/page/agenda/ | grep -i location  # the path survives
-curl -sI https://vienalatina.com/ | head -1                     # 200, unchanged
+dig +short vielac.at A vienalatina.net A        # both: this server
+dig +short vielac.at AAAA vienalatina.net AAAA  # nothing at all
+curl -sI https://vielac.at/ | head -3                                 # 301 → vienalatina.com
+curl -sI https://www.vienalatina.net/page/agenda/ | grep -i location  # the path survives
+curl -sI https://vienalatina.com/ | head -1                           # 200, unchanged
+dig +short vienalatina.com MX                                         # mail, still answering
 ```
 
-The third is the one that matters. A Caddyfile edit that breaks the site it was
-meant to leave alone is the failure this ordering exists to prevent.
+The last two are the ones that matter. A Caddyfile edit that breaks the site it
+was meant to leave alone, or a DNS session across three zones that takes the
+mailbox with it, are the two failures this ordering exists to prevent.
 
 ## 2. First login + basic hardening
 

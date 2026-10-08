@@ -21,23 +21,25 @@ www.vienalatina.com {
 	redir https://vienalatina.com{uri} 301
 }
 
-# The old site's own domain. vielac.at is where the WordPress install this
-# project replaced used to live — it is the address in every link shared before
-# the cutover, in every search result that has not been recrawled, and in the
-# bookmarks of everybody who read it.
+# The other names the association answers to. vielac.at is where the WordPress
+# install this project replaced used to live — it is the address in every link
+# shared before the cutover, in every search result not yet recrawled, and in
+# the bookmarks of everybody who read it. vienalatina.net is the .com's sibling.
 #
-# Both spellings in one block, and 301 rather than 302: a permanent redirect is
-# what makes a search engine fold the two names into one site instead of
-# indexing them as duplicates of each other, and what makes a browser stop
-# asking after the first visit. `{uri}` carries the path, so a link somebody
-# shared to vielac.at/page/agenda/ lands on the agenda rather than on the home
-# page — and an old WordPress path arrives at vienalatina.com and is caught by
-# the 301s further down, which is one set of rules rather than two.
+# All four spellings in one block, and 301 rather than 302: a permanent redirect
+# is what makes a search engine fold them into one site instead of indexing four
+# copies of each other, and what makes a browser stop asking after the first
+# visit. `{uri}` carries the path, so a link somebody shared to
+# vielac.at/page/agenda/ lands on the agenda rather than on the home page — and
+# an old WordPress path arrives at vienalatina.com and is caught by the 301s
+# further down, which is one set of rules rather than three.
 #
-# Caddy asks Let's Encrypt for this certificate the first time the name
-# resolves to this server, so the A records go in before this file is reloaded.
-# Until they do, the block is harmless: nothing reaches it.
-vielac.at, www.vielac.at {
+# Caddy asks Let's Encrypt for each certificate the first time that name
+# resolves to this server, so this block can be deployed while the names still
+# point elsewhere: nothing reaches it until they move, and when they do the
+# certificate is fetched on the first request rather than after a second trip
+# to the server.
+vielac.at, www.vielac.at, vienalatina.net, www.vienalatina.net {
 	redir https://vienalatina.com{uri} 301
 }
 
