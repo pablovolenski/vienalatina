@@ -1080,9 +1080,8 @@ card and `BlogPosting` for articles. What it now also does:
 
 - **Static pages get all of it** — they had none, so *Acerca de* shared as a bare
   link. `WebPage` schema, Open Graph, the card
-- **`og:image` with an alt**, from the post's own picture or `params.defaultImage`
-  as a fallback. That param is empty: fill it in when there is a logo, and every
-  link shared on WhatsApp, Signal, Mastodon or Bluesky starts carrying a picture
+- **`og:image` with an alt**, built rather than pointed at — see §11.16b, which
+  is the difference between a card with a picture and a card without one
 - **`Organization`** on the home, with `areaServed: Wien` and a `sameAs` list
   ready for social profiles — this is how a search or answer engine knows the
   Instagram account and this site are one body
@@ -1097,6 +1096,63 @@ card and `BlogPosting` for articles. What it now also does:
 The translation pipeline carries all of it: `image_alt` joins the translated
 keys, and `faq` is translated line by line with each half handled separately so
 the `|` survives.
+
+### 11.16b The share row, and the card that arrives
+
+**Seven buttons under the title of every post and again after the text**, from
+`partials/share.html`. Four are ordinary links and work with scripting off:
+WhatsApp, Facebook, Bluesky and Mastodon all accept a URL that opens their own
+composer.
+
+The other three cannot be links, and it is worth knowing why rather than
+rediscovering it:
+
+| | |
+|---|---|
+| **Signal** | has no web intent at all. It is a share *target* in the operating system's own sheet and nowhere else |
+| **Instagram** | accepts no link from anybody, by design. Every site with an Instagram share button is really offering a copied link |
+| **Copiar enlace** | the fallback for everything the two above do not cover, including a desktop with no share sheet |
+
+All three call `navigator.share()` where it exists and copy the address where it
+does not. They carry `hidden` in the markup and `share.js` removes it, so a
+reader without scripting sees four buttons that work rather than seven of which
+three do nothing. `main.css` has to say `.share__btn[hidden] { display: none }`
+explicitly: `[hidden]` lives in the browser's own stylesheet and an author rule
+beats it whatever the specificity, so `display: inline-flex` silently un-hid all
+three the first time.
+
+Mastodon has no central address — the composer lives on whichever server the
+*reader* has an account on. The button asks once, keeps the answer in
+`localStorage`, and without scripting falls back to the association's own server
+from *Gestión → Identidad* when one is set.
+
+The links are built with `urlquery` **and** marked `safeURL`. Go's template
+escaper treats an href as a URL and escapes it again on the way out, so without
+that the WhatsApp link went out as `%253A` and `%2b` — the composer opening with
+the percent signs spelled out.
+
+**The card image is generated, not linked.** This is the half that was actually
+broken: `og:image` pointed at the original upload, a photograph off a phone of
+two to five megabytes, and WhatsApp fetches preview images on a tight budget and
+gives up on a file that size — so the card arrived as a title and a link with a
+blank where the picture should be.
+
+Hugo copies `static/` and processes `assets/`, and only the second can be
+resized, so `config.yaml` mounts `static/uploads` and `static/brand` into
+`assets/` **as well**. The static copies stay exactly where they are: every
+`/uploads/…` URL, every image in every post and everything the editor commits
+are untouched. `seo-head.html` then fills a post's photograph to **1200×630**
+(80–150 KB in practice, measured at 93 KB against a 22 MB source) and fits the
+logo fallback without cropping — a wordmark filled to a landscape card loses its
+ends, and converting a transparent PNG to JPEG puts it on a black square.
+
+`partials/og-image.html` emits the five tags together, including
+`og:image:width` and `og:image:height`, which are not decoration: several
+clients draw the small card rather than the large one when they would have to
+fetch the file to find out how big it is.
+
+A picture the pipeline cannot find falls back to the absolute URL with no
+dimensions — exactly what happened before, so nothing is ever worse than it was.
 
 ### 11.17 Writing boxes
 

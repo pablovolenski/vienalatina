@@ -41,6 +41,11 @@
 
 		<h1 class="article-single__title">{{ .Title }}</h1>
 
+		{{/* Twice on purpose: here for the reader who decides to send it to
+		     somebody the moment they see what it is, and again after the text
+		     for the one who decides having read it. */}}
+		{{ partial "share.html" . }}
+
 		{{/* An event leads with the three things somebody needs before they read
 		     a word: when, what time, and where. Everything else on the page is
 		     the same article it would otherwise be. */}}
@@ -101,9 +106,17 @@
 		</section>
 		{{ end }}
 
+		{{ partial "share.html" . }}
+
 		<a class="back-link" href="{{ .Site.Home.Permalink }}">
 			← Volver al inicio
 		</a>
+
+		{{/* Only on this template: the home page and the lists carry no share
+		     row, so they should not carry its script either. Fingerprinted and
+		     deferred like the others. */}}
+		{{ $share := resources.Get "js/share.js" | minify | fingerprint }}
+		<script src="{{ $share.RelPermalink }}" integrity="{{ $share.Data.Integrity }}" defer></script>
 
 	</article>
 </main>

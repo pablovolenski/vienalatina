@@ -27,9 +27,46 @@
      one in config.yaml: most sites want their logo and the field exists for the
      ones that want something else. */}}
 {{ $fallback := or $chosen (or $brandLogo .Site.Params.defaultImage) }}
-{{ $image := "" }}
-{{ with .Params.image }}{{ $image = . | absURL }}
-{{ else }}{{ with $fallback }}{{ $image = . | absURL }}{{ end }}{{ end }}
+
+{{/* The card is *generated*, not pointed at.
+
+     What used to go out was the original upload — a photograph off a phone,
+     two to five megabytes. WhatsApp fetches a preview image on a tight budget
+     and gives up on a file that size, so the card arrived as a title and a
+     link with a blank where the picture should be. That is the whole reason
+     `static/uploads` is mounted into `assets/` in config.yaml: Hugo copies
+     static files and processes asset files, and only one of those can be
+     resized.
+
+     A post's own photograph is filled to 1200×630 — the size every client
+     draws its large card at — and comes out at 80–150 KB. The fallback is
+     fitted rather than filled, because a wordmark cropped to a landscape card
+     is a wordmark with its ends cut off.
+
+     An image the pipeline cannot find — a path typed by hand, a file added
+     after the build — falls back to exactly what happened before: the absolute
+     URL, no dimensions. Nothing is worse than it was. */}}
+{{ $source := or .Params.image $fallback }}
+{{ $image := "" }}{{ $cardW := "" }}{{ $cardH := "" }}{{ $cardType := "" }}
+{{ with $source }}
+{{ $image = . | absURL }}
+{{ with resources.Get (strings.TrimPrefix "/" .) }}
+{{ $card := "" }}
+{{ if $.Params.image }}
+{{ $card = .Fill "1200x630 Center q82 jpg" }}
+{{ else }}
+{{/* Fitted, and in its own format: the fallback is usually the logo, and a
+     logo cropped to a landscape card loses its ends — while converting a
+     transparent PNG to JPEG puts it on a black square, because JPEG has no
+     alpha to put it on anything else. */}}
+{{ $card = .Fit "1200x630" }}
+{{ end }}
+{{ $image = $card.Permalink }}
+{{ $cardW = $card.Width }}{{ $cardH = $card.Height }}{{ $cardType = $card.MediaType.Type }}
+{{ end }}
+{{ end }}
+{{ $cardAlt := cond (ne .Params.image_alt nil) .Params.image_alt .Title }}
+{{ $card := dict "url" $image "alt" $cardAlt "width" $cardW "height" $cardH "type" $cardType }}
 
 <meta name="description" content="{{ $desc }}">
 
@@ -54,10 +91,7 @@
 {{ range .Translations }}
 {{ with index $localeMap .Language.Lang }}<meta property="og:locale:alternate" content="{{ . }}">{{ end }}
 {{ end }}
-{{ with $image }}
-<meta property="og:image" content="{{ . }}">
-<meta property="og:image:alt" content="{{ $.Params.image_alt | default $.Title }}">
-{{ end }}
+{{ partial "og-image.html" $card }}
 <meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05-07:00" }}">
 <meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05-07:00" }}">
 {{ with .Params.author }}<meta property="article:author" content="{{ . }}">{{ end }}
@@ -65,7 +99,6 @@
 <meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
 <meta name="twitter:title" content="{{ .Title }}">
 <meta name="twitter:description" content="{{ $desc }}">
-{{ with $image }}<meta name="twitter:image" content="{{ . }}">{{ end }}
 
 {{ $schema := dict
 	"@context" "https://schema.org"
@@ -136,11 +169,7 @@
 {{/* The home page shared without a picture until there was one to use. Now
      that an admin can upload a logo, the front page of the site is the last
      place that should share as a bare link. */}}
-{{ with $image }}
-<meta property="og:image" content="{{ . }}">
-<meta property="og:image:alt" content="{{ $.Site.Title }}">
-<meta name="twitter:image" content="{{ . }}">
-{{ end }}
+{{ partial "og-image.html" (merge $card (dict "alt" (partial "site-name.html" .))) }}
 
 {{/* The organisation, as a search or answer engine reads it. Everything
      overridable lives in Gestión → Identidad; `areaServed` stays here because a
@@ -215,15 +244,11 @@
 {{ range .Translations }}
 {{ with index $localeMap .Language.Lang }}<meta property="og:locale:alternate" content="{{ . }}">{{ end }}
 {{ end }}
-{{ with $image }}
-<meta property="og:image" content="{{ . }}">
-<meta property="og:image:alt" content="{{ $.Params.image_alt | default $.Title }}">
-{{ end }}
+{{ partial "og-image.html" $card }}
 
 <meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
 <meta name="twitter:title" content="{{ .Title }}">
 <meta name="twitter:description" content="{{ $desc }}">
-{{ with $image }}<meta name="twitter:image" content="{{ . }}">{{ end }}
 
 {{ $schema := dict
 	"@context" "https://schema.org"

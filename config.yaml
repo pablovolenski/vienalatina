@@ -135,3 +135,35 @@ markup:
       unsafe: false
 
 enableRobotsTXT: false   # robots.txt is a static file in static/
+
+# The uploads are mounted twice on purpose.
+#
+# Hugo copies `static/` and processes `assets/`, and a picture that is only
+# copied cannot be resized — which is why a share card used to point at the
+# original: a photograph off a phone, two to five megabytes. WhatsApp fetches a
+# preview image on a tight budget and gives up on a file that size, so the card
+# arrived with a blank where the picture should be.
+#
+# Mounting `static/uploads` into `assets/uploads` as well lets seo-head.html
+# build a 1200×630 card from the same file, while the static copy stays exactly
+# where it is: every existing /uploads/… URL, every image in every post, and
+# everything the editor commits are untouched.
+#
+# Declaring any mount means declaring them all — these five are Hugo's own
+# defaults, written out so nothing silently stops being read.
+module:
+  mounts:
+    - source: content
+      target: content
+    - source: layouts
+      target: layouts
+    - source: data
+      target: data
+    - source: assets
+      target: assets
+    - source: static
+      target: static
+    - source: static/uploads
+      target: assets/uploads
+    - source: static/brand
+      target: assets/brand

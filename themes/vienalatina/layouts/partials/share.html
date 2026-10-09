@@ -1,0 +1,116 @@
+{{/* The row of share buttons, drawn under the title and again after the text.
+
+     Four of these are ordinary links and work with scripting switched off:
+     WhatsApp, Facebook, Bluesky and Mastodon all accept a URL that opens their
+     own composer with the text already in it.
+
+     Signal and Instagram do not, and no amount of wanting changes it. Signal
+     has no web intent at all — it appears in the operating system's own share
+     sheet and nowhere else — and Instagram cannot be handed a link by anybody,
+     which is why every site that claims an Instagram share button is really
+     offering a copied link. So both call `navigator.share()`, which opens that
+     sheet with every installed app in it, and fall back to copying. They carry
+     `hidden` until share.js removes it: a button that does nothing at all is
+     worse than no button.
+
+     The icons are simplified marks in one visual language rather than the
+     official logo files. Reproducing those from memory gives something subtly
+     wrong, and subtly wrong looks worse than plainly simple; each carries its
+     name for a screen reader and in `title` for a cursor. Swapping in the real
+     SVGs later is one file and no other change. */}}
+
+{{ $lang := .Site.Language.Lang }}
+{{ $url := .Permalink }}
+{{ $text := printf "%s — %s" .Title $url }}
+{{/* Encoded once, and marked safe so it is not encoded again. Go's template
+     escaper treats an href as a URL and escapes it on the way out, so a value
+     that arrived already encoded came through as %253A and %2b — a link that
+     opens WhatsApp with the percent signs spelled out. */}}
+{{ $encText := $text | urlquery }}
+{{ $encUrl := $url | urlquery }}
+
+{{/* Without scripting the Mastodon button needs an instance to aim at, and the
+     association's own is the only one this page knows. With scripting it asks
+     the reader for theirs instead and remembers the answer. */}}
+{{ $masto := "" }}
+{{ with site.Data.site }}{{ with .social }}{{ with .mastodon }}
+{{ $masto = (urls.Parse .).Host }}
+{{ end }}{{ end }}{{ end }}
+
+<aside class="share" data-share
+       data-url="{{ $url }}"
+       data-title="{{ .Title }}"
+       data-text="{{ $text }}"
+       data-copied="{{ partial "t.html" (dict "key" "copied" "lang" $lang) }}"
+       data-ask="{{ partial "t.html" (dict "key" "askmasto" "lang" $lang) }}"
+       aria-label="{{ partial "t.html" (dict "key" "share" "lang" $lang) }}">
+	<span class="share__title">{{ partial "t.html" (dict "key" "share" "lang" $lang) }}</span>
+
+	<a class="share__btn share__btn--whatsapp" title="WhatsApp" rel="noopener"
+	   target="_blank" href="{{ printf "https://wa.me/?text=%s" $encText | safeURL }}">
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M12 2a9.8 9.8 0 0 0-8.4 15l-1.3 4.6 4.8-1.3A9.8 9.8 0 1 0 12 2Zm0 1.9a7.9 7.9 0 1 1-4.1 14.6l-.4-.2-2.6.7.7-2.5-.3-.4A7.9 7.9 0 0 1 12 3.9Z"/>
+			<path d="M9.4 7.6c-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.2 5 4.3 2.5.9 3 .7 3.5.7.6-.1 1.8-.7 2-1.5.3-.7.3-1.3.2-1.4l-.6-.3-1.9-.9c-.3-.1-.5-.2-.7.1l-.9 1.1c-.2.2-.3.2-.6.1a7.8 7.8 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.4.1-.6l.4-.5.3-.5v-.5l-.9-2.1Z"/>
+		</svg>
+		<span class="share__name">WhatsApp</span>
+	</a>
+
+	<a class="share__btn share__btn--facebook" title="Facebook" rel="noopener"
+	   target="_blank" href="{{ printf "https://www.facebook.com/sharer/sharer.php?u=%s" $encUrl | safeURL }}">
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M12 2a10 10 0 0 0-1.6 19.9v-7h-2.5V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9l2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.5 2.9h-2.3v7A10 10 0 0 0 12 2Z"/>
+		</svg>
+		<span class="share__name">Facebook</span>
+	</a>
+
+	<a class="share__btn share__btn--bluesky" title="Bluesky" rel="noopener"
+	   target="_blank" href="{{ printf "https://bsky.app/intent/compose?text=%s" $encText | safeURL }}">
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M12 10.8C10.9 8.7 7.9 4.7 5.2 3.3 2.6 2 1.6 3.4 1.6 5.3c0 1.9.8 7.9 1.3 8.9.9 1.7 2.6 2 4.1 1.8l-.6.1c-2.4.4-4.5 1.3-1.7 4.4 3 3.3 4.2-.7 4.8-2.7l.5-1.9.5 1.9c.6 2 1.8 6 4.8 2.7 2.8-3.1.7-4-1.7-4.4l-.6-.1c1.5.2 3.2-.1 4.1-1.8.5-1 1.3-7 1.3-8.9 0-1.9-1-3.3-3.6-2C16.1 4.7 13.1 8.7 12 10.8Z"/>
+		</svg>
+		<span class="share__name">Bluesky</span>
+	</a>
+
+	<a class="share__btn share__btn--mastodon" title="Mastodon" rel="noopener"
+	   target="_blank" data-share-mastodon
+	   {{ if $masto }}href="{{ printf "https://%s/share?text=%s" $masto $encText | safeURL }}"{{ else }}href="#" hidden{{ end }}>
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M20.9 8.3c0-3.4-2.2-4.4-2.2-4.4C17.5 3.4 15.6 3.1 13.5 3h-.1c-2 0-4 .4-5.1.9 0 0-2.2 1-2.2 4.4v2.9c.1 3.4.6 6.8 3.7 7.6 1.5.4 2.7.5 3.7.4 1.8-.1 2.8-.6 2.8-.6l-.1-1.3s-1.2.4-2.6.3c-1.4 0-2.9-.1-3.1-1.9v-.5c3 .7 5.5.3 6.2.2 2-.2 3.7-1.5 3.9-2.6.3-1.8.3-4.5.3-4.5Zm-2.6 4.3h-1.6V8.7c0-.8-.3-1.2-1-1.2-.8 0-1.2.5-1.2 1.4v2H12.9v-2c0-.9-.4-1.4-1.2-1.4-.7 0-1 .4-1 1.2v3.9H9.1V8.6c0-.8.2-1.4.6-1.9.4-.4 1-.7 1.7-.7.8 0 1.4.3 1.8.9l.4.7.4-.7c.4-.6 1-.9 1.8-.9.7 0 1.3.3 1.7.7.4.5.6 1.1.6 1.9v4Z"/>
+		</svg>
+		<span class="share__name">Mastodon</span>
+	</a>
+
+	{{/* The two with nowhere to send a link, and the universal fallback. All
+	     three are hidden until share.js takes the attribute off. */}}
+	<button class="share__btn share__btn--signal" type="button" title="Signal"
+	        data-share-native hidden>
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M12 2.6a9.4 9.4 0 0 0-8.1 14.1l-1.2 3.9 4-1.1A9.4 9.4 0 1 0 12 2.6Zm0 1.9a7.5 7.5 0 1 1-3.9 13.9l-.4-.2-2.1.6.6-2-.2-.4A7.5 7.5 0 0 1 12 4.5Z"/>
+		</svg>
+		<span class="share__name">Signal</span>
+	</button>
+
+	<button class="share__btn share__btn--instagram" type="button" title="Instagram"
+	        data-share-native hidden>
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M16.2 3H7.8A4.8 4.8 0 0 0 3 7.8v8.4A4.8 4.8 0 0 0 7.8 21h8.4a4.8 4.8 0 0 0 4.8-4.8V7.8A4.8 4.8 0 0 0 16.2 3Zm3 13.2a3 3 0 0 1-3 3H7.8a3 3 0 0 1-3-3V7.8a3 3 0 0 1 3-3h8.4a3 3 0 0 1 3 3v8.4Z"/>
+			<path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 7.6a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8Z"/>
+			<circle cx="17.1" cy="6.9" r="1.1"/>
+		</svg>
+		<span class="share__name">Instagram</span>
+	</button>
+
+	<button class="share__btn share__btn--copy" type="button"
+	        title="{{ partial "t.html" (dict "key" "copylink" "lang" $lang) }}"
+	        data-share-copy hidden>
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M10.6 13.4a3.6 3.6 0 0 0 5.1 0l2.9-2.9a3.6 3.6 0 0 0-5.1-5.1l-1.4 1.4 1.3 1.3 1.4-1.4a1.8 1.8 0 1 1 2.5 2.5l-2.9 2.9a1.8 1.8 0 0 1-2.5 0l-1.3 1.3Z"/>
+			<path d="M13.4 10.6a3.6 3.6 0 0 0-5.1 0l-2.9 2.9a3.6 3.6 0 0 0 5.1 5.1l1.4-1.4-1.3-1.3-1.4 1.4a1.8 1.8 0 1 1-2.5-2.5l2.9-2.9a1.8 1.8 0 0 1 2.5 0l1.3-1.3Z"/>
+		</svg>
+		<span class="share__name">{{ partial "t.html" (dict "key" "copylink" "lang" $lang) }}</span>
+	</button>
+
+	{{/* What the copy button says back. Polite rather than assertive: it
+	     announces itself once rather than interrupting whatever is being read. */}}
+	<span class="share__said" role="status" aria-live="polite"></span>
+</aside>

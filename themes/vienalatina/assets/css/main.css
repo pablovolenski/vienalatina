@@ -4150,3 +4150,100 @@ a.notif-card__message:hover {
   letter-spacing: 0.02em;
   vertical-align: middle;
 }
+
+/* --- sharing ------------------------------------------------------------
+ *
+ * A tinted strip rather than six bare icons: the row has to be noticed to be
+ * used, and a label saying what it is costs one word. Drawn twice on a post —
+ * under the title and after the text — so it meets both the reader who decides
+ * on sight and the one who decides at the end.
+ *
+ * Each button takes its own brand colour on hover and keeps the page's muted
+ * grey at rest, so the row reads as one object instead of six logos competing
+ * with the article.
+ */
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 24px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light, #e0cec8);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--surface-soft, #faf2ef);
+}
+
+.share__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted, #5c3d37);
+  margin-right: 4px;
+}
+
+.share__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border-light, #e0cec8);
+  border-radius: 50%;
+  background: var(--surface, #fff);
+  color: var(--muted, #5c3d37);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.share__btn svg { width: 20px; height: 20px; fill: currentColor; }
+.share__btn:hover { transform: translateY(-1px); }
+
+/* The `hidden` attribute, given back its meaning.
+ *
+ * `[hidden] { display: none }` lives in the browser's own stylesheet, and an
+ * author rule beats a user-agent rule whatever the specificity — so the
+ * `display: inline-flex` above quietly un-hid the three buttons that are
+ * supposed to appear only once share.js has run. With scripting off, all
+ * seven showed and three of them did nothing at all, which is the exact
+ * failure the attribute was there to prevent. */
+.share__btn[hidden] { display: none; }
+
+/* Their own colours, and only on hover: at rest the row belongs to the page. */
+.share__btn--whatsapp:hover  { color: #25d366; border-color: #25d366; }
+.share__btn--facebook:hover  { color: #1877f2; border-color: #1877f2; }
+.share__btn--bluesky:hover   { color: #0085ff; border-color: #0085ff; }
+.share__btn--mastodon:hover  { color: #6364ff; border-color: #6364ff; }
+.share__btn--signal:hover    { color: #3a76f0; border-color: #3a76f0; }
+.share__btn--instagram:hover { color: #e1306c; border-color: #e1306c; }
+.share__btn--copy:hover      { color: var(--brand, #c0391c); border-color: var(--brand, #c0391c); }
+
+.share__btn:focus-visible {
+  outline: 2px solid var(--brand, #c0391c);
+  outline-offset: 2px;
+}
+
+/* The name is for a screen reader and for `title` on a cursor; the icon is for
+   everybody else. Hidden this way rather than with display:none, which would
+   take it out of the accessibility tree along with the button's only label. */
+.share__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* What the copy button says back. Empty until it has something to say, so it
+   takes no room on a row that is already seven items wide. */
+.share__said {
+  font-size: 0.8rem;
+  color: var(--brand-dark, #9a2a0f);
+  font-weight: 600;
+}
+
+@media (pointer: coarse) {
+  .share__btn { width: 44px; height: 44px; }
+}

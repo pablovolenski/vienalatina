@@ -1,0 +1,23 @@
+{{/* The tags a share card needs to arrive with its picture.
+
+     One partial rather than the same five lines in three branches: the article,
+     the home page and a static page all share cards, and the set drifted once
+     already — the home page had no `twitter:image` for a while because it was
+     added to one branch and not the others.
+
+     Width and height are not decoration. Several clients draw the small card
+     instead of the large one when they would have to fetch the file to find
+     out how big it is, and WhatsApp in particular gives up on a slow or heavy
+     image rather than waiting for it. Both numbers come from the generated
+     card, so they cannot disagree with the file.
+
+     Takes: url, alt, width, height, type. */}}
+{{ with .url }}
+<meta property="og:image" content="{{ . }}">
+<meta property="og:image:secure_url" content="{{ . }}">
+{{ with $.alt }}<meta property="og:image:alt" content="{{ . }}">{{ end }}
+{{ with $.width }}<meta property="og:image:width" content="{{ . }}">{{ end }}
+{{ with $.height }}<meta property="og:image:height" content="{{ . }}">{{ end }}
+{{ with $.type }}<meta property="og:image:type" content="{{ . }}">{{ end }}
+<meta name="twitter:image" content="{{ . }}">
+{{ end }}

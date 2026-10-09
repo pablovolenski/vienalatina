@@ -388,3 +388,48 @@ def test_the_public_agenda_draws_every_day_on_a_phone_too():
     assert weekday and weekday[2] != "none", (
         "the phone block never shows .agenda__weekday, so every row of the "
         "month is a bare number — there is no column header at that width")
+
+
+# --- the share row, which is theme and not members area --------------------
+
+def test_the_share_buttons_that_need_a_script_say_so_in_the_markup():
+    """Three of the seven cannot be links: Signal has no web intent, Instagram
+    accepts no URL at all, and copying needs the clipboard. They carry `hidden`
+    and share.js takes it off — so a reader without scripting sees four buttons
+    that work rather than seven of which three do nothing.
+    """
+    share = (THEME / "layouts" / "partials" / "share.html").read_text(encoding="utf-8")
+    for hook in ("data-share-native", "data-share-copy"):
+        for element in re.findall(r"<(?:a|button)[^>]*" + hook + r"[^>]*>", share):
+            assert "hidden" in element, f"{hook} without `hidden`: {element[:80]}"
+
+
+def test_a_hidden_share_button_is_actually_hidden():
+    """`[hidden] { display: none }` lives in the browser's own stylesheet, and
+    an author rule beats a user-agent rule whatever the specificity — so
+    `.share__btn { display: inline-flex }` quietly un-hid all three. With
+    scripting off, seven buttons appeared and three of them did nothing, which
+    is the exact failure the attribute was there to prevent.
+    """
+    css = (THEME / "assets" / "css" / "main.css").read_text(encoding="utf-8")
+    assert re.search(r"\.share__btn\[hidden\]\s*\{[^}]*display:\s*none", css), (
+        "main.css gives .share__btn a display without taking it back for "
+        "[hidden], so the buttons share.js is meant to reveal are visible "
+        "before it runs — and useless until it does")
+
+
+def test_every_share_link_is_marked_safe_so_it_is_not_encoded_twice():
+    """Go's template escaper treats an href as a URL and escapes it on the way
+    out. A value already encoded with `urlquery` therefore went out as %253A
+    and %2b — a WhatsApp link with the percent signs spelled out, which opens
+    the composer with gibberish in it. `safeURL` is what stops the second pass.
+    """
+    share = (THEME / "layouts" / "partials" / "share.html").read_text(encoding="utf-8")
+    # By line rather than by matching the attribute: the value contains its own
+    # quotes — `href="{{ printf "https://…" $enc | safeURL }}"` — and a regex
+    # for href="..." stops at the first of them and reads nothing.
+    lines = [line.strip() for line in share.splitlines()
+             if "href=" in line and "$enc" in line]
+    assert lines, "share.html builds no encoded links at all any more"
+    for line in lines:
+        assert "safeURL" in line, f"encoded twice: {line}"
