@@ -41,7 +41,7 @@ def index():
                     WHERE c.thread_id = t.id AND c.deleted_at IS NULL) AS replies
              FROM threads t JOIN members m ON m.id = t.author_id
             WHERE t.deleted_at IS NULL
-            ORDER BY t.created_at DESC LIMIT ?""",
+            ORDER BY t.pinned DESC, t.created_at DESC, t.id DESC LIMIT ?""",
         (RECENT,),
     ).fetchall()
 
@@ -62,13 +62,16 @@ def index():
              JOIN conversation_members theirs
                ON theirs.conversation_id = c.id AND theirs.member_id != :me
              JOIN members other ON other.id = theirs.member_id
-            ORDER BY last_at DESC NULLS LAST LIMIT :limit""",
+            ORDER BY last_at DESC NULLS LAST, c.id DESC LIMIT :limit""",
         {"me": g.member["id"], "limit": RECENT},
     ).fetchall()
 
     mine = db.execute(
         """SELECT id, title, state, note FROM submissions
-            WHERE author_id = ? ORDER BY created_at DESC LIMIT ?""",
+            WHERE author_id = ?
+             ORDER BY CASE state WHEN 'pending' THEN 0 ELSE 1 END,
+                      created_at DESC, id DESC
+             LIMIT ?""",
         (g.member["id"], RECENT),
     ).fetchall()
 
@@ -82,7 +85,7 @@ def index():
                       m.profile_published AS author_published
                  FROM submissions s JOIN members m ON m.id = s.author_id
                 WHERE s.state = 'pending' AND s.author_id != ?
-                ORDER BY s.created_at LIMIT ?""",
+                ORDER BY s.created_at, s.id LIMIT ?""",
             (g.member["id"], RECENT),
         ).fetchall()
 

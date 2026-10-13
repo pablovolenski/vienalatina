@@ -1,7 +1,7 @@
 {{/* Home: feed of recent articles in the current language. */}}
 {{ define "main" }}
 <main class="feed">
-	{{ range first 20 (where .Site.RegularPages "Section" "post") }}
+	{{ range first 20 (partial "posts-ordered.html" (where .Site.RegularPages "Section" "post")) }}
 	<article class="article-card">
 		<div class="article-card__meta">
 			<time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 Jan 2006" }}</time>

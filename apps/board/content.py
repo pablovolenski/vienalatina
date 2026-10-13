@@ -25,6 +25,7 @@ import secrets
 import unicodedata
 from datetime import date as date_type
 from datetime import datetime
+from datetime import time as time_type
 
 import yaml
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
@@ -142,10 +143,61 @@ def build_document(fields: dict, body: str) -> str:
     return f"---\n{front}---\n\n{body.strip()}\n"
 
 
+def as_datetime(value):
+    """Whatever a `date:` turned out to be — a date, a datetime, a string —
+    as a datetime, or None if it is none of those."""
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date_type):
+        return datetime.combine(value, time_type())
+    try:
+        return datetime.fromisoformat(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def date_input(value) -> str:
+    """The `YYYY-MM-DD` an `<input type="date">` accepts. A datetime handed to
+    one straight is not a value it understands, and the browser answers by
+    showing an empty field — silently, which is the failure this exists to
+    stop."""
+    moment = as_datetime(value)
+    return f"{moment:%Y-%m-%d}" if moment else ""
+
+
+def stamp(when, original=None) -> datetime:
+    """The post's date, with the clock attached.
+
+    Hugo sorts the blog by this field and a bare `date: 2026-07-31` makes every
+    post published that day byte-identical in it — so Hugo falls through to its
+    next key, the title, and the day comes out alphabetised. Permanently: a
+    rebuild does not change it, because nothing about the files changed. That
+    is the whole of "the posts are not in the order they were written".
+
+    The day is still the one whoever is publishing chose, and the URL still
+    carries only the day. The time is the tiebreak, which is why it is the
+    clock at the moment of publication rather than anything cleverer.
+
+    `original` is what the file already said. An edit keeps it verbatim as long
+    as the day has not moved — otherwise correcting a typo would carry a
+    year-old post to the top of the home page.
+    """
+    chosen = as_datetime(when) or datetime.now()
+    before = as_datetime(original)
+    if before and before.date() == chosen.date() and before.time() != time_type():
+        return before
+    now = datetime.now()
+    return chosen.replace(hour=now.hour, minute=now.minute, second=now.second,
+                          microsecond=0)
+
+
 def frontmatter_for(collection: str, form: dict) -> dict:
     fields = {"title": form["title"]}
     if COLLECTIONS[collection]["dated"]:
-        fields["date"] = form["date"]
+        # Every path that writes a post comes through here — the editor, an
+        # edit, and a moderator approving a proposal — so this is the one place
+        # the clock has to be attached.
+        fields["date"] = stamp(form["date"], form.get("date_stamped"))
     fields["lang"] = "es"
     fields["manual_translation"] = form["manual_translation"]
     if collection == "page":
@@ -262,6 +314,12 @@ def listing(collection: str) -> list[dict]:
             "event_location": row["event_location"] or "",
         })
 
+    # Newest first, by the whole of the date. That used to be a day and nothing
+    # else, so everything published on one day tied and fell through to the
+    # filename — which under `reverse` is descending-alphabetical slug order,
+    # as likely to be chronological as not. The editor stamps the clock now
+    # (`stamp`), and the filename is left as the last resort for the posts
+    # written before it did.
     items.sort(key=lambda item: (item["date"], item["name"]), reverse=True)
     return items
 
@@ -307,6 +365,10 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
             when = datetime.strptime(raw_date, "%Y-%m-%d").date()
         except ValueError:
             errors.append("La fecha debe tener el formato AAAA-MM-DD.")
+    # What the file already said, carried through the form untouched so that
+    # `stamp()` can keep the publication time when only the text changed. A
+    # date field is a day and nothing else; this is the rest of it.
+    stamped = request.form.get("date_stamped", "").strip()
 
     # A page's place in the menu. `parent` is another page's basename — the one
     # translate.py uses to pair siblings, so a parent chosen once holds in all
@@ -354,6 +416,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
 
     fields = {
         "title": title, "date": when,
+        "date_stamped": stamped, "date_input": raw_date,
         "description": request.form.get("description", "").strip(),
         "image": image,
         "manual_translation": request.form.get("manual_translation") == "on",
@@ -588,9 +651,15 @@ def edit(collection: str, name: str):
                   "error")
             return redirect(url_for("content.index", collection=collection))
 
+        published = as_datetime(fm.get("date"))
         fields = {
             "title": fm.get("title", ""),
             "date": fm.get("date"),
+            # The day for the date field, and the whole of it for the hidden
+            # one, so an edit that does not move the day keeps the publication
+            # time the post already had.
+            "date_input": date_input(fm.get("date")),
+            "date_stamped": published.isoformat() if published else "",
             "description": fm.get("description", ""),
             "image": fm.get("image", ""),
             "manual_translation": bool(fm.get("manual_translation")),

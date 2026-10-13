@@ -1034,6 +1034,50 @@ Only *Inicio* remains in `config.yaml`. Weight under 5 puts a menu entry before
 the pages, 5 or more after them. *Comunidad* used to be the entry at weight 9 and
 is a button in the bar now — see §11.19.
 
+### 11.15c Strict reverse-chronological order, in both halves
+
+Posts came out in the wrong order on the public site and in the editor, from two
+different causes that look like one bug.
+
+**On the site: the editor wrote a day with no clock.** `date: 2026-07-31` is
+byte-identical for everything published that day, so Hugo fell through its sort
+keys — weight, date, linktitle, filepath — and the day came out **alphabetised
+by title**. Permanently: a rebuild changes nothing about the files. None of the
+four post feeds applied an explicit sort either, so all four inherited it.
+
+Both halves are fixed, and both are needed — a sort cannot break a tie:
+
+- `apps/board/content.py`'s **`stamp()`** attaches the clock at the moment of
+  publication, in `frontmatter_for`, which every publishing path goes through
+  (the editor, an edit, a moderator approving a proposal). The day is still
+  whoever publishes chose and the URL still carries only the day, so nothing
+  anybody linked to moves. **An edit keeps the time the file already had** as
+  long as the day has not changed — otherwise correcting a typo would carry a
+  year-old post to the top of the home page. That is what the hidden
+  `date_stamped` field in `content_form.html` is for.
+- **`partials/posts-ordered.html`** returns the order, and the home page, the
+  section list, `llms.txt` and the `BlogPosting` block in `seo-head.html` all
+  call it. `first N` is applied to its result, never to its input: slicing
+  before sorting is how a post falls off the end of its own list.
+
+Posts written before this keep their bare date and tie with each other, which
+is right — the time they were published is not recoverable. Saving one attaches
+a clock.
+
+**In the members area: no ordering had a tiebreak.** `created_at` is
+`datetime('now')`, which has one-second resolution, so two rows written in the
+same second compared equal and SQLite returned them in whatever order it liked
+— differently on different pages of the same list. Every ordering now ends in
+the primary key. `activity.py` had it already and was the model.
+
+Two disagreements went with it: Inicio's wall panel now orders by `pinned` like
+the wall itself, and its own-submissions panel uses the same state ranking
+*Publicaciones* does. The two moderation queues stay **oldest-first** on
+purpose: a queue is not a feed, and work waiting to be done is FIFO.
+
+The public agenda also sorts a day's events by `event_time`, which the private
+calendar has done since it was written.
+
 ### 11.15b Two calendars
 
 **Public events are posts carrying an `event_date`**, with two more fields of

@@ -132,7 +132,8 @@ def index():
     db = get_db()
     mine = db.execute(
         """SELECT * FROM submissions WHERE author_id = ?
-            ORDER BY CASE state WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC""",
+            ORDER BY CASE state WHEN 'pending' THEN 0 ELSE 1 END,
+                     created_at DESC, id DESC""",
         (g.member["id"],),
     ).fetchall()
     queue = []
@@ -143,7 +144,7 @@ def index():
                       m.profile_published AS author_published
                  FROM submissions s JOIN members m ON m.id = s.author_id
                 WHERE s.state = 'pending' AND s.author_id != ?
-                ORDER BY s.created_at""",
+                ORDER BY s.created_at, s.id""",
             (g.member["id"],),
         ).fetchall()
     return render_template("submissions.html", mine=mine, queue=queue,

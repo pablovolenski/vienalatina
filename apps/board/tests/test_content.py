@@ -12,6 +12,8 @@ from __future__ import annotations
 import importlib.util
 import io
 import sys
+from datetime import date as date_type
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -566,7 +568,8 @@ def test_an_event_carries_its_own_date_and_an_ics(repo, editor, post):
 
     path, = repo.files
     front = yaml.safe_load(repo.files[path].decode().split("---")[1])
-    assert front["date"].isoformat() == "2026-10-03"
+    # The day the writer chose, and the clock attached to it — see `stamp`.
+    assert front["date"].date().isoformat() == "2026-10-03"
     assert front["event_date"] == "2026-10-24"
     assert front["event_time"] == "18:30"
     assert front["event_location"] == "Plaza de Ottakring"
@@ -758,3 +761,82 @@ def test_a_post_still_needs_a_body(repo, editor, post):
     response = publish(post, title="", body="")
     assert not repo.files
     assert "cuerpo no puede estar vacío" in response.get_data(as_text=True)
+
+
+# --- the order the site reads them in -------------------------------------
+
+def test_two_posts_published_on_one_day_do_not_have_the_same_date(
+        repo, editor, post):
+    """The bug behind «the posts are not in the order they were written».
+
+    `date: 2026-09-25` with no clock is byte-identical for everything published
+    that day, so Hugo falls through its sort keys to the title and the day
+    comes out alphabetised — permanently, because a rebuild changes nothing
+    about the files. The day is still the one the writer chose; the time is
+    only what breaks the tie.
+    """
+    publish(post, title="Zutano llega tarde", date="2026-09-25")
+    publish(post, title="Abc va primero", date="2026-09-25")
+
+    dates = {}
+    for path, blob in repo.files.items():
+        fm, _ = translate.split_frontmatter(blob.decode())
+        dates[path] = fm["date"]
+
+    assert len(dates) == 2
+    for path, when in dates.items():
+        assert isinstance(when, datetime), f"{path} carries a bare date: {when!r}"
+        assert when.date() == date_type(2026, 9, 25)
+    # And the URL still carries only the day, so nothing anybody linked moves.
+    assert sorted(repo.files) == [
+        "content/post/2026-09-25-abc-va-primero.es.md",
+        "content/post/2026-09-25-zutano-llega-tarde.es.md",
+    ]
+
+
+def test_the_newest_post_is_first_in_the_editors_own_list(repo, editor, post, client):
+    """Contenido sorted on the same date-only string, with the filename as the
+    tiebreak — and `reverse=True` reverses the filename too, so the day came
+    out in descending-alphabetical slug order."""
+    publish(post, title="Abc se publica primero", date="2026-09-25")
+    publish(post, title="Zutano se publica después", date="2026-09-25")
+
+    page = client.get("/comunidad/contenido/post").get_data(as_text=True)
+    assert page.index("Zutano se publica después") < page.index("Abc se publica primero")
+
+
+def test_correcting_a_post_does_not_move_it_to_the_top(repo, editor, post):
+    """An edit keeps the publication time the file already carried, as long as
+    the day has not moved. Without that, fixing a typo in a year-old post would
+    restamp it with today's clock and carry it up the page."""
+    publish(post, title="Una nota de hace tiempo", date="2026-09-25")
+    path, = repo.files
+    before, _ = translate.split_frontmatter(repo.files[path].decode())
+
+    post(f"/comunidad/contenido/post/editar/{path.rsplit('/', 1)[1]}",
+         {"title": "Una nota de hace tiempo", "body": "Corregida.",
+          "date": "2026-09-25", "date_stamped": before["date"].isoformat(),
+          "sha": repo._sha(repo.files[path])})
+
+    after, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert after["date"] == before["date"]
+
+
+def test_moving_a_post_to_another_day_restamps_it(repo, editor, post):
+    """The other half: a date deliberately changed is a date changed, and the
+    clock that goes with it is the one it is being published at now."""
+    publish(post, title="Se adelanta", date="2026-09-25")
+    path, = repo.files
+    before, _ = translate.split_frontmatter(repo.files[path].decode())
+
+    post(f"/comunidad/contenido/post/editar/{path.rsplit('/', 1)[1]}",
+         {"title": "Se adelanta", "body": "Texto.", "date": "2026-10-01",
+          "date_stamped": before["date"].isoformat(),
+          "sha": repo._sha(repo.files[path])})
+
+    # An edit writes back to the file it opened — the filename keeps the day it
+    # was created with, and always has. The date Hugo sorts and builds the URL
+    # from is the one in the frontmatter, and that is the one that moves.
+    after, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert after["date"].date() == date_type(2026, 10, 1)
+    assert after["date"] != before["date"]

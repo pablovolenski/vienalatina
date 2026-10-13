@@ -79,7 +79,14 @@
 			{{ if gt $lead 0 }}{{ range seq $lead }}<li class="agenda__pad" aria-hidden="true"></li>{{ end }}{{ end }}
 			{{ range $day := seq 1 $days }}
 			{{ $date := printf "%s-%02d" $key $day }}
-			{{ $onThisDay := where $events "Params.event_date" $date }}
+			{{/* By the hour, so two things on one day read in the order they
+			     happen rather than in the order they were announced. The
+			     private calendar has sorted this way since it was written
+			     (apps/board/events.py: `ORDER BY starts_on, COALESCE(starts_at,
+			     '99:99')`), and the two show the same events to the same
+			     people. An event with no time sorts first here, which is right:
+			     all day begins before the evening does. */}}
+			{{ $onThisDay := sort (where $events "Params.event_date" $date) "Params.event_time" }}
 			{{/* The column a day falls in is its weekday, Monday first — the
 			     same arithmetic the padding above is made of. On a phone the
 			     grid becomes one day per row, where a column position says

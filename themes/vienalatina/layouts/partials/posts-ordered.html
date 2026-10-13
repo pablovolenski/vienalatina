@@ -1,0 +1,23 @@
+{{/*
+    The order every list of posts on this site is in, in one place.
+
+    Call it with the pages and range over what comes back:
+
+        {{ range first 20 (partial "posts-ordered.html" (where site.RegularPages "Section" "post")) }}
+        {{ range partial "posts-ordered.html" .Pages }}
+
+    Four lists used to range over the pages with no sort at all and lean on
+    Hugo's default, which is weight, then date, then linktitle, then filepath.
+    That is fine until two posts share a date — and until this phase the editor
+    wrote `date: 2026-07-31` with no clock, so every post published on one day
+    was identical in it and Hugo fell through to the title. A day came out
+    alphabetised, permanently, because nothing about the files changed on a
+    rebuild. The editor stamps the time now (apps/board/content.py, `stamp`),
+    and this is the other half: the order is stated rather than inherited, so a
+    weight somebody adds by hand cannot quietly reorder the home page.
+
+    `first N` applied to the result slices something already ordered. Applied
+    to the input it would slice first and sort afterwards, which is how a
+    pinned post falls off the end of its own list.
+*/}}
+{{ return (sort . "Date" "desc") }}

@@ -146,7 +146,7 @@ def history(other_id: int) -> dict:
                   a.profile_published AS author_published
              FROM messages m JOIN members a ON a.id = m.author_id
             WHERE m.conversation_id = ? AND m.deleted_at IS NULL
-            ORDER BY m.created_at""",
+            ORDER BY m.created_at, m.id""",
         (conversation_id,),
     ).fetchall()
     db.execute(

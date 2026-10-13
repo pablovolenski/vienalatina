@@ -34,7 +34,12 @@
 
 	{% if meta.dated %}
 	<label for="date">Fecha</label>
-	<input id="date" name="date" type="date" required value="{{ f.date or today }}">
+	<input id="date" name="date" type="date" required value="{{ f.date_input or today }}">
+	{#- The publication time the post already carries. Hugo sorts the blog by
+	    the whole of it and a date field is only a day, so without this, saving
+	    a corrected typo would restamp the clock and carry a year-old post to
+	    the top of the home page. -#}
+	<input type="hidden" name="date_stamped" value="{{ f.date_stamped or '' }}">
 	{% endif %}
 
 	{% if collection == 'page' %}

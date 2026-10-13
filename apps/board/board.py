@@ -147,7 +147,13 @@ def threads():
                     WHERE c.thread_id = t.id AND c.deleted_at IS NULL) AS replies
              FROM threads t JOIN members m ON m.id = t.author_id
             WHERE t.deleted_at IS NULL
-            ORDER BY t.pinned DESC, t.created_at DESC
+            -- `id` last, and it is not decoration. `created_at` is
+            -- `datetime('now')`, which has one-second resolution, so two
+            -- threads written in the same second compared equal and SQLite was
+            -- free to return them in either order — and did, differently on
+            -- different pages of the same list. Every ordering in this app now
+            -- ends in the primary key for that reason.
+            ORDER BY t.pinned DESC, t.created_at DESC, t.id DESC
             LIMIT ? OFFSET ?""",
         (PER_PAGE + 1, (page - 1) * PER_PAGE),
     ).fetchall()
@@ -174,7 +180,7 @@ def thread(thread_id: int):
                   m.gitea_login AS author_login, m.profile_published AS author_published
              FROM comments c JOIN members m ON m.id = c.author_id
             WHERE c.thread_id = ? AND c.deleted_at IS NULL
-            ORDER BY c.created_at""",
+            ORDER BY c.created_at, c.id""",
         (thread_id,),
     ).fetchall()
     return render_template("thread.html", thread=row, author=author,

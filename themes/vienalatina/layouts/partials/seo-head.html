@@ -205,7 +205,7 @@
 {{ with .Site.Params.sameAs }}{{ $org = merge $org (dict "sameAs" .) }}{{ end }}
 <script type="application/ld+json">{{ $org | jsonify (dict "indent" "  ") | safeJS }}</script>
 
-{{ $posts := first 10 (where .Site.RegularPages "Section" "post") }}
+{{ $posts := first 10 (partial "posts-ordered.html" (where .Site.RegularPages "Section" "post")) }}
 {{ $blogPost := slice }}
 {{ range $posts }}
 {{ $entry := dict
