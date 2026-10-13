@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Calendario{% endblock %}
 
+{#- One definition of what an event looks like, used in the grid cell and again
+    in the list underneath it. Two copies of this markup would drift the first
+    time one of them gained a field. -#}
+{% macro event_link(item) %}
+<a class="cal__event {{ 'cal__event--public' if item.public }}" href="{{ item.url }}">
+	{%- if item.starts_at %}<time>{{ item.starts_at }}</time> {% endif %}{{ item.title }}
+	{%- if item.public %} <span class="tag tag--quiet">público</span>{% endif %}
+</a>
+{% endmacro %}
+
 {% block main %}
 <div class="feed-head">
 	<h1>Calendario</h1>
@@ -16,69 +26,88 @@
 </p>
 {% endif %}
 
+{#- Two round controls with the month between them, rather than three runs of
+    text in a row that cannot wrap: at 320px «← Anterior / noviembre 2026 /
+    Siguiente →» pushed the next-month link off the right edge, which is how a
+    month became impossible to leave. The same shape as the public agenda's
+    bar, which has never had that problem. -#}
 <nav class="cal-bar" aria-label="Mes">
-	<a class="linkish" href="{{ url_for('events.month', mes=previous) }}">← Anterior</a>
-	<strong>{{ label }}</strong>
-	<a class="linkish" href="{{ url_for('events.month', mes=next) }}">Siguiente →</a>
+	<a class="cal-bar__move" rel="prev" aria-label="Mes anterior"
+	   href="{{ url_for('events.month', mes=previous) }}">←</a>
+	<strong class="cal-bar__label">{{ label }}</strong>
+	<a class="cal-bar__move" rel="next" aria-label="Mes siguiente"
+	   href="{{ url_for('events.month', mes=next) }}">→</a>
 </nav>
 <p class="muted small cal-bar__today">
 	<a href="{{ url_for('events.month', mes=this_month) }}">Ir a este mes</a>
 </p>
 
-{# Said above the grid rather than below it: on a phone the month is a column
-   of days, and a line under thirty-one empty rows is a line nobody reads. The
-   public agenda says the same thing in its own words (agenda.html). #}
+{# Said above the grid rather than below it, so a thumb meets it first. The
+   grid is drawn either way: a month that draws nothing because it holds
+   nothing looks broken, and looking broken is what it did. #}
 {% if not by_day %}
 <p class="muted cal__empty">No hay nada en {{ label }}.</p>
 {% endif %}
 
-<table class="cal">
-	<thead>
-		<tr>{% for day in weekdays %}<th scope="col">{{ day }}</th>{% endfor %}</tr>
-	</thead>
-	<tbody>
-		{% for week in weeks %}
-		<tr>
-			{% for day in week %}
-			{# calendar.monthdayscalendar pads the first and last weeks with
-			   zeroes, which are days belonging to the neighbouring months. #}
-			{% if day == 0 %}
-			<td class="cal__pad"></td>
-			{% else %}
-			<td class="cal__day {{ 'cal__day--today' if day == today }}">
-				{# The weekday travels with the number because on a phone the
-				   header row is hidden — the grid is a column there, and a day
-				   without its weekday is just an integer. `loop.index0` of this
-				   loop *is* the weekday, since each week is seven cells
-				   starting on Monday, so nothing has to be computed in Python.
-				   Above 640px .cal__weekday is display:none and the column
-				   header says it instead. #}
-				<span class="cal__date">
-					<span class="cal__weekday">{{ weekdays[loop.index0] }}</span>
-					<span class="cal__number">{{ day }}</span>
-				</span>
-				<span class="cal__events">
-				{% for item in by_day.get(day, []) %}
-					<a class="cal__event {{ 'cal__event--public' if item.public }}"
-					   href="{{ item.url }}">
-						{% if item.starts_at %}<time>{{ item.starts_at }}</time> {% endif %}{{ item.title }}
-						{% if item.public %}<span class="tag tag--quiet">público</span>{% endif %}
-					</a>
-				{% endfor %}
-				</span>
-				{% if may_edit %}
-				{# The day is carried into the form, so adding something to the
-				   24th starts with the 24th already filled in. #}
-				<a class="cal__add" title="Añadir evento este día"
-				   href="{{ url_for('events.new', dia='%s-%02d'|format(month_key, day)) }}">+</a>
-				{% endif %}
-			</td>
-			{% endif %}
-			{% endfor %}
-		</tr>
-		{% endfor %}
-	</tbody>
-</table>
+<ol class="cal__head" aria-hidden="true">
+	{% for day in weekdays %}<li>{{ day }}</li>{% endfor %}
+</ol>
+<ol class="cal__grid">
+	{% for week in weeks %}
+	{% for day in week %}
+	{# calendar.monthdayscalendar pads the first and last weeks with zeroes,
+	   which are days belonging to the neighbouring months. They keep their
+	   space — that is what puts the 1st under its own weekday — and lose only
+	   their ink. #}
+	{% if day == 0 %}
+	<li class="cal__pad" aria-hidden="true"></li>
+	{% else %}
+	<li class="cal__day {{ 'cal__day--today' if day == today }}">
+		{# `loop.index0` of this inner loop *is* the weekday, since each week is
+		   seven cells starting on Monday, so nothing has to be computed in
+		   Python. The column header says the weekday at every width now, so
+		   this copy is for a screen reader: it is what makes «22» announce
+		   itself as a Thursday. #}
+		<span class="cal__date">
+			<span class="cal__weekday">{{ weekdays[loop.index0] }}</span>
+			<span class="cal__number">{{ day }}</span>
+		</span>
+		{% if by_day.get(day) %}
+		{# A phone cell is about fifty pixels wide, which holds a number and
+		   some dots and nothing else. The dots are the link to this day's
+		   block in the list below, so the month stays a month and the titles
+		   stay readable. Above 640px they are hidden and the titles sit in the
+		   cell itself. #}
+		<a class="cal__dots" href="#eventos-{{ day }}"
+		   aria-label="{{ by_day.get(day)|length }} evento{{ '' if by_day.get(day)|length == 1 else 's' }} el {{ day }}">
+			{% for item in by_day.get(day)[:4] %}<i class="cal__dot {{ 'cal__dot--public' if item.public }}"></i>{% endfor %}
+		</a>
+		{% endif %}
+		<span class="cal__events">
+		{% for item in by_day.get(day, []) %}{{ event_link(item) }}{% endfor %}
+		</span>
+		{% if may_edit %}
+		{# The day is carried into the form, so adding something to the 24th
+		   starts with the 24th already filled in. #}
+		<a class="cal__add" title="Añadir evento este día"
+		   href="{{ url_for('events.new', dia='%s-%02d'|format(month_key, day)) }}">+</a>
+		{% endif %}
+	</li>
+	{% endif %}
+	{% endfor %}
+	{% endfor %}
+</ol>
+
+{# Only the days that have something in them, and only on a phone — above 640px
+   every title is already in its cell and this would say it all twice. #}
+<section class="cal__list" aria-label="Eventos del mes">
+	{% for day, items in by_day|dictsort %}
+	<div class="cal__listday" id="eventos-{{ day }}">
+		<h2 class="cal__listhead">{{ day }} de {{ label }}</h2>
+		{% for item in items %}{{ event_link(item) }}{% endfor %}
+	</div>
+	{% endfor %}
+</section>
 
 <p class="muted small">
 	Los eventos marcados <span class="tag tag--quiet">público</span> están en

@@ -306,56 +306,116 @@ def _winning_display(rules, ending_in):
     return winner
 
 
+def _rules_in(body):
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL)
+    return [(selector.strip(), rule.group("body"))
+            for rule in RULE.finditer(body)
+            for selector in rule.group("selectors").split(",") if selector.strip()]
+
+
 @pytest.fixture(scope="module")
-def calendar_phone_rules():
-    css = (Path(__file__).resolve().parents[1] / "static" / "board.css").read_text(encoding="utf-8")
-    block = CALENDAR_PHONE_BLOCK.search(css)
+def board_css():
+    return (Path(__file__).resolve().parents[1] / "static" / "board.css").read_text(
+        encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def calendar_phone_rules(board_css):
+    block = CALENDAR_PHONE_BLOCK.search(board_css)
     assert block, "board.css has no phone block for the calendar"
-    body = re.sub(r"/\*.*?\*/", "", block.group("body"), flags=re.DOTALL)
-    rules = []
-    for rule in RULE.finditer(body):
-        for selector in rule.group("selectors").split(","):
-            if selector.strip():
-                rules.append((selector.strip(), rule.group("body")))
-    return rules
+    return _rules_in(block.group("body"))
 
 
-def test_the_padding_cells_are_actually_hidden_on_a_phone(calendar_phone_rules):
-    """The one that shipped: `.cal td { display: block }` is (0,1,1) and
-    `.cal__pad { display: none }` is (0,1,0), so the padding cells stayed as
-    92px empty boxes — while `.cal__day:not(:has(.cal__event))` at (0,2,0) won
-    and hid every real day. A month with no events drew four blank boxes and
-    nothing else, and the HTML was correct throughout.
+@pytest.fixture(scope="module")
+def calendar_base_rules(board_css):
+    """The calendar's rules outside any media block — everything from the
+    section heading up to the first `@media` after it."""
+    start = board_css.index("--- the private calendar")
+    end = board_css.index("@media", start)
+    return _rules_in(board_css[start:end])
+
+
+def test_the_month_is_seven_columns_at_every_width(calendar_base_rules,
+                                                   calendar_phone_rules):
+    """The regression this phase is about, stated as a rule.
+
+    The month was a <table>, and the only way to make a seven-column table
+    legible at 390px was to stop it being one — which turned a calendar into a
+    list of dates, and on the way there produced the specificity bug that drew
+    an empty month as four blank boxes. It is a grid now, and a grid stays a
+    grid: the phone makes the cells smaller and moves the titles out of them,
+    and that is all it is allowed to do.
     """
-    winner = _winning_display(calendar_phone_rules, {"td.cal__pad", ".cal__pad", "td"})
-    assert winner, "nothing in the phone block decides what a padding cell does"
-    assert winner[2] == "none", (
-        f"a padding cell ends up `display: {winner[2]}` from `{winner[1]}`. "
-        "A rule naming td outranks one naming only the class, so every cell "
-        "belonging to the neighbouring month is drawn as an empty box."
-    )
+    columns = [re.search(r"grid-template-columns\s*:\s*([^;]+)", body).group(1)
+               for selector, body in calendar_base_rules
+               if selector.endswith(".cal__grid") and "grid-template-columns" in body]
+    assert columns, "the base stylesheet never gives .cal__grid its columns"
+    assert "repeat(7," in columns[0].replace(" ", ""), (
+        f"the month is laid out as `{columns[0].strip()}` rather than seven columns")
+
+    for selector, body in calendar_phone_rules:
+        if not selector.endswith(".cal__grid"):
+            continue
+        display = re.search(r"display\s*:\s*([\w-]+)", body)
+        assert not display or display.group(1) == "grid", (
+            f"`{selector}` takes the month off the grid on a phone "
+            f"(`display: {display.group(1)}`), which is how it became a list "
+            "of dates the first time.")
+        assert "grid-template-columns" not in body, (
+            f"`{selector}` changes the number of columns on a phone; a month "
+            "has seven of them at every width.")
 
 
-def test_every_day_of_the_month_is_drawn_on_a_phone(calendar_phone_rules):
-    """The month is a column of days there, not only the days with something in
-    them: an empty day is how you see the month is empty, and how an admin taps
-    the 14th to put something on it."""
-    winner = _winning_display(calendar_phone_rules, {"td.cal__day", ".cal__day"})
-    assert winner and winner[2] != "none", (
-        f"a day cell ends up hidden on a phone (`{winner[1] if winner else '—'}`)."
-    )
+def test_no_cell_of_the_month_is_hidden_on_a_phone(calendar_phone_rules):
+    """Neither a day nor a padding cell.
+
+    The day cells are obvious. The padding cells are the ones worth a test:
+    they were `display: none` while the month was a list, and in a grid they
+    are what puts the 1st under its own weekday — hide them and every date in
+    the month lands on the wrong column, which still *looks* like a calendar.
+    """
+    for compounds, what in ((({"li.cal__day", ".cal__day"}), "a day"),
+                            (({"li.cal__pad", ".cal__pad"}), "a padding cell")):
+        winner = _winning_display(calendar_phone_rules, compounds)
+        assert winner is None or winner[2] != "none", (
+            f"{what} ends up hidden on a phone, from `{winner[1]}`.")
 
 
-def test_the_weekday_shows_on_a_phone(calendar_phone_rules):
-    """The header row is hidden at that width, and the base stylesheet hides
-    `.cal__weekday` because up there the header says it. If the phone block
-    only restyles it without turning it back on, every row of the month reads
-    as a bare number — which is how it was first rendered."""
-    winner = _winning_display(calendar_phone_rules, {".cal__weekday", "span.cal__weekday"})
-    assert winner and winner[2] != "none", (
-        "the phone block never gives .cal__weekday a display of its own, so the "
-        "base `display: none` stands and the days lose their weekday."
-    )
+def test_the_weekday_is_hidden_from_the_eye_and_not_from_a_screen_reader(
+        calendar_base_rules):
+    """A fifty-pixel cell has room for a number and nothing else, so the
+    weekday inside each cell is clipped rather than drawn — the header row says
+    it for anyone who can see it. `display: none` would be the obvious way to
+    do that and the wrong one: it takes the element out of the accessibility
+    tree too, and then «22» is announced as the number 22 with no day attached.
+    """
+    rules = [(selector, body) for selector, body in calendar_base_rules
+             if selector.strip().endswith(".cal__weekday")]
+    assert rules, "nothing in board.css hides .cal__weekday from the eye"
+    for selector, body in rules:
+        display = re.search(r"display\s*:\s*([\w-]+)", body)
+        assert not display or display.group(1) != "none", (
+            f"`{selector}` uses display:none, which hides the weekday from a "
+            "screen reader as well. Clip it instead.")
+    assert any("clip-path" in body for _, body in rules), (
+        "the weekday is not clipped, so it is drawn inside every cell")
+
+
+def test_everywhere_a_member_writes_breaks_a_word_too_long_for_its_box(board_css):
+    """A pasted URL is one word, and `profiles.clean_links` lets it be five
+    hundred characters long.
+
+    `.rich` — the box the text is typed into — has broken long words since the
+    editor shipped; the places that *show* what was typed did not, so a bio
+    looked right while being written and came back out through the side of the
+    card. The two lists are the same list, which is the only reason this is a
+    test rather than a line in the stylesheet nobody reads.
+    """
+    for selector in (".rich", ".prose", ".person-head__links", ".cal__event"):
+        assert re.search(
+            r"(^|,)\s*" + re.escape(selector) + r"\s*(,[^{]*)?\{[^}]*overflow-wrap",
+            board_css, re.MULTILINE), (
+            f"`{selector}` has no overflow-wrap, so a pasted link leaves the box")
 
 
 AGENDA_PHONE_BLOCK = re.compile(

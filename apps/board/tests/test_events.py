@@ -120,14 +120,13 @@ def test_february_in_a_leap_year_has_twenty_nine_days(client, superadmin_id, sig
 
 def test_a_month_with_nothing_in_it_says_so_and_still_draws_its_days(
         client, superadmin_id, sign_in, quiet_gitea):
-    """On a phone the month is a column of days rather than a grid, so an empty
-    month is thirty-one empty rows — which is how you see that it is empty. The
-    line above them says it in words, as the public agenda does.
+    """An empty month still draws its month, which is how you see that it is
+    empty. The line above it says so in words, as the public agenda does.
 
     The HTML has always been right here; what shipped was a stylesheet that hid
     every day and kept the cells belonging to the neighbouring months, so the
-    page was six hundred pixels of nothing. The rule that catches that one is in
-    test_templates.py, where it can be seen.
+    page was six hundred pixels of nothing. The rules that catch that one are in
+    test_templates.py, where they can be seen.
     """
     sign_in(superadmin_id)
     page = client.get("/comunidad/calendario?mes=2026-12").get_data(as_text=True)
@@ -147,12 +146,49 @@ def test_a_month_with_something_in_it_does_not_claim_to_be_empty(
     assert "Asamblea" in page
 
 
-def test_every_day_carries_its_weekday_for_the_phone(
+def test_a_busy_day_carries_a_dot_per_event_and_a_block_of_its_own(
+        client, an_event, superadmin_id, sign_in):
+    """What a phone shows instead of the titles, which do not fit in a cell
+    fifty pixels wide.
+
+    The dots are the link to the day's block in the list underneath, so the
+    month stays a month and the titles stay readable. Both halves are asserted
+    together because either one alone is useless: dots that link nowhere, or a
+    block nothing points at.
+    """
+    an_event("Asamblea", "2026-10-24")
+    an_event("Ensayo", "2026-10-24", starts_at="19:00")
+    sign_in(superadmin_id)
+
+    page = client.get("/comunidad/calendario?mes=2026-10").get_data(as_text=True)
+
+    assert 'href="#eventos-24"' in page
+    assert page.count('class="cal__dot ') == 2
+    block = page.split('id="eventos-24"')[1]
+    assert "Asamblea" in block and "Ensayo" in block
+    # A day with nothing in it has nothing to link to.
+    assert 'href="#eventos-23"' not in page
+
+
+def test_the_month_can_always_be_left(client, superadmin_id, sign_in, quiet_gitea):
+    """Both controls, at every width, with no text beside them to push one off
+    the edge. `← Anterior / noviembre 2026 / Siguiente →` was three runs of
+    text in a row that could not wrap, and at 320px the next month was simply
+    not reachable."""
+    sign_in(superadmin_id)
+    page = client.get("/comunidad/calendario?mes=2026-10").get_data(as_text=True)
+
+    assert page.count('class="cal-bar__move"') == 2
+    assert 'rel="prev"' in page and 'rel="next"' in page
+
+
+def test_every_day_carries_its_weekday_for_a_screen_reader(
         client, superadmin_id, sign_in, quiet_gitea):
-    """The column header is hidden at phone width, so without this a day is a
-    bare number in a list. It comes from the loop position rather than from a
-    date calculation, which is why this checks the pairing and not the markup:
-    an off-by-one would put Sunday's name on Monday's row."""
+    """The header row says the weekday to anyone who can see it; this copy is
+    what makes «22» announce itself as a Thursday. It comes from the loop
+    position rather than from a date calculation, which is why this checks the
+    pairing and not the markup: an off-by-one would put Sunday's name on
+    Monday's cell."""
     sign_in(superadmin_id)
     page = client.get("/comunidad/calendario?mes=2026-10").get_data(as_text=True)
 

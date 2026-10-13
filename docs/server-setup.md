@@ -1401,22 +1401,35 @@ In the members area the navigation **wraps** on a phone rather than scrolling:
 six sections over two lines shows all six, where a swipe strip would have left
 Calendario and Gestión off the right edge with nothing to say they were there.
 
-**Both calendars become a column of days below 640px** — every day of the month,
-in order, with its weekday beside it, the days carrying something standing out,
-and a line saying so when the month is empty. The private one
-(`/comunidad/calendario`, a `<table>`) and the public agenda (`/page/agenda/`,
-an `<ol>`) are deliberately the same shape, because the private one lists the
-public events and a member moves between the two.
+**The private calendar is a seven-column month at every width.** Below 640px
+the cells shrink to about 50px, the titles come out of them and each day with
+something in it shows one dot per event and links to that day's block in a list
+under the grid — an anchor, so it needs no script. Above 640px the titles are
+in the cells and the list is not drawn. The padding cells belonging to the
+neighbouring months keep their space at both widths: they are what puts the 1st
+under its own weekday.
 
-Both phone blocks are written so that **every rule deciding `display` names the
-cell's own class**, and `apps/board/tests/test_templates.py` fails if one does
-not. That is the shape of the bug it replaces: the calendar's block opened with
-`.cal td { display: block }` — specificity (0,1,1) — which outranked
-`.cal__pad { display: none }` at (0,1,0), while `.cal__day:not(:has(…))` at
-(0,2,0) won and hid every real day. A month with no events therefore drew four
-empty boxes and nothing else, with correct HTML throughout. The guard computes
-the specificity and runs the cascade for a padding cell, a day cell and the
-weekday label, which is as close as pytest gets to looking at a page.
+The weekday inside each cell is **clipped rather than `display: none`**, because
+the header row says it to anyone who can see it and a screen reader still needs
+«22» to announce itself as a Thursday.
+
+**It is an `<ol>` on a CSS grid and not a `<table>`, and that is load-bearing.**
+A table brings `tbody`, `tr` and `td` with it, so every phone rule had to name
+an element to undo them — and `.cal td` at specificity (0,1,1) outranks
+`.cal__pad` at (0,1,0). That is exactly what shipped: the padding cells stayed
+as 92px empty boxes while `.cal__day:not(:has(…))` at (0,2,0) won and hid every
+real day, so a month with nothing in it drew four empty boxes and nothing else
+— with correct HTML throughout. A grid has no scaffolding to undo, which is why
+the public agenda (`/page/agenda/`, an `<ol>` since it was written) never had
+the bug. `apps/board/tests/test_templates.py` computes specificity and runs the
+cascade for a day cell, a padding cell and the grid itself, which is as close as
+pytest gets to looking at a page.
+
+**A pasted link breaks rather than leaving its box.** `profiles.clean_links`
+accepts a 500-character label and a URL is one word, so `.prose`,
+`.person-head__links`, `.cal__event` and `.panel__row` all carry
+`overflow-wrap: anywhere` — the rule `.rich`, the box the text is *typed* into,
+has had since the editor shipped. The guard holds the two lists together.
 
 **Tap targets are raised under `@media (pointer: coarse)`** in both stylesheets,
 and both blocks are **padding only** — no type size, colour or spacing changes,
