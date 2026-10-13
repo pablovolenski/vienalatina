@@ -159,6 +159,17 @@
 			<span class="toggle__text">Contenido generado con IA</span>
 		</label>
 
+		{#- The same switch for the pin, next to it. The moment it was pinned
+		    rides along in the hidden field so that saving a correction does
+		    not count as pinning it again and carry it above everything pinned
+		    since. -#}
+		<label class="toggle">
+			<input type="checkbox" name="pinned" {{ 'checked' if f.pinned }}>
+			<span class="toggle__track" aria-hidden="true"></span>
+			<span class="toggle__text">Fijar arriba</span>
+		</label>
+		<input type="hidden" name="pinned_at" value="{{ f.pinned_at or '' }}">
+
 		{#- Beside Cancelar and shaped like it: both are things you press in this
 		    row, and a bare link wedged between two buttons reads as unfinished. -#}
 		<button class="btn btn--quiet" type="submit"

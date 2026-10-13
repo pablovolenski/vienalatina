@@ -35,13 +35,15 @@ BODY_MAX = 100_000
 def index():
     db = get_db()
     threads = db.execute(
-        """SELECT t.id, t.title, t.body_md, t.created_at, m.display_name AS author,
+        """SELECT t.id, t.title, t.body_md, t.created_at, t.pinned,
+                  m.display_name AS author,
                   m.gitea_login AS author_login, m.profile_published AS author_published,
                   (SELECT COUNT(*) FROM comments c
                     WHERE c.thread_id = t.id AND c.deleted_at IS NULL) AS replies
              FROM threads t JOIN members m ON m.id = t.author_id
             WHERE t.deleted_at IS NULL
-            ORDER BY t.pinned DESC, t.created_at DESC, t.id DESC LIMIT ?""",
+            ORDER BY t.pinned DESC, t.pinned_at DESC, t.created_at DESC, t.id DESC
+            LIMIT ?""",
         (RECENT,),
     ).fetchall()
 

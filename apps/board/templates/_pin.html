@@ -1,0 +1,16 @@
+{# Fijar / No fijar, for a thread on the wall or on its own page.
+
+   A form rather than a link, because it changes something and a GET that
+   changes something is a thing a prefetching browser will do on its own. It
+   carries where it was pressed so pinning from the wall comes back to the
+   wall, and the handler puts that through the same open-redirect check as the
+   login form. #}
+{% macro pin(thread, back) %}
+<form method="post" action="{{ url_for('board.set_state', thread_id=thread.id) }}">
+	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	<input type="hidden" name="field" value="pinned">
+	<input type="hidden" name="value" value="{{ 0 if thread.pinned else 1 }}">
+	<input type="hidden" name="back" value="{{ back }}">
+	<button class="linkish" type="submit">{{ 'No fijar' if thread.pinned else 'Fijar' }}</button>
+</form>
+{% endmacro %}

@@ -29,6 +29,7 @@
 			<td>
 				<a href="{{ url_for('content.edit', collection=collection, name=item.name) }}">{{ item.title }}</a>
 				<div class="muted small mono">{{ item.name }}</div>
+				{% if item.pinned %}<span class="tag">Fijado</span>{% endif %}
 				{% if item.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
 			</td>
 			{# data-label is drawn by board.css under 640px, where the header row
@@ -47,6 +48,15 @@
 			<td>
 				<div class="actions actions--row">
 					<a class="linkish" href="{{ url_for('content.edit', collection=collection, name=item.name) }}">Editar</a>
+					{#- One press from the screen that shows what is already
+					    fijado, rather than opening the post to find out. It
+					    commits, like every other write here. -#}
+					<form method="post"
+					      action="{{ url_for('content.pin', collection=collection, name=item.name) }}">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<input type="hidden" name="value" value="{{ 0 if item.pinned else 1 }}">
+						<button class="linkish" type="submit">{{ 'No fijar' if item.pinned else 'Fijar' }}</button>
+					</form>
 					<form method="post"
 					      action="{{ url_for('content.delete', collection=collection, name=item.name) }}"
 					      data-confirm="Se eliminará «{{ item.title }}» del sitio público. ¿Seguro?">

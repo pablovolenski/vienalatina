@@ -2,6 +2,7 @@
 {% from "_person.html" import person %}
 {% from "_reaction.html" import reaction %}
 {% from "_attachments.html" import attachments %}
+{% from "_pin.html" import pin %}
 {% block title %}{{ thread.title }}{% endblock %}
 
 {% block main %}
@@ -30,13 +31,12 @@
 			<button class="linkish linkish--danger" type="submit">Eliminar</button>
 		</form>
 		{% endif %}
+		{# Pinning is curation and a moderator does it; closing a conversation
+		   stops named people talking to each other and is an admin's. #}
+		{% if may_pin %}
+		{{ pin(thread, url_for('board.thread', thread_id=thread.id)) }}
+		{% endif %}
 		{% if is_admin %}
-		<form method="post" action="{{ url_for('board.set_state', thread_id=thread.id) }}">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<input type="hidden" name="field" value="pinned">
-			<input type="hidden" name="value" value="{{ 0 if thread.pinned else 1 }}">
-			<button class="linkish" type="submit">{{ 'No fijar' if thread.pinned else 'Fijar' }}</button>
-		</form>
 		<form method="post" action="{{ url_for('board.set_state', thread_id=thread.id) }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" name="field" value="locked">

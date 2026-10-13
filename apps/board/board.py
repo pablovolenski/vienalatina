@@ -22,7 +22,8 @@ from . import auth, uploads
 from .db import get_db
 from . import titles
 from .render import excerpt, to_html
-from .security import admin_required, is_at_least, login_required
+from .security import (admin_required, is_at_least, login_required,
+                       moderator_required)
 
 bp = Blueprint("board", __name__)
 
@@ -33,6 +34,13 @@ BODY_MAX = 20_000
 
 def is_admin() -> bool:
     return is_at_least(g.member["role"], "admin")
+
+
+def may_pin() -> bool:
+    """Deciding what the association reads first is curation, which is a
+    moderator's whole job. Locking a thread is not, and asks for an admin —
+    see `set_state`."""
+    return is_at_least(g.member["role"], "moderator")
 
 
 def may_delete(row) -> bool:
@@ -153,7 +161,7 @@ def threads():
             -- free to return them in either order — and did, differently on
             -- different pages of the same list. Every ordering in this app now
             -- ends in the primary key for that reason.
-            ORDER BY t.pinned DESC, t.created_at DESC, t.id DESC
+            ORDER BY t.pinned DESC, t.pinned_at DESC, t.created_at DESC, t.id DESC
             LIMIT ? OFFSET ?""",
         (PER_PAGE + 1, (page - 1) * PER_PAGE),
     ).fetchall()
@@ -163,6 +171,7 @@ def threads():
     shown = rows[:PER_PAGE]
     return render_template("threads.html", threads=shown, page=page,
                            has_next=has_next, excerpt=excerpt,
+                           may_pin=may_pin(),
                            reactions=reactions_for_threads([t["id"] for t in shown]))
 
 
@@ -186,7 +195,7 @@ def thread(thread_id: int):
     return render_template("thread.html", thread=row, author=author,
                            comments=comments, body_html=to_html(row["body_md"]),
                            to_html=to_html, may_edit=may_edit, may_delete=may_delete,
-                           is_admin=is_admin(),
+                           is_admin=is_admin(), may_pin=may_pin(),
                            thread_images=uploads.for_threads([thread_id]).get(thread_id, []),
                            comment_images=uploads.for_comments([c["id"] for c in comments]),
                            reactions=reactions_for_threads([thread_id]),
@@ -370,14 +379,36 @@ def react():
 
 
 @bp.route("/tema/<int:thread_id>/estado", methods=["POST"])
-@admin_required
+@moderator_required
 def set_state(thread_id: int):
+    """Pinning and locking, which are not the same authority.
+
+    A moderator decides what the association reads first — that is curation,
+    and it is the whole of their job. Closing a conversation is not: it stops
+    named people saying anything more to each other, which is power over
+    people, and this codebase keeps those two apart everywhere else (see
+    `security.py`'s ladder). So the decorator admits a moderator and locking
+    asks again.
+    """
     _thread_or_404(thread_id)
     field = request.form.get("field")
     if field not in ("pinned", "locked"):
         abort(400, "Campo desconocido.")
+    if field == "locked" and not is_admin():
+        abort(403)
     value = 1 if request.form.get("value") == "1" else 0
     # `field` is checked against a fixed pair above, so it never carries
     # anything a member typed into the statement.
     get_db().execute(f"UPDATE threads SET {field} = ? WHERE id = ?", (value, thread_id))
-    return redirect(url_for("board.thread", thread_id=thread_id))
+    if field == "pinned":
+        # When, not only whether: several threads can be pinned and the newest
+        # pin goes on top, so the moment is the order. Cleared on unpinning so
+        # that pinning again puts it where a new pin belongs rather than where
+        # the old one was.
+        get_db().execute(
+            "UPDATE threads SET pinned_at = CASE WHEN ? THEN datetime('now') END"
+            " WHERE id = ?", (value, thread_id))
+    # Back where it was pressed — the wall as well as the thread page now —
+    # through the same open-redirect check the login form's `next` gets.
+    return redirect(auth.safe_next(request.form.get("back") or
+                                   url_for("board.thread", thread_id=thread_id)))

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_person.html" import person %}
 {% from "_reaction.html" import reaction %}
+{% from "_pin.html" import pin %}
 {% block title %}Muro{% endblock %}
 
 {% block main %}
@@ -30,6 +31,10 @@
 	<div class="card__foot">
 		{{ reaction('thread', t.id, reactions.get(t.id), url_for('board.threads', page=page)) }}
 		<span>{{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
+		{# From here as well as from the thread page: deciding what the wall
+		   leads with means looking at the wall, not opening each thread to
+		   find out what is on it. #}
+		{% if may_pin %}{{ pin(t, url_for('board.threads', page=page)) }}{% endif %}
 	</div>
 </article>
 {% endfor %}

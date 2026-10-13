@@ -4151,6 +4151,22 @@ a.notif-card__message:hover {
   vertical-align: middle;
 }
 
+/* Fijado. The same pill, in the brand colour rather than in grey: the IA one
+   is a disclosure and recedes, this one is the association saying «read this
+   first» and should carry the weight of having been chosen. */
+.tag-pin {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--brand, #c0391c);
+  border-radius: 999px;
+  background: var(--brand-softer, #fdf1ee);
+  color: var(--brand-dark, #90290f);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
 /* --- sharing ------------------------------------------------------------
  *
  * A tinted strip rather than six bare icons: the row has to be noticed to be

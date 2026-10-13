@@ -244,6 +244,15 @@ def frontmatter_for(collection: str, form: dict) -> dict:
     # the mind of anybody reading the file.
     if form.get("ai_generated"):
         fields["ai_generated"] = True
+    # The moment it was pinned, and only when it is. One key carrying both the
+    # flag and the order: several posts can be pinned and the newest pin goes
+    # first, so `{{ if .Params.pinned }}` still reads as a yes/no while
+    # `sort … "Params.pinned" "desc"` puts them in the right order with nothing
+    # else to keep in step. Written as a string rather than a timestamp scalar
+    # so that a file saved twice does not alternate between the two shapes.
+    if form.get("pinned"):
+        fields["pinned"] = (str(form.get("pinned_at") or "")
+                            or datetime.now().isoformat(timespec="seconds"))
     return fields
 
 
@@ -259,14 +268,14 @@ def _cache_write(path: str, sha: str, fm: dict) -> None:
     get_db().execute(
         """INSERT INTO content_cache (path, sha, title, date, generated, image,
                                       event_date, event_time, event_location,
-                                      ai_generated)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                      ai_generated, pinned)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(path) DO UPDATE SET
                sha = excluded.sha, title = excluded.title, date = excluded.date,
                generated = excluded.generated, image = excluded.image,
                event_date = excluded.event_date, event_time = excluded.event_time,
                event_location = excluded.event_location,
-               ai_generated = excluded.ai_generated,
+               ai_generated = excluded.ai_generated, pinned = excluded.pinned,
                updated_at = datetime('now')""",
         (path, sha, str(fm.get("title", "")), str(fm.get("date", "")),
          1 if fm.get("translated_from") else 0,
@@ -280,7 +289,11 @@ def _cache_write(path: str, sha: str, fm: dict) -> None:
          # every page view to find out when they are.
          str(fm.get("event_date", "") or ""), str(fm.get("event_time", "") or ""),
          str(fm.get("event_location", "") or ""),
-         1 if fm.get("ai_generated") else 0),
+         1 if fm.get("ai_generated") else 0,
+         # When it was pinned, or '' — the same copy of the frontmatter, so the
+         # editor's own list can put the pinned ones first without re-reading
+         # every file to find out which they are.
+         str(fm.get("pinned", "") or "")),
     )
 
 
@@ -309,6 +322,7 @@ def listing(collection: str) -> list[dict]:
             "title": row["title"] or name,
             "date": row["date"],
             "ai_generated": bool(row["ai_generated"]),
+            "pinned": row["pinned"],
             "event_date": row["event_date"] or "",
             "event_time": row["event_time"] or "",
             "event_location": row["event_location"] or "",
@@ -320,7 +334,8 @@ def listing(collection: str) -> list[dict]:
     # as likely to be chronological as not. The editor stamps the clock now
     # (`stamp`), and the filename is left as the last resort for the posts
     # written before it did.
-    items.sort(key=lambda item: (item["date"], item["name"]), reverse=True)
+    items.sort(key=lambda item: (item["pinned"], item["date"], item["name"]),
+               reverse=True)
     return items
 
 
@@ -424,6 +439,11 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         # frontmatter rather than in a database, because the file in the
         # repository is the record of what was published.
         "ai_generated": request.form.get("ai_generated") == "on",
+        # And when it was pinned, carried through untouched, so that editing a
+        # pinned post does not count as pinning it again and move it above
+        # everything pinned since.
+        "pinned": request.form.get("pinned") == "on",
+        "pinned_at": request.form.get("pinned_at", "").strip(),
         "author": author, "author_url": author_url,
         "parent": parent, "weight": weight,
         "faq": faq, "image_alt": image_alt,
@@ -668,6 +688,8 @@ def edit(collection: str, name: str):
             # correction quietly removes — which is the whole failure the
             # byline below was given its comment for.
             "ai_generated": bool(fm.get("ai_generated")),
+            "pinned": bool(fm.get("pinned")),
+            "pinned_at": str(fm.get("pinned", "") or ""),
             # Carried through the form untouched. Correcting a typo in somebody
             # else's post must not re-sign it with the name of whoever is
             # fixing it — the same rule the board has about editing other
@@ -733,6 +755,47 @@ def delete(collection: str, name: str):
     # The German and Portuguese siblings go too, but not from here: the next
     # pipeline run reaps them (translate.py's orphaned_siblings).
     flash("Eliminado. Las traducciones se borran en la siguiente publicación.", "ok")
+    return redirect(url_for("content.index", collection=collection))
+
+
+@bp.route("/contenido/<collection>/fijar/<name>", methods=["POST"])
+@moderator_required
+def pin(collection: str, name: str):
+    """Pin or unpin from the list, without opening the post.
+
+    The same write as saving the form — the file in the repository is the
+    record and there is no second store that could disagree with it — but
+    reached in one press from the screen where you can see what is pinned and
+    what is not, because deciding what the site leads with means looking at
+    the list rather than opening each post to find out.
+
+    The whole document is rebuilt rather than patched: the frontmatter is YAML,
+    and a regular expression over somebody's prose is how a post loses its body.
+    """
+    meta = _collection_or_404(collection)
+    name = _name_or_404(name)
+    path = f"{meta['folder']}/{name}"
+    wanted = request.form.get("value") == "1"
+    try:
+        text, sha = gitea.read_file(path, gitea.content_token())
+        fm, body = split_frontmatter(text)
+        if fm.get("translated_from"):
+            abort(400, "Ese archivo lo genera la traducción automática.")
+        if bool(fm.get("pinned")) != wanted:
+            if wanted:
+                fm["pinned"] = datetime.now().isoformat(timespec="seconds")
+            else:
+                fm.pop("pinned", None)
+            title = fm.get("title", name)
+            gitea.write_file(
+                path, build_document(fm, body).encode("utf-8"),
+                f"content: {'fijar' if wanted else 'dejar de fijar'} «{title}»",
+                gitea.content_token(), sha=sha, member=g.member)
+    except gitea.GiteaError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("content.index", collection=collection))
+
+    flash("Fijado arriba." if wanted else "Ya no está fijado.", "ok")
     return redirect(url_for("content.index", collection=collection))
 
 

@@ -1297,6 +1297,45 @@ This is also the shape the EU AI Act's Article 50 asks for — telling people wh
 they are reading machine-generated material — which is worth knowing for whoever
 installs this for the second organisation.
 
+### 11.17c Fijar: what the site and the wall lead with
+
+**Moderators and above can pin.** Deciding what the association reads first is
+curation, which is the whole of a moderator's job — `COLLECTIONS["post"]["role"]`
+has said so since the queue was built, and `board.set_state` now agrees.
+**Locking a thread still asks for an admin**: it stops named people saying
+anything more to each other, and that is power over people rather than over
+content. The two ride one route and the handler asks twice.
+
+**Several posts can be pinned at once, and the newest pin goes first.** The
+stored value is therefore a *moment* rather than a flag, in both halves:
+
+| | Where | What is stored |
+|---|---|---|
+| Public post | its own frontmatter, `pinned: '2026-10-13T12:00:00'`, written only when pinned | plus a copy in `content_cache.pinned`, so the editor's list can sort without re-reading every file from the git server |
+| Wall thread | `threads.pinned` (the flag, since the board shipped) and `threads.pinned_at` | cleared on unpinning, so pinning again puts it where a new pin belongs |
+
+One key carrying both the flag and the order means `{{ if .Params.pinned }}`
+still reads as a yes/no while `sort … "Params.pinned" "desc"` puts them in the
+right order, with no second field to keep in step. `scripts/translate.py`
+copies the whole frontmatter and rewrites only `TRANSLATED_KEYS`, so a pinned
+post is pinned in German and Portuguese for free — asserted against the real
+list rather than assumed.
+
+**Two ways to pin a public post**: the *Fijar arriba* switch beside *Publicar*
+in the editor, and a one-press *Fijar* in the *Contenido* list. Both commit —
+the file in the repository is the record and there is no second store that
+could disagree with it — and the list one exists because deciding what the site
+leads with means looking at the list rather than opening each post to find out
+what is on it. On the wall the same button is on the thread page and on each
+card.
+
+**Migration 10** adds the two columns and **recreates `threads_live`**, the
+wall's index, because it now names `pinned_at`. `CREATE INDEX IF NOT EXISTS` in
+`schema.sql` leaves an index that already exists exactly as it is, so without
+that a server that has been running would keep the old definition forever while
+a fresh install got the new one. Nothing breaks either way — which is the
+problem: the two stop being the same system, invisibly.
+
 ### 11.18 Marca: the superadministrator owns the look
 
 *Gestión* → **Marca**, admins only. Colours, a logo and a favicon for both

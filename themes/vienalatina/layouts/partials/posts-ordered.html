@@ -19,5 +19,13 @@
     `first N` applied to the result slices something already ordered. Applied
     to the input it would slice first and sort afterwards, which is how a
     pinned post falls off the end of its own list.
+
+    The pinned ones go on top, newest pin first. `pinned` holds the moment it
+    was pinned rather than `true`, so one key is both the flag and the order —
+    there is no second field to keep in step with the first. Two sorts appended
+    rather than one multi-key sort, so this does not depend on Hugo's sort being
+    stable.
 */}}
-{{ return (sort . "Date" "desc") }}
+{{ $pinned := where . "Params.pinned" "!=" nil }}
+{{ $rest := where . "Params.pinned" nil }}
+{{ return (append (sort $rest "Date" "desc") (sort $pinned "Params.pinned" "desc")) }}

@@ -52,6 +52,9 @@
 	{% endif %}
 	{% for t in threads %}
 	<p class="panel__row">
+		{# This panel orders by the pin like the wall does, so it has to say
+		   which one is pinned or the order looks arbitrary from here. #}
+		{% if t.pinned %}<span class="tag">Fijado</span> {% endif %}
 		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>
 		<span class="muted small">{{ person(t.author, t.author_login) }} · {{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
 	</p>

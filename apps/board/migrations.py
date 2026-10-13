@@ -364,6 +364,49 @@ def _room_to_say_a_machine_wrote_it(db: sqlite3.Connection) -> None:
                     "INTEGER NOT NULL DEFAULT 0")
 
 
+def _room_to_say_what_goes_first(db: sqlite3.Connection) -> None:
+    """When a post was pinned, which is also the order the pinned ones sit in.
+
+    Two plain ADD COLUMNs, and both hold a moment rather than a flag. That is
+    the design: «several pins, newest pin first» needs an order, and a
+    timestamp is both the order and the answer to "is this pinned", so there is
+    no second column to keep in step with the first.
+
+    `threads.pinned` has been in the schema since the board shipped and stays —
+    it is what the wall's index is on, and folding two columns into one would
+    be a table rebuild for tidiness. `pinned_at` sits beside it and is NULL for
+    anything pinned before this step, which sorts those below the ones pinned
+    since. Nothing is pinned today, so that costs nothing and says the truth:
+    we do not know when.
+
+    `content_cache.pinned` is only the copy of the post's own frontmatter that
+    lets the editor's list sort without re-reading every file from the git
+    server. The file in the repository is the record.
+    """
+    for table, column, kind in (
+            ("threads", "pinned_at", "TEXT"),
+            ("content_cache", "pinned", "TEXT NOT NULL DEFAULT ''")):
+        existing = _columns(db, table)
+        if existing and column not in existing:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+
+    # And the wall's index, which now names the new column — `CREATE INDEX IF
+    # NOT EXISTS` in schema.sql leaves an index that already exists exactly as
+    # it is, so without this a server that has been running keeps the old
+    # definition forever while a fresh install gets the new one. Nothing breaks
+    # either way; the two just stop being the same system, which is how a
+    # difference nobody can see becomes a bug nobody can reproduce.
+    # Every column it names, because the oldest databases this runner has to
+    # cross predate some of them and a step that assumes the table it is
+    # looking at is the current one is a step that fails on the one server it
+    # was written for.
+    if {"pinned", "pinned_at", "created_at", "deleted_at"} <= _columns(db, "threads"):
+        db.execute("DROP INDEX IF EXISTS threads_live")
+        db.execute("CREATE INDEX threads_live"
+                   " ON threads(pinned DESC, pinned_at DESC, created_at DESC, id DESC)"
+                   " WHERE deleted_at IS NULL")
+
+
 # (number, description, function). The number is the value written to
 # user_version once the step succeeds.
 STEPS = [
@@ -377,6 +420,7 @@ STEPS = [
     (8, "room for the identity, a typeface and the media library",
      _room_for_identity_and_a_typeface),
     (9, "a post can say a machine wrote it", _room_to_say_a_machine_wrote_it),
+    (10, "a post can be pinned to the top", _room_to_say_what_goes_first),
 ]
 
 

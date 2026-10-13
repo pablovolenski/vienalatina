@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS threads (
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
   edited_at   TEXT,
   pinned      INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
+  -- When it was pinned, which is also the order the pinned ones sit in: several
+  -- can be pinned at once and the newest pin goes first. NULL for anything
+  -- pinned before this column existed, which sorts those below.
+  pinned_at   TEXT,
   locked      INTEGER NOT NULL DEFAULT 0 CHECK (locked IN (0, 1)),
   -- Said out loud where the post is read. The association's own words and a
   -- machine's are both welcome here; which is which is not the reader's job
@@ -64,7 +68,8 @@ CREATE TABLE IF NOT EXISTS threads (
 );
 
 CREATE INDEX IF NOT EXISTS threads_live
-  ON threads(pinned DESC, created_at DESC) WHERE deleted_at IS NULL;
+  ON threads(pinned DESC, pinned_at DESC, created_at DESC, id DESC)
+  WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS comments (
   id          INTEGER PRIMARY KEY,
@@ -210,6 +215,10 @@ CREATE TABLE IF NOT EXISTS content_cache (
   -- it without re-reading every file from the git server. The file is the
   -- record; this is the cache.
   ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (ai_generated IN (0, 1)),
+  -- The same copy of the frontmatter, for the pin: the moment it was pinned,
+  -- or '' when it is not. A moment rather than a flag because several posts
+  -- can be pinned and the newest pin goes first, so the value is the order.
+  pinned      TEXT NOT NULL DEFAULT '',
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

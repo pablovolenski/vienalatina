@@ -487,3 +487,62 @@ def test_step_nine_gives_every_post_somewhere_to_say_a_machine_wrote_it(tmp_path
     assert db.execute("PRAGMA user_version").fetchone()[0] == max(
         number for number, _, _ in migrations.STEPS)
     db.close()
+
+
+def test_step_ten_gives_a_post_somewhere_to_say_when_it_was_pinned(tmp_path):
+    """Two plain ADD COLUMNs, and the rows around them untouched.
+
+    Both hold a moment rather than a flag, because several posts can be pinned
+    and the newest pin goes first — so the value is the order, and there is no
+    second column to keep in step with the first. `threads.pinned` is the
+    exception and stays: it has been in the schema since the board shipped and
+    is what the wall's index is on.
+    """
+    from apps.board.app import create_app
+    from apps.board.db import connect
+
+    path = str(tmp_path / "board.db")
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    member = db.execute("SELECT id FROM members WHERE role = 'superadmin'").fetchone()["id"]
+    db.execute("INSERT INTO threads (author_id, title, body_md, pinned)"
+               " VALUES (?, 'Fijado hace tiempo', 'Texto.', 1)", (member,))
+    db.execute("""INSERT INTO content_cache (path, sha, title, date)
+                  VALUES ('content/post/2026-01-01-algo.es.md', 'abc', 'Algo', '2026-01-01')""")
+    # Wind it back to a server that has been running since before this phase.
+    # The index has to go first — SQLite refuses to drop a column one names,
+    # which is the same reason the step has to recreate it rather than leave it
+    # to `CREATE INDEX IF NOT EXISTS`.
+    db.execute("DROP INDEX threads_live")
+    db.execute("CREATE INDEX threads_live ON threads(pinned DESC, created_at DESC)"
+               " WHERE deleted_at IS NULL")
+    db.execute("ALTER TABLE threads DROP COLUMN pinned_at")
+    db.execute("ALTER TABLE content_cache DROP COLUMN pinned")
+    db.execute("PRAGMA user_version = 9")
+    db.commit()
+    db.close()
+
+    create_app({"SECRET_KEY": "x", "DB_PATH": path, "OWNER_LOGIN": "salvador",
+                "UPLOAD_DIR": str(tmp_path / "uploads"), "TESTING": True})
+
+    db = connect(path)
+    assert "pinned_at" in {row[1] for row in db.execute("PRAGMA table_info(threads)")}
+    assert "pinned" in {row[1] for row in db.execute("PRAGMA table_info(content_cache)")}
+    # A thread pinned before this step keeps its pin and gains no moment: we do
+    # not know when, and NULL says so rather than inventing a time that would
+    # put it above everything pinned since.
+    row = db.execute("SELECT title, pinned, pinned_at FROM threads").fetchone()
+    assert row["title"] == "Fijado hace tiempo"
+    assert row["pinned"] == 1 and row["pinned_at"] is None
+    assert db.execute("SELECT pinned FROM content_cache").fetchone()["pinned"] == ""
+    # And the index is the new one. `CREATE INDEX IF NOT EXISTS` would have
+    # left the old definition standing on a server that had been running,
+    # so a fresh install and an upgraded one would have quietly diverged.
+    index = db.execute("SELECT sql FROM sqlite_master WHERE name = 'threads_live'"
+                       ).fetchone()["sql"]
+    assert "pinned_at" in index
+    assert db.execute("PRAGMA user_version").fetchone()[0] == max(
+        number for number, _, _ in migrations.STEPS)
+    db.close()

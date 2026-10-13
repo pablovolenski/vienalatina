@@ -87,10 +87,84 @@ def test_a_closed_thread_refuses_replies(client, db, post, thread, make_member, 
     assert count == 0
 
 
-def test_only_admins_pin(client, post, thread, make_member, sign_in):
+def test_a_plain_member_cannot_pin(client, post, thread, make_member, sign_in):
     sign_in(make_member("maria"))
     assert post(f"/comunidad/tema/{thread['id']}/estado",
                 {"field": "pinned", "value": "1"}).status_code == 403
+
+
+def test_a_moderator_pins_but_does_not_lock(client, post, thread, make_member,
+                                            sign_in, db):
+    """The two ride the same route and are not the same authority. Deciding
+    what the association reads first is curation, which is the whole of a
+    moderator's job; closing a conversation stops named people saying anything
+    more to each other, and that is an admin's."""
+    sign_in(make_member("modera", role="moderator"))
+
+    assert post(f"/comunidad/tema/{thread['id']}/estado",
+                {"field": "pinned", "value": "1"}).status_code in (302, 303)
+    row = db.execute("SELECT pinned, pinned_at FROM threads WHERE id = ?",
+                     (thread["id"],)).fetchone()
+    assert row["pinned"] == 1 and row["pinned_at"]
+
+    assert post(f"/comunidad/tema/{thread['id']}/estado",
+                {"field": "locked", "value": "1"}).status_code == 403
+    assert db.execute("SELECT locked FROM threads WHERE id = ?",
+                      (thread["id"],)).fetchone()["locked"] == 0
+
+
+def test_unpinning_forgets_when_it_was_pinned(client, post, thread, make_member,
+                                              sign_in, db):
+    """Otherwise pinning it again would put it back where the old pin was,
+    rather than at the top where a new pin belongs."""
+    sign_in(make_member("modera", role="moderator"))
+    post(f"/comunidad/tema/{thread['id']}/estado", {"field": "pinned", "value": "1"})
+    post(f"/comunidad/tema/{thread['id']}/estado", {"field": "pinned", "value": "0"})
+
+    row = db.execute("SELECT pinned, pinned_at FROM threads WHERE id = ?",
+                     (thread["id"],)).fetchone()
+    assert row["pinned"] == 0 and row["pinned_at"] is None
+
+
+def test_a_pinned_thread_leads_the_wall_and_inicio(client, post, make_member,
+                                                   sign_in, db):
+    """Both lists, because they are the same rows and used to disagree: the
+    wall ordered by the pin and Inicio's panel did not."""
+    author = make_member("escribe")
+    sign_in(author)
+    for title in ("Lo primero", "Lo segundo", "Lo tercero"):
+        post("/comunidad/nuevo", {"title": title, "body": "Texto."})
+    old = db.execute("SELECT id FROM threads ORDER BY id LIMIT 1").fetchone()["id"]
+
+    sign_in(make_member("modera", role="moderator"))
+    post(f"/comunidad/tema/{old}/estado", {"field": "pinned", "value": "1"})
+
+    for url in ("/comunidad/muro", "/comunidad/"):
+        page = client.get(url).get_data(as_text=True)
+        assert page.index("Lo primero") < page.index("Lo tercero"), url
+
+
+def test_the_newest_pin_goes_above_an_older_one(client, post, make_member,
+                                                sign_in, db):
+    """Several pins at once, newest pin first — which is why the column holds
+    the moment rather than a 1."""
+    author = make_member("escribe")
+    sign_in(author)
+    post("/comunidad/nuevo", {"title": "Fijado hace rato", "body": "Texto."})
+    post("/comunidad/nuevo", {"title": "Fijado ahora", "body": "Texto."})
+    first, second = [r["id"] for r in
+                     db.execute("SELECT id FROM threads ORDER BY id")]
+
+    sign_in(make_member("modera", role="moderator"))
+    post(f"/comunidad/tema/{first}/estado", {"field": "pinned", "value": "1"})
+    # `datetime('now')` has one-second resolution, so the two pins would
+    # otherwise land in the same second and the order would be the fallback.
+    db.execute("UPDATE threads SET pinned_at = '2026-01-01 00:00:00' WHERE id = ?",
+               (first,))
+    post(f"/comunidad/tema/{second}/estado", {"field": "pinned", "value": "1"})
+
+    page = client.get("/comunidad/muro").get_data(as_text=True)
+    assert page.index("Fijado ahora") < page.index("Fijado hace rato")
 
 
 def test_the_state_field_is_not_a_way_into_the_query(client, post, thread, make_member, sign_in):

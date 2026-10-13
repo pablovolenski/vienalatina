@@ -703,6 +703,101 @@ def test_the_disclosure_is_not_one_of_the_keys_translation_rewrites(repo, editor
     assert "ai_generated" not in translate.TRANSLATED_KEYS
 
 
+# --- what the site leads with ---------------------------------------------
+
+def test_a_pinned_post_carries_the_moment_it_was_pinned(repo, editor, post):
+    """One key for both the flag and the order. Several posts can be pinned and
+    the newest pin goes first, so the value has to say when — and it is written
+    only when it is true, like the IA disclosure, so no post carries a line
+    reading `pinned: false` for somebody to wonder about."""
+    publish(post, pinned="on")
+    path, = repo.files
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert isinstance(fm["pinned"], str) and fm["pinned"].startswith("20")
+
+    publish(post, title="Sin fijar", pinned="")
+    other = [p for p in repo.files if p != path][0]
+    fm, _ = translate.split_frontmatter(repo.files[other].decode())
+    assert "pinned" not in fm
+
+
+def test_editing_a_pinned_post_does_not_count_as_pinning_it_again(repo, editor, post):
+    """Otherwise fixing a typo would carry it above everything pinned since,
+    which is the same shape of bug as the publication date and lands in the
+    same place."""
+    publish(post, pinned="on")
+    path, = repo.files
+    before, _ = translate.split_frontmatter(repo.files[path].decode())
+
+    post(f"/comunidad/contenido/post/editar/{path.rsplit('/', 1)[1]}",
+         {"title": "Sabores del barrio", "body": "Corregido.", "date": "2026-09-25",
+          "pinned": "on", "pinned_at": before["pinned"],
+          "sha": repo._sha(repo.files[path])})
+
+    after, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert after["pinned"] == before["pinned"]
+
+
+def test_the_pin_survives_an_edit_that_says_nothing_about_it(repo, editor, post, client):
+    """The form loads it back the way it was left. A flag read into the form
+    but not written out again is a flag that one correction quietly removes."""
+    publish(post, pinned="on")
+    path, = repo.files
+    name = path.rsplit("/", 1)[1]
+    page = client.get(f"/comunidad/contenido/post/editar/{name}").get_data(as_text=True)
+    assert 'name="pinned" checked' in page.replace(' >', '>')
+
+
+def test_pinning_from_the_list_commits_without_opening_the_post(repo, editor, post):
+    publish(post)
+    path, = repo.files
+    name = path.rsplit("/", 1)[1]
+
+    post(f"/comunidad/contenido/post/fijar/{name}", {"value": "1"})
+    fm, body = translate.split_frontmatter(repo.files[path].decode())
+    assert fm["pinned"] and body.strip() == "Texto del artículo."
+
+    post(f"/comunidad/contenido/post/fijar/{name}", {"value": "0"})
+    fm, body = translate.split_frontmatter(repo.files[path].decode())
+    assert "pinned" not in fm and body.strip() == "Texto del artículo."
+
+
+def test_a_plain_member_cannot_pin_a_post(repo, post, make_member, sign_in):
+    sign_in(make_member("maria"))
+    assert post("/comunidad/contenido/post/fijar/cualquiera.es.md",
+                {"value": "1"}).status_code == 403
+
+
+def test_a_moderator_can_pin_a_post(repo, post, make_member, sign_in):
+    """Curating what the public reads is the whole of a moderator's job, and
+    `COLLECTIONS["post"]["role"]` has said so since the queue was built."""
+    sign_in(make_member("modera", role="moderator"))
+    publish(post)
+    path, = repo.files
+    response = post(f"/comunidad/contenido/post/fijar/{path.rsplit('/', 1)[1]}",
+                    {"value": "1"})
+    assert response.status_code in (302, 303)
+    fm, _ = translate.split_frontmatter(repo.files[path].decode())
+    assert fm["pinned"]
+
+
+def test_the_pin_is_not_one_of_the_keys_translation_rewrites(repo, editor, post):
+    """A pinned post is pinned in German too. `translate_file` copies the whole
+    frontmatter and rewrites only TRANSLATED_KEYS, so this needs no change to
+    the pipeline — asserted against the real list, because a key quietly added
+    to it would send a timestamp through a translation engine."""
+    publish(post, pinned="on")
+    assert "pinned" not in translate.TRANSLATED_KEYS
+
+
+def test_the_pinned_post_is_first_in_the_editors_list(repo, editor, post, client):
+    publish(post, title="Un aviso viejo", date="2026-01-05", pinned="on")
+    publish(post, title="Algo de ayer", date="2026-09-25")
+
+    page = client.get("/comunidad/contenido/post").get_data(as_text=True)
+    assert page.index("Un aviso viejo") < page.index("Algo de ayer")
+
+
 # --- a post nobody titled -------------------------------------------------
 
 def test_an_untitled_post_is_named_when_it_is_published(repo, editor, post):
