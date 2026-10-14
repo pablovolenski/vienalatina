@@ -19,7 +19,7 @@
 					     nothing. */}}
 					{{ with .Params.author }}
 					<span class="article-card__by">
-						{{ partial "t.html" (dict "key" "by" "lang" .Site.Language.Lang) }}
+						{{ partial "t.html" (dict "key" "by" "lang" $.Site.Language.Lang) }}
 						{{ with $.Params.author_url }}
 						<a href="{{ . | relURL }}">{{ $.Params.author }}</a>
 						{{ else }}
@@ -33,11 +33,11 @@
 					     into the German and Portuguese siblings by itself, which is right:
 					     a translated post was still machine-written. */}}
 					{{ if .Params.ai_generated }}
-					<span class="tag-ai" title="{{ partial "t.html" (dict "key" "aifull" "lang" .Site.Language.Lang) }}">{{ partial "t.html" (dict "key" "ai" "lang" .Site.Language.Lang) }}</span>
+					<span class="tag-ai" title="{{ partial "t.html" (dict "key" "aifull" "lang" $.Site.Language.Lang) }}">{{ partial "t.html" (dict "key" "ai" "lang" $.Site.Language.Lang) }}</span>
 					{{ end }}
 					{{/* And whether somebody put it at the top on purpose, so a reader
 					     arriving from the home page knows why it was first. */}}
-					{{ if .Params.pinned }}<span class="tag-pin">{{ partial "t.html" (dict "key" "pinned" "lang" .Site.Language.Lang) }}</span>{{ end }}
+					{{ if .Params.pinned }}<span class="tag-pin">{{ partial "t.html" (dict "key" "pinned" "lang" $.Site.Language.Lang) }}</span>{{ end }}
 				</div>
 			</div>
 		</header>
@@ -96,7 +96,7 @@
 		     cannot see is exactly what search engines penalise. */}}
 		{{ with .Params.faq }}
 		<section class="faq">
-			<h2>{{ partial "t.html" (dict "key" "faq" "lang" .Site.Language.Lang) }}</h2>
+			<h2>{{ partial "t.html" (dict "key" "faq" "lang" $.Site.Language.Lang) }}</h2>
 			<dl>
 				{{ range . }}
 				{{ $parts := split . "|" }}
@@ -112,7 +112,7 @@
 		{{ partial "share.html" . }}
 
 		<a class="back-link" href="{{ .Site.Home.Permalink }}">
-			{{ partial "t.html" (dict "key" "back" "lang" .Site.Language.Lang) }}
+			{{ partial "t.html" (dict "key" "back" "lang" $.Site.Language.Lang) }}
 		</a>
 
 		{{/* Only on this template: the home page and the lists carry no share

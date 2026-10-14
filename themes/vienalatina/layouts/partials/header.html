@@ -3,7 +3,7 @@
      sans-serif, keeping the site free of third-party requests (GDPR). */}}
 <header class="site-bar">
 	<div class="site-bar__inner">
-		<a class="site-bar__brand" href="{{ .Site.Home.Permalink }}" aria-label="{{ partial "t.html" (dict "key" "home" "lang" .Site.Language.Lang) }}">
+		<a class="site-bar__brand" href="{{ .Site.Home.Permalink }}" aria-label="{{ partial "t.html" (dict "key" "home" "lang" $.Site.Language.Lang) }}">
 			{{/* The logo uploaded in Gestión → Marca, and the site's name in
 			     letters when there is none. The alt text is the name either way,
 			     so a reader who does not see the picture reads the same thing.
@@ -36,7 +36,7 @@
 		     who has an account needs to find the door at a glance, and somebody
 		     who does not should see that there is one. In the bar at every width,
 		     so a phone never has to open a menu to find it. */}}
-		<a class="site-bar__cta" href="/comunidad/">{{ partial "t.html" (dict "key" "community" "lang" .Site.Language.Lang) }}</a>
+		<a class="site-bar__cta" href="/comunidad/">{{ partial "t.html" (dict "key" "community" "lang" $.Site.Language.Lang) }}</a>
 
 		{{/* The ☰ itself. A <label> can sit anywhere in the document, so the
 		     checkbox it drives lives below, as a sibling of the menu it opens —
@@ -63,7 +63,7 @@
 	     so the menu opens from a keyboard. The ☰ above is aria-hidden because it
 	     would otherwise be read a second time as the same control. */}}
 	<input id="site-menu" class="site-menu__state" type="checkbox"
-	       aria-label="{{ partial "t.html" (dict "key" "menu" "lang" .Site.Language.Lang) }}">
+	       aria-label="{{ partial "t.html" (dict "key" "menu" "lang" $.Site.Language.Lang) }}">
 
 	{{/* The menu is built from the pages themselves, not from a list in
 	     config.yaml. It used to be three names written there, which meant a page

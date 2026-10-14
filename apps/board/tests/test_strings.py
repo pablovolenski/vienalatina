@@ -58,6 +58,30 @@ def test_every_key_in_the_catalogue_is_used():
     assert not orphans, f"defined but never shown: {orphans}"
 
 
+def test_every_theme_call_site_passes_the_page_explicitly():
+    """`$.Site.Language.Lang`, never `.Site.Language.Lang`.
+
+    Inside a `{{ with }}` the dot is whatever that block holds — `.Params.author`
+    is a string, `.Params.faq` is a slice — and `.Site` on a string is an
+    execution error, not a wrong word. Two call sites shipped exactly that way,
+    and the build only went red on a post that happened to carry an `author`:
+    every post in the test fixture had neither, so a clean build proved nothing.
+
+    `$` is the page in every context, so the rule is "always `$.`" rather than
+    "think about where you are", and this is what holds it.
+    """
+    offenders = []
+    for path in THEME.rglob("*"):
+        if not path.is_file() or path.suffix in (".css", ".js", ".toml"):
+            continue
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if 't.html"' in line and re.search(r'"lang"\s+\.', line):
+                offenders.append(f"{path.relative_to(THEME)}:{line_no}")
+    assert not offenders, (
+        "these pass `.Site…` to t.html instead of `$.Site…`, which fails the "
+        f"build inside a `with`: {offenders}")
+
+
 def test_the_theme_and_the_catalogue_agree_on_the_public_defaults():
     """Two copies, deliberately — Hugo reads the repository and the members area
     reads its own image, and neither can read the other's file. The same trade

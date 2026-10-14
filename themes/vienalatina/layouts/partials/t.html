@@ -1,11 +1,26 @@
 {{- /* The handful of words the templates themselves say.
 
       Everything else on this site is content and arrives already translated by
-      the pipeline. These are the labels around it — "Lugar", "Hoy" — and there
-      are eleven of them, which is a table rather than a reason to install i18n
-      files and a translation workflow for the theme.
+      the pipeline. These are the labels around it — "Lugar", "Compartir" — and
+      they are a table rather than a reason to install i18n files and a
+      translation workflow for the theme.
 
-      Usage: {{ partial "t.html" (dict "key" "place" "lang" .Site.Language.Lang) }}
+      What is below is the *default*. Gestión → Textos can say something else,
+      and that is read first, out of data/ui.yaml. The same defaults also live
+      in apps/board/strings/sitio.yaml so the screen can show them as
+      placeholders — two copies, unavoidably, because Hugo reads the repository
+      and the members area reads its own image and neither can read the other's
+      file. test_strings.py fails if they drift, the way brand.FACTORY is held
+      to the two `:root` blocks.
+
+      Usage: {{ partial "t.html" (dict "key" "place" "lang" $.Site.Language.Lang) }}
+
+      **`$.` and never a bare `.`** Inside a `{{ with }}` the dot is whatever
+      that block holds — a string, a slice — and `.Site` on a string fails the
+      build rather than producing a wrong word. Two call sites shipped that way
+      and the build only broke on a post that happened to carry an `author`.
+      `$` is the page everywhere, and a test holds every call site to it.
+
       An unknown key returns itself, so a typo is visible on the page instead of
       rendering as nothing. */ -}}
 {{- $words := dict
