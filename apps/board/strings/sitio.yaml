@@ -1,0 +1,142 @@
+# The words the public site says for itself — everything that is not an article
+# somebody wrote. Three languages each, because vienalatina.com is built in
+# three and a label left in Spanish on the German pages is the one kind of
+# mistake nobody reports.
+#
+# These are the `site.*` namespace, and the prefix is load-bearing: it is what
+# tells the screen to draw three boxes instead of one, and what sends the value
+# to `data/ui.yaml` and the pipeline rather than only to SQLite.
+#
+# The theme keeps its own copy of these defaults in
+# themes/vienalatina/layouts/partials/t.html, because Hugo reads the repository
+# and the members area reads its own image — neither can read the other's file.
+# A test holds the two together, the way the two `:root` blocks are held to
+# brand.py's FACTORY.
+#
+# A language left empty is filled by the pipeline's translation engine on the
+# next build. That is a fallback and not the plan: a one-word label is the worst
+# case for machine translation, and the three boxes are there to be used.
+
+site.home:
+  es: "Inicio"
+  de: "Start"
+  pt-br: "Início"
+  _note: >-
+    La primera entrada del menú público, y también el nombre del enlace del
+    logotipo para un lector de pantalla.
+
+site.community:
+  es: "Comunidad"
+  de: "Community"
+  pt-br: "Comunidade"
+  _note: "El botón de la barra que lleva al área de miembros."
+
+site.menu:
+  es: "Menú"
+  de: "Menü"
+  pt-br: "Menu"
+  _note: "No se ve: nombra el botón ☰ en el móvil."
+
+site.back:
+  es: "← Volver al inicio"
+  de: "← Zurück zur Startseite"
+  pt-br: "← Voltar ao início"
+  _note: "Al final de cada artículo."
+
+site.by:
+  es: "por"
+  de: "von"
+  pt-br: "por"
+  _note: "Antes del nombre de quien escribió el artículo. «por Salvador Dalí»."
+
+site.faq:
+  es: "Preguntas frecuentes"
+  de: "Häufige Fragen"
+  pt-br: "Perguntas frequentes"
+  _note: "El título de la sección de preguntas, cuando el artículo tiene."
+
+site.agenda:
+  es: "Agenda"
+  de: "Termine"
+  pt-br: "Agenda"
+  _note: "No se ve: nombra la barra de meses de la agenda."
+
+site.previous:
+  es: "Mes anterior"
+  de: "Voriger Monat"
+  pt-br: "Mês anterior"
+  _note: "No se ve: el botón ← de la agenda."
+
+site.next:
+  es: "Mes siguiente"
+  de: "Nächster Monat"
+  pt-br: "Próximo mês"
+  _note: "No se ve: el botón → de la agenda."
+
+site.noevents:
+  es: "No hay nada en este mes."
+  de: "In diesem Monat ist nichts geplant."
+  pt-br: "Nada marcado neste mês."
+  _note: "Cuando un mes de la agenda está vacío."
+
+site.time:
+  es: "Hora"
+  de: "Uhrzeit"
+  pt-br: "Hora"
+  _note: "En la ficha de un evento."
+
+site.place:
+  es: "Lugar"
+  de: "Ort"
+  pt-br: "Local"
+  _note: "En la ficha de un evento."
+
+site.add:
+  es: "Añadir a mi calendario"
+  de: "Zum Kalender hinzufügen"
+  pt-br: "Adicionar ao meu calendário"
+  _note: "El botón que descarga el evento al móvil."
+
+site.ai:
+  es: "Generado con IA"
+  de: "Mit KI erstellt"
+  pt-br: "Gerado com IA"
+  _note: "La etiqueta en un artículo marcado como escrito por una máquina."
+
+site.aifull:
+  es: "Quien lo publicó marcó este texto como generado con inteligencia artificial."
+  de: >-
+    Wer diesen Beitrag veröffentlicht hat, hat ihn als mit künstlicher
+    Intelligenz erstellt gekennzeichnet.
+  pt-br: "Quem publicou marcou este texto como gerado com inteligência artificial."
+  _note: "La explicación que sale al posar el ratón sobre esa etiqueta."
+
+site.pinned:
+  es: "Fijado"
+  de: "Angeheftet"
+  pt-br: "Fixado"
+  _note: "La etiqueta de un artículo puesto arriba a propósito."
+
+site.share:
+  es: "Compartir"
+  de: "Teilen"
+  pt-br: "Compartilhar"
+  _note: "El título de la fila de botones para compartir."
+
+site.copylink:
+  es: "Copiar enlace"
+  de: "Link kopieren"
+  pt-br: "Copiar link"
+  _note: "El último botón de esa fila."
+
+site.copied:
+  es: "Enlace copiado"
+  de: "Link kopiert"
+  pt-br: "Link copiado"
+  _note: "Lo que dice después de copiarlo."
+
+site.askmasto:
+  es: "¿En qué servidor de Mastodon tienes tu cuenta? Por ejemplo: mastodon.social"
+  de: "Auf welchem Mastodon-Server hast du dein Konto? Zum Beispiel: mastodon.social"
+  pt-br: "Em qual servidor do Mastodon está a sua conta? Por exemplo: mastodon.social"
+  _note: "La pregunta antes de compartir en Mastodon."

@@ -97,11 +97,12 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     from . import (activity, auth, board, brand, content, events, home,
                    identity, media, members, messages, profiles, status,
-                   submissions, uploads)
+                   strings, submissions, ui, uploads)
     app.register_blueprint(auth.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(home.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(brand.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(identity.bp, url_prefix=URL_PREFIX)
+    app.register_blueprint(ui.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(status.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(activity.bp, url_prefix=URL_PREFIX)
     app.register_blueprint(media.bp, url_prefix=URL_PREFIX)
@@ -137,6 +138,12 @@ def create_app(overrides: dict | None = None) -> Flask:
     # <template> that the editor adopts, so the browser never has to parse
     # markdown and cannot disagree with the server about what text means.
     app.jinja_env.globals["to_html"] = to_html
+    # Every word the chrome says. A global rather than a context processor
+    # because it is a function templates call with an argument, and eager
+    # rather than lazy because `base.html` asks for six of them on every page —
+    # the read behind it is one row, memoised on `g`, and falls back to the
+    # shipped wording rather than raising. See strings.overrides().
+    app.jinja_env.globals["t"] = strings.t
 
     @app.context_processor
     def _year():
@@ -148,6 +155,13 @@ def create_app(overrides: dict | None = None) -> Flask:
         # link, the logo and the favicon on every page, so there is no render
         # that would save the query by deferring it.
         return {"brand": brand.state()}
+
+    @app.context_processor
+    def _ui_state():
+        # Only the Gestión card and the Textos screen draw it, so lazy like
+        # `identity` rather than eager like `brand`: a callable costs nothing on
+        # the pages that never ask.
+        return {"ui_state": strings.state}
 
     @app.context_processor
     def _identity():

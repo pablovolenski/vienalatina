@@ -157,6 +157,9 @@ CLEARED_ON_ERASE = {
     # reason for the site to go back to looking like a default install.
     ("brand", "updated_by"),
     ("site", "updated_by"),
+    # And the words. Whoever decided this association says «Socios» rather than
+    # «Miembros» leaving is not a reason for it to start saying «Miembros».
+    ("strings", "updated_by"),
     # That a role was changed is the association's record; whose name was on it
     # is the erased person's data. The row stays, the name goes — which is also
     # why the log is not a cascade: an audit trail that deletes itself when the

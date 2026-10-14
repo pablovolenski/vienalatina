@@ -13,11 +13,9 @@
 	"place"    (dict "es" "Lugar" "de" "Ort" "pt-br" "Local")
 	"add"      (dict "es" "Añadir a mi calendario" "de" "Zum Kalender hinzufügen" "pt-br" "Adicionar ao meu calendário")
 	"agenda"   (dict "es" "Agenda" "de" "Termine" "pt-br" "Agenda")
-	"today"    (dict "es" "Hoy" "de" "Heute" "pt-br" "Hoje")
 	"previous" (dict "es" "Mes anterior" "de" "Voriger Monat" "pt-br" "Mês anterior")
 	"next"     (dict "es" "Mes siguiente" "de" "Nächster Monat" "pt-br" "Próximo mês")
 	"noevents" (dict "es" "No hay nada en este mes." "de" "In diesem Monat ist nichts geplant." "pt-br" "Nada marcado neste mês.")
-	"allevents" (dict "es" "Todos los eventos" "de" "Alle Termine" "pt-br" "Todos os eventos")
 	"ai"       (dict "es" "Generado con IA" "de" "Mit KI erstellt" "pt-br" "Gerado com IA")
 	"pinned"   (dict "es" "Fijado" "de" "Angeheftet" "pt-br" "Fixado")
 	"share"    (dict "es" "Compartir" "de" "Teilen" "pt-br" "Compartilhar")
@@ -31,10 +29,29 @@
 	                 "pt-br" "Quem publicou marcou este texto como gerado com inteligência artificial.")
 	"community" (dict "es" "Comunidad" "de" "Community" "pt-br" "Comunidade")
 	"menu"     (dict "es" "Menú" "de" "Menü" "pt-br" "Menu")
+	"home"     (dict "es" "Inicio" "de" "Start" "pt-br" "Início")
+	"back"     (dict "es" "← Volver al inicio" "de" "← Zurück zur Startseite" "pt-br" "← Voltar ao início")
+	"by"       (dict "es" "por" "de" "von" "pt-br" "por")
+	"faq"      (dict "es" "Preguntas frecuentes" "de" "Häufige Fragen" "pt-br" "Perguntas frequentes")
 -}}
+{{- /* What Gestión → Textos has said instead, if anything. Read through
+      nested `with` rather than as site.Data.ui.<key>.<lang>, because on a site
+      with no data file that dotted chain is a field lookup on nil and fails the
+      build — which is the state every install starts in. Same shape, and the
+      same trap, as site-name.html. */ -}}
+{{- $said := "" -}}
+{{- with site.Data.ui -}}
+{{- with index . $.key -}}
+{{- with index . $.lang }}{{ $said = . }}{{ end -}}
+{{- end -}}
+{{- end -}}
+{{- if $said -}}
+{{- $said -}}
+{{- else -}}
 {{- $entry := index $words .key -}}
 {{- if $entry -}}
 {{- index $entry .lang | default (index $entry "es") -}}
 {{- else -}}
 {{- .key -}}
+{{- end -}}
 {{- end -}}

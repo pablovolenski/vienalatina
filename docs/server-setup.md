@@ -1552,6 +1552,73 @@ The theme's coarse block sits at the **end** of `main.css` on purpose:
 media query changes nothing about specificity, and a coarse rule written before
 it loses silently.
 
+### 11.19b Textos: every word the software says
+
+Nothing this software said could be changed without a commit. «Inicio» was a
+word in `base.html`, again in `home.py`'s section list, again three times in
+`config.yaml`, again in an `aria-label` and again in the breadcrumb schema — six
+edits to rename one section, none of them reachable from Gestión. §11.18b exists
+to end exactly that for the site's *name*; it stopped before it reached the
+*labels*.
+
+**`apps/board/strings/*.yaml` is the catalogue**, one file per area, shipped in
+the image through the Dockerfile's existing `COPY apps /srv/apps`. It holds what
+the software says when nobody has said otherwise, and **only the differences are
+stored** — `brand.FACTORY`'s rule, buying the same thing: a wording improved in
+a later version improves for every install that has not deliberately overridden
+it, instead of arriving frozen.
+
+`_note` in an entry is for whoever is editing; every other key is a language
+code.
+
+**The `site.` prefix is load-bearing.** It decides the store, the number of
+boxes on the form, and whether a save needs the git server at all:
+
+| | Store | Reaches the reader |
+|---|---|---|
+| `site.*` | `data/ui.yaml`, committed | next pipeline run, three languages |
+| everything else | `strings.strings_json`, one pinned row | next page load, Spanish |
+
+**No migration.** `strings` is a new table, so `CREATE TABLE IF NOT EXISTS` in
+`schema.sql` creates it on start-up, as `activity` and `site` arrived.
+
+**`t()` is a Jinja global and a Python function**, `{{ t('nav.inicio') }}` and
+`strings.t("nav.inicio")`. An unknown key renders as itself — the rule `t.html`
+has used since it was written, and the right one: a typo renders as `nav.incio`
+on the page, which somebody notices, rather than as nothing, which nobody does.
+The read behind it is one row memoised on `g`, and it falls back to the
+catalogue rather than raising, because `base.html` asks for six words on every
+page including the error page.
+
+**The fallback order is a judgement, not an accident.** An override for the
+asked-for language wins, then the **shipped** word in that language, before the
+Spanish override — somebody who reworded only the Spanish has said nothing about
+German, and showing a German reader Spanish would be reading an intention into
+silence.
+
+**The screen is generic.** It iterates the catalogue, so extracting another
+hundred strings costs no UI work; there is no field list in `ui.py` and there
+must never be one. One page per area, a `?q=` search across all of them (server
+side — a filter that needs a script is a filter that silently does nothing under
+this CSP), and the shipped word as the placeholder with what was typed as the
+value, never the other way round.
+
+**The public defaults are written twice**, in `t.html` for Hugo and in
+`strings/sitio.yaml` so the screen can show them. That is deliberate and
+unavoidable — Hugo reads the repository and the members area reads its own
+image — and it is held together the way `brand.FACTORY` is held to the two
+`:root` blocks: by a test that fails on divergence.
+
+**Two guards make extracting five hundred strings mechanical rather than
+risky**, in `apps/board/tests/test_strings.py`: every `t("…")` used must exist in
+the catalogue, and every key in the catalogue must be used somewhere. A typo and
+an orphan are the only two failure modes of a change this shape.
+
+The public menu keeps its entry in `config.yaml` — a data file cannot override
+`.Site.Menus.main`, which is why `site-name.html` exists — but the entry now
+carries `identifier: home`, and `header.html` looks its *label* up in the table.
+The entry and its weight stay in config; the word is editable.
+
 ### 11.20 The three admin tools
 
 **Estado del sistema** (superadministrator). The backups panel reads

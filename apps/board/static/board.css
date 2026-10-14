@@ -1234,3 +1234,25 @@ input[type="file"] {
 @media (prefers-reduced-motion: reduce) {
   .toggle__track, .toggle__track::after { transition: none; }
 }
+
+/* --- Gestión → Textos ---------------------------------------------------- */
+
+/* One block per string: the key and its note above, the boxes below. Drawn from
+   the catalogue rather than written out, so these rules have to hold for a
+   one-word label and for a four-line explanation alike. */
+.stringrow {
+	padding: 0.9rem 0;
+	border-top: 1px solid var(--border-light);
+}
+.stringrow:first-of-type { border-top: 0; padding-top: 0; }
+.stringrow__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.5rem;
+}
+.stringrow .muted { margin: 0.15rem 0 0.4rem; }
+/* The shipped wording is the placeholder, so it has to read as "this is what it
+   says now" rather than as a half-typed value. */
+.stringrow input::placeholder,
+.stringrow textarea::placeholder { color: var(--subtle); opacity: 1; }

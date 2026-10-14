@@ -1,0 +1,68 @@
+# The members area's own chrome: the sections, the corner menu, the footer.
+#
+# Every key here is a word somebody can change in Gestión → Textos. What is in
+# this file is the default — what the software says when nobody has said
+# otherwise — and only the differences are stored, so a wording improved in a
+# later version improves for everybody who has not deliberately overridden it.
+#
+# `_note` is for whoever is editing: it says where the word appears, because
+# «nav.gestion» is not a question an admin can answer from the key alone.
+# Every other key in an entry is a language code.
+
+nav.inicio:
+  es: "Inicio"
+  _note: "La primera sección: el resumen de lo que ha pasado desde la última visita."
+
+nav.muro:
+  es: "Muro"
+  _note: "El tablón interno donde los miembros escriben entre ellos."
+
+nav.miembros:
+  es: "Miembros"
+  _note: "El directorio de personas. Lleva el aviso de mensajes sin leer."
+
+nav.publicaciones:
+  es: "Publicaciones"
+  _note: "Proponer algo para el sitio público, y la cola de revisión."
+
+nav.calendario:
+  es: "Calendario"
+  _note: "Los eventos, internos y públicos."
+
+nav.gestion:
+  es: "Gestión"
+  _note: "Sólo la ve la administración."
+
+nav.secciones:
+  es: "Secciones"
+  _note: "No se ve: es el nombre de la barra de navegación para un lector de pantalla."
+
+account.perfil:
+  es: "Mi perfil"
+  _note: "En el menú de tu nombre, arriba a la derecha."
+
+account.datos:
+  es: "Descargar mis datos"
+  _note: "En el menú de tu nombre. Es un derecho, no una función: cámbialo con cuidado."
+
+account.salir:
+  es: "Salir"
+  _note: "En el menú de tu nombre, y también en la barra del sitio público."
+
+chrome.titulo:
+  es: "Comunidad"
+  _note: "El título de la pestaña del navegador cuando una página no pone el suyo."
+
+chrome.publico:
+  es: "Ir al sitio público"
+  _note: "El enlace del pie que lleva de vuelta a vienalatina.com."
+
+chrome.privada:
+  es: "Área privada"
+  _note: "La línea del pie, después del nombre y el año."
+
+chrome.miembros:
+  es: "Área de miembros"
+  _note: >-
+    No se ve: nombra la franja que aparece en el sitio público cuando has
+    iniciado sesión, para un lector de pantalla.

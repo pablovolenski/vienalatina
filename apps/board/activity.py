@@ -44,6 +44,8 @@ SENTENCES = {
     "brand.saved": "cambió el aspecto del sitio",
     "brand.restored": "restauró el aspecto de fábrica",
     "identity.saved": "cambió la identidad del sitio",
+    "ui.saved": "cambió los textos del sitio",
+    "ui.restored": "restauró los textos originales",
     "media.deleted": "borró la imagen {object}",
 }
 

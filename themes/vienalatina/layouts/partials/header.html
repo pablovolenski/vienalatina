@@ -3,7 +3,7 @@
      sans-serif, keeping the site free of third-party requests (GDPR). */}}
 <header class="site-bar">
 	<div class="site-bar__inner">
-		<a class="site-bar__brand" href="{{ .Site.Home.Permalink }}" aria-label="Inicio">
+		<a class="site-bar__brand" href="{{ .Site.Home.Permalink }}" aria-label="{{ partial "t.html" (dict "key" "home" "lang" .Site.Language.Lang) }}">
 			{{/* The logo uploaded in Gestión → Marca, and the site's name in
 			     letters when there is none. The alt text is the name either way,
 			     so a reader who does not see the picture reads the same thing.
@@ -99,9 +99,17 @@
 
 	<nav class="site-bar__pages" id="site-bar-pages" aria-label="Secciones">
 		<ul class="page-nav">
+			{{/* config.yaml still says the entry exists and where it sits —
+			     `weight` decides the side, and a data file cannot override a
+			     menu (see site-name.html). What it is *called* comes through
+			     the table, so «Inicio» can become «Escritorio» without a
+			     commit. Only the home entry has a key; anything else somebody
+			     adds to the menu keeps its own name. */}}
 			{{ range where .Site.Menus.main "Weight" "<" 5 }}
+			{{ $label := .Name }}
+			{{ if eq .Identifier "home" }}{{ $label = partial "t.html" (dict "key" "home" "lang" $.Site.Language.Lang) }}{{ end }}
 			<li{{ if $current.IsMenuCurrent "main" . }} class="current-menu-item"{{ end }}>
-				<a href="{{ .URL }}">{{ .Name }}</a>
+				<a href="{{ .URL }}">{{ $label }}</a>
 			</li>
 			{{ end }}
 

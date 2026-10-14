@@ -440,3 +440,25 @@ CREATE TABLE IF NOT EXISTS site (
   updated_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   published_at  TEXT
 );
+
+-- Every word the software says that somebody has decided to say differently.
+-- One row, pinned like `brand` and `site`.
+--
+-- Only the differences from apps/board/strings/*.yaml are stored, as JSON:
+-- {"nav.inicio": {"es": "Escritorio"}}. A snapshot of all five hundred would
+-- mean that a wording improved in a later version arrived frozen at whatever
+-- this version thought it should be, for every install that had ever opened the
+-- screen — the same rule, and the same reason, as `brand.tokens_json`.
+--
+-- `published_at` is NULL between a save and the commit that carries the `site.*`
+-- half to the content repository. The members-area half needs no commit and is
+-- true the moment the row is written.
+CREATE TABLE IF NOT EXISTS strings (
+  id            INTEGER PRIMARY KEY CHECK (id = 1),
+  strings_json  TEXT    NOT NULL DEFAULT '{}',
+  -- Cleared rather than reassigned when that member is erased: the words belong
+  -- to the association, like the colours and the events.
+  updated_by    INTEGER REFERENCES members(id),
+  updated_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  published_at  TEXT
+);

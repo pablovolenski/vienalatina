@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from flask import Blueprint, g, jsonify, render_template, request, url_for
 
-from . import submissions
+from . import strings, submissions
 from .db import TOMBSTONE_LOGIN, get_db
 from .render import excerpt, to_html
 from .security import admin_required, csrf_token, is_at_least, login_required
@@ -124,20 +124,30 @@ def session_state():
     if g.member is None:
         return _no_store(jsonify({"signed_in": False}))
 
+    # The same six words base.html draws, through the same lookup. They were
+    # written out twice — here and in the template — until Gestión → Textos
+    # made them editable, at which point two copies would have meant the strip
+    # on the public site saying «Inicio» while the members area said
+    # «Escritorio».
     sections = [
-        {"label": "Inicio", "url": url_for("home.index")},
-        {"label": "Muro", "url": url_for("board.threads")},
-        {"label": "Miembros", "url": url_for("members.index")},
-        {"label": "Publicaciones", "url": url_for("submissions.index")},
-        {"label": "Calendario", "url": url_for("events.month")},
+        {"label": strings.t("nav.inicio"), "url": url_for("home.index")},
+        {"label": strings.t("nav.muro"), "url": url_for("board.threads")},
+        {"label": strings.t("nav.miembros"), "url": url_for("members.index")},
+        {"label": strings.t("nav.publicaciones"), "url": url_for("submissions.index")},
+        {"label": strings.t("nav.calendario"), "url": url_for("events.month")},
     ]
     if is_at_least(g.member["role"], "admin"):
-        sections.append({"label": "Gestión", "url": url_for("home.gestion")})
+        sections.append({"label": strings.t("nav.gestion"),
+                         "url": url_for("home.gestion")})
 
     return _no_store(jsonify({
         "signed_in": True,
         "name": g.member["display_name"] or g.member["gitea_login"],
         "sections": sections,
+        # The bar's own two words, which it used to hardcode in JavaScript —
+        # the one surface on the public site that no setting could reach.
+        "labels": {"bar": strings.t("chrome.miembros"),
+                   "logout": strings.t("account.salir")},
         "profile": url_for("profiles.edit"),
         "logout": url_for("auth.logout"),
         # Signing out is a POST, so the bar needs the token to render a real

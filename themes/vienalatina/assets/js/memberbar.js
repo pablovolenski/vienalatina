@@ -34,7 +34,11 @@
   function draw(state) {
     var bar = el("div", "member-bar");
     bar.setAttribute("role", "navigation");
-    bar.setAttribute("aria-label", "Área de miembros");
+    // From the endpoint, not from here: these were the one part of the
+    // signed-in strip that no setting could reach, because a word in a
+    // fingerprinted script is a word only a deploy can change.
+    var labels = state.labels || {};
+    bar.setAttribute("aria-label", labels.bar || "Área de miembros");
 
     var inner = el("div", "member-bar__inner");
     var links = el("ul", "member-bar__links");
@@ -62,7 +66,7 @@
     token.name = "csrf_token";
     token.value = state.csrf;
     form.appendChild(token);
-    var out = el("button", "member-bar__out", "Salir");
+    var out = el("button", "member-bar__out", labels.logout || "Salir");
     out.type = "submit";
     form.appendChild(out);
     account.appendChild(form);

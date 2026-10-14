@@ -6,7 +6,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex, nofollow">
-	<title>{% block title %}Comunidad{% endblock %} — Viena Latina</title>
+	<title>{% block title %}{{ t('chrome.titulo') }}{% endblock %} — Viena Latina</title>
 	<link rel="stylesheet" href="{{ url_for('static', filename='board.css') }}">
 	{% block brand_css %}
 	{# After board.css, so the admin's colours win, and cache-busted by when
@@ -43,11 +43,11 @@
 		<details class="account">
 			<summary class="account__name">{{ g.member.display_name }}</summary>
 			<div class="account__menu">
-				<a href="{{ url_for('profiles.edit') }}">Mi perfil</a>
-				<a href="{{ url_for('members.export') }}">Descargar mis datos</a>
+				<a href="{{ url_for('profiles.edit') }}">{{ t('account.perfil') }}</a>
+				<a href="{{ url_for('members.export') }}">{{ t('account.datos') }}</a>
 				<form method="post" action="{{ url_for('auth.logout') }}">
 					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<button class="linkish" type="submit">Salir</button>
+					<button class="linkish" type="submit">{{ t('account.salir') }}</button>
 				</form>
 			</div>
 		</details>
@@ -55,7 +55,7 @@
 	</div>
 
 	{% if g.member %}
-	<nav class="site-bar__pages" aria-label="Secciones">
+	<nav class="site-bar__pages" aria-label="{{ t('nav.secciones') }}">
 		{# Six entries, and five of them are the same for everybody. The role
 		   only decides whether Gestión is there — it used to decide three of
 		   them, which is how an ordinary member ended up signing in to a wall
@@ -69,19 +69,19 @@
 		   left that tells a member somebody wrote to them, which is why it is
 		   also repeated on the card of whoever wrote. #}
 		<ul class="page-nav">
-			<li><a href="{{ url_for('home.index') }}">Inicio</a></li>
-			<li><a href="{{ url_for('board.threads') }}">Muro</a></li>
+			<li><a href="{{ url_for('home.index') }}">{{ t('nav.inicio') }}</a></li>
+			<li><a href="{{ url_for('board.threads') }}">{{ t('nav.muro') }}</a></li>
 			<li>
-				<a href="{{ url_for('members.index') }}">Miembros{% set unread = unread_private() %}{% if unread %} <span class="tag">{{ unread }}</span>{% endif %}</a>
+				<a href="{{ url_for('members.index') }}">{{ t('nav.miembros') }}{% set unread = unread_private() %}{% if unread %} <span class="tag">{{ unread }}</span>{% endif %}</a>
 			</li>
 			<li>
 				{# The badge counts what is waiting for a moderator, so for
 				   anybody else the function returns 0 and nothing is drawn. #}
-				<a href="{{ url_for('submissions.index') }}">Publicaciones{% set waiting = pending_review() %}{% if waiting %} <span class="tag">{{ waiting }}</span>{% endif %}</a>
+				<a href="{{ url_for('submissions.index') }}">{{ t('nav.publicaciones') }}{% set waiting = pending_review() %}{% if waiting %} <span class="tag">{{ waiting }}</span>{% endif %}</a>
 			</li>
-			<li><a href="{{ url_for('events.month') }}">Calendario</a></li>
+			<li><a href="{{ url_for('events.month') }}">{{ t('nav.calendario') }}</a></li>
 			{% if is_at_least(g.member.role, 'admin') %}
-			<li><a href="{{ url_for('home.gestion') }}">Gestión</a></li>
+			<li><a href="{{ url_for('home.gestion') }}">{{ t('nav.gestion') }}</a></li>
 			{% endif %}
 		</ul>
 	</nav>
@@ -100,8 +100,8 @@
 	</main>
 
 	<footer class="site-foot">
-		<a href="/">Ir al sitio público</a>
-		<div class="site-foot__legal">Viena Latina © {{ current_year }} · Área privada</div>
+		<a href="/">{{ t('chrome.publico') }}</a>
+		<div class="site-foot__legal">Viena Latina © {{ current_year }} · {{ t('chrome.privada') }}</div>
 	</footer>
 </div>
 

@@ -96,6 +96,21 @@
 
 <section class="panel">
 	<div class="panel__head">
+		<h2>Textos</h2>
+		<a class="linkish" href="{{ url_for('ui.edit') }}">Abrir</a>
+	</div>
+	{% set words = ui_state() %}{% if words.updated_at and not words.published_at %}
+	<p class="panel__row">Hay cambios guardados que no han llegado al sitio público.</p>
+	{% endif %}
+	<p class="muted small">
+		Cómo se llaman las secciones y qué dicen los botones y los avisos, en las
+		dos mitades del sitio. Si aquí dentro preferís «Escritorio» a «Inicio», o
+		«Socios» a «Miembros», se cambia desde aquí.
+	</p>
+</section>
+
+<section class="panel">
+	<div class="panel__head">
 		<h2>Estado del sistema</h2>
 		<a class="linkish" href="{{ url_for('status.index') }}">Abrir</a>
 	</div>

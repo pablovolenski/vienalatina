@@ -48,6 +48,10 @@ languages:
       main:
         - name: "Inicio"
           url: "/"
+          # Named so partials/header.html can look its label up in
+          # the table: the entry and its weight stay here, the word
+          # is editable in Gestión → Textos.
+          identifier: "home"
           weight: 1
   de:
     languageCode: "de"
@@ -59,6 +63,10 @@ languages:
       main:
         - name: "Start"
           url: "/de/"
+          # Named so partials/header.html can look its label up in
+          # the table: the entry and its weight stay here, the word
+          # is editable in Gestión → Textos.
+          identifier: "home"
           weight: 1
   pt-br:
     languageCode: "pt-BR"
@@ -70,6 +78,10 @@ languages:
       main:
         - name: "Início"
           url: "/pt-br/"
+          # Named so partials/header.html can look its label up in
+          # the table: the entry and its weight stay here, the word
+          # is editable in Gestión → Textos.
+          identifier: "home"
           weight: 1
 
 params:

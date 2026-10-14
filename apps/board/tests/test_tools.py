@@ -14,6 +14,7 @@ from apps.board import activity, identity
 
 SCREENS = {
     "/comunidad/gestion/identidad": "superadmin",
+    "/comunidad/gestion/textos": "superadmin",
     "/comunidad/gestion/estado": "superadmin",
     "/comunidad/gestion/registro": "superadmin",
     "/comunidad/gestion/medios": "admin",
