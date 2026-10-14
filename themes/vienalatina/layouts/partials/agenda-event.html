@@ -1,0 +1,5 @@
+{{/* One event, as a link. Used in the grid cell and again in the list the
+     phone shows under the month, so the two cannot drift apart. */}}
+<a class="agenda__event" href="{{ .RelPermalink }}">
+	{{- with .Params.event_time }}<time>{{ . }}</time> {{ end }}{{ .Title }}
+</a>

@@ -1484,13 +1484,31 @@ In the members area the navigation **wraps** on a phone rather than scrolling:
 six sections over two lines shows all six, where a swipe strip would have left
 Calendario and Gestión off the right edge with nothing to say they were there.
 
-**The private calendar is a seven-column month at every width.** Below 640px
-the cells shrink to about 50px, the titles come out of them and each day with
-something in it shows one dot per event and links to that day's block in a list
-under the grid — an anchor, so it needs no script. Above 640px the titles are
-in the cells and the list is not drawn. The padding cells belonging to the
-neighbouring months keep their space at both widths: they are what puts the 1st
-under its own weekday.
+**Both calendars are a seven-column month at every width** — the private one at
+`/comunidad/calendario` and the public agenda at `/page/agenda/`. They are one
+feature seen from two sides, since the private one lists the public events, so
+they have the same shape on purpose and the guards in
+`apps/board/tests/test_templates.py` are written twice, once per stylesheet.
+
+**The agenda always renders a year ahead**, whatever the events say: this month
+and the eleven after it, plus every month that has something in it. Without
+that the span ran from the first event to the last, so the → went grey on the
+last month anybody had announced something in and the next one could not be
+reached — which reads as broken rather than as empty. A month with nothing in
+it says so.
+
+That change also surfaced a bug that had been sitting in the layout since it
+was written: `int "08"` is an error in Go, because a leading zero means octal
+and 8 is not an octal digit. The month number is taken off the parsed date now
+(`$asTime.Format "1"`) rather than off the key string. It had never fired
+because August and September had never been inside the span.
+
+**Below 640px**, in both of them, the cells shrink to about 50px, the titles
+come out of them, and each day with something in it shows one dot per event and
+links to that day's block in a list under the grid — an anchor, so it needs no
+script. Above 640px the titles are in the cells and the list is not drawn. The
+padding cells belonging to the neighbouring months keep their space at both
+widths: they are what puts the 1st under its own weekday.
 
 The weekday inside each cell is **clipped rather than `display: none`**, because
 the header row says it to anyone who can see it and a screen reader still needs
@@ -1503,10 +1521,17 @@ an element to undo them — and `.cal td` at specificity (0,1,1) outranks
 as 92px empty boxes while `.cal__day:not(:has(…))` at (0,2,0) won and hid every
 real day, so a month with nothing in it drew four empty boxes and nothing else
 — with correct HTML throughout. A grid has no scaffolding to undo, which is why
-the public agenda (`/page/agenda/`, an `<ol>` since it was written) never had
-the bug. `apps/board/tests/test_templates.py` computes specificity and runs the
-cascade for a day cell, a padding cell and the grid itself, which is as close as
-pytest gets to looking at a page.
+the agenda, an `<ol>` since it was written, never had *that* bug even while it
+had the other one. `apps/board/tests/test_templates.py` computes specificity
+and runs the cascade for a day cell, a padding cell and the grid itself, in
+both stylesheets, which is as close as pytest gets to looking at a page.
+
+**Neither of these was caught by a test, and neither could have been.** Both
+were a stylesheet turning correct HTML into something unreadable, and the loop
+that finds that is rendering the page in a headless browser at 320, 390 and
+1280 and measuring it — `grid-template-columns` still seven, every day cell
+with a height, nothing past the right edge. The guards above are the cheap
+half; the render is the half that actually looks.
 
 **A pasted link breaks rather than leaving its box.** `profiles.clean_links`
 accepts a 500-character label and a URL is one word, so `.prose`,

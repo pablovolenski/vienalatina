@@ -423,31 +423,92 @@ AGENDA_PHONE_BLOCK = re.compile(
     re.DOTALL)
 
 
-def test_the_public_agenda_draws_every_day_on_a_phone_too():
-    """The same rule as the members area's calendar, in the other stylesheet.
+@pytest.fixture(scope="module")
+def main_css():
+    return (THEME / "assets" / "css" / "main.css").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def agenda_phone_rules(main_css):
+    block = AGENDA_PHONE_BLOCK.search(main_css)
+    assert block, "main.css has no phone block for the agenda"
+    return _rules_in(block.group("body"))
+
+
+@pytest.fixture(scope="module")
+def agenda_base_rules(main_css):
+    start = main_css.index(".agenda__intro")
+    end = main_css.index("@media", start)
+    return _rules_in(main_css[start:end])
+
+
+def test_the_public_agenda_is_a_month_at_every_width_too(agenda_base_rules,
+                                                         agenda_phone_rules):
+    """The same contract as the members area's calendar, in the other
+    stylesheet, and the same three assertions.
 
     The two are one feature seen from two sides — the private calendar lists
     the public events — so a member who moves between them should not meet two
-    designs. The agenda used to show only the days with something in them,
-    which made an empty month a heading and one sentence.
+    designs. Both used to become a column of dates below 640px, and both were
+    reported as broken for it.
     """
-    css = (THEME / "assets" / "css" / "main.css").read_text(encoding="utf-8")
-    block = AGENDA_PHONE_BLOCK.search(css)
-    assert block, "main.css has no phone block for the agenda"
-    body = re.sub(r"/\*.*?\*/", "", block.group("body"), flags=re.DOTALL)
-    rules = [(selector.strip(), rule.group("body"))
-             for rule in RULE.finditer(body)
-             for selector in rule.group("selectors").split(",") if selector.strip()]
+    columns = [re.search(r"grid-template-columns\s*:\s*([^;]+)", body).group(1)
+               for selector, body in agenda_base_rules
+               if selector.endswith(".agenda__grid") and "grid-template-columns" in body]
+    assert columns, "the base stylesheet never gives .agenda__grid its columns"
+    assert "repeat(7," in columns[0].replace(" ", ""), (
+        f"the month is laid out as `{columns[0].strip()}` rather than seven columns")
 
-    day = _winning_display(rules, {".agenda__day", "li.agenda__day"})
-    assert day and day[2] != "none", (
-        f"a day of the month is hidden on a phone (`{day[1] if day else '—'}`)")
-    pad = _winning_display(rules, {".agenda__pad", "li.agenda__pad"})
-    assert pad and pad[2] == "none", "the neighbouring months' padding cells are drawn"
-    weekday = _winning_display(rules, {".agenda__weekday", "span.agenda__weekday"})
-    assert weekday and weekday[2] != "none", (
-        "the phone block never shows .agenda__weekday, so every row of the "
-        "month is a bare number — there is no column header at that width")
+    for selector, body in agenda_phone_rules:
+        if not selector.endswith(".agenda__grid"):
+            continue
+        display = re.search(r"display\s*:\s*([\w-]+)", body)
+        assert not display or display.group(1) == "grid", (
+            f"`{selector}` takes the month off the grid on a phone "
+            f"(`display: {display.group(1)}`), which is how it became a list "
+            "of dates the first time.")
+        assert "grid-template-columns" not in body, (
+            f"`{selector}` changes the number of columns on a phone; a month "
+            "has seven of them at every width.")
+
+
+def test_no_cell_of_the_public_month_is_hidden_on_a_phone(agenda_phone_rules):
+    """Days and padding cells alike — hide the pads and every date lands on the
+    wrong column, which still looks like a calendar."""
+    for compounds, what in (({"li.agenda__day", ".agenda__day"}, "a day"),
+                            ({"li.agenda__pad", ".agenda__pad"}, "a padding cell")):
+        winner = _winning_display(agenda_phone_rules, compounds)
+        assert winner is None or winner[2] != "none", (
+            f"{what} ends up hidden on a phone, from `{winner[1]}`.")
+
+
+def test_the_public_weekday_is_hidden_from_the_eye_and_not_from_a_screen_reader(
+        agenda_base_rules):
+    rules = [(selector, body) for selector, body in agenda_base_rules
+             if selector.strip().endswith(".agenda__weekday")]
+    assert rules, "nothing in main.css hides .agenda__weekday from the eye"
+    for selector, body in rules:
+        display = re.search(r"display\s*:\s*([\w-]+)", body)
+        assert not display or display.group(1) != "none", (
+            f"`{selector}` uses display:none, which hides the weekday from a "
+            "screen reader as well. Clip it instead.")
+    assert any("clip-path" in body for _, body in rules), (
+        "the weekday is not clipped, so it is drawn inside every cell")
+
+
+def test_the_agenda_always_has_a_year_ahead_to_look_at(main_css):
+    """Not CSS: the span the layout builds.
+
+    The months rendered used to run from the earliest event to the latest, so
+    the agenda stopped dead at the last month anybody had announced something
+    in — December went grey on the → and January could not be reached. An empty
+    month has to be visitable, or an agenda with nothing coming up reads as
+    broken rather than as empty.
+    """
+    layout = (THEME / "layouts" / "page" / "agenda.html").read_text(encoding="utf-8")
+    assert "now.AddDate 0 11 0" in layout, (
+        "the agenda's span is not extended past the last event, so the last "
+        "month with something in it is the last month anybody can reach")
 
 
 # --- the share row, which is theme and not members area --------------------
