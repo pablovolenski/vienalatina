@@ -1,6 +1,13 @@
 {{/* GEO/SEO surfaces — ported from theme/inc/seo.php:
      hreflang alternates, Open Graph + og:locale(:alternate), Twitter Card,
      JSON-LD BlogPosting (articles) / Blog (home), all with inLanguage. */}}
+{{/* The site's name, resolved once. Every JSON-LD block below used to read
+     `.Site.Title` directly, which bypassed Gestión → Identidad entirely: rename
+     the site there and every og: tag updated while every `publisher`, `author`
+     and `isPartOf` kept the config.yaml name — the home page emitted two blocks
+     that openly disagreed. Once, into a variable, because the call sites sit at
+     four different nesting levels and `.` is not the page in all of them. */}}
+{{ $sitename := partial "site-name.html" . }}
 {{ $localeMap := .Site.Params.localeMap }}
 {{ $locale := index $localeMap .Language.Lang | default "es_ES" }}
 {{ $desc := "" }}
@@ -109,8 +116,8 @@
 	"url" .Permalink
 	"datePublished" (.Date.Format "2006-01-02T15:04:05-07:00")
 	"dateModified" (.Lastmod.Format "2006-01-02T15:04:05-07:00")
-	"author" (dict "@type" "Person" "name" (.Params.author | default .Site.Title))
-	"publisher" (dict "@type" "Organization" "name" .Site.Title "url" .Site.Home.Permalink)
+	"author" (dict "@type" "Person" "name" (.Params.author | default $sitename))
+	"publisher" (dict "@type" "Organization" "name" $sitename "url" .Site.Home.Permalink)
 	"mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
 }}
 {{/* The author's own page, when they have published one. An answer engine
@@ -119,7 +126,7 @@
 {{ with .Params.author_url }}
 {{ $schema = merge $schema (dict "author" (dict
 	"@type" "Person"
-	"name" ($.Params.author | default $.Site.Title)
+	"name" ($.Params.author | default $sitename)
 	"url" (. | absURL))) }}
 {{ end }}
 {{ with $image }}{{ $schema = merge $schema (dict "image" .) }}{{ end }}
@@ -145,7 +152,7 @@
 	"inLanguage" $.Site.Language.LanguageCode
 	"eventAttendanceMode" "https://schema.org/OfflineEventAttendanceMode"
 	"eventStatus" "https://schema.org/EventScheduled"
-	"organizer" (dict "@type" "Organization" "name" $.Site.Title "url" $.Site.Home.Permalink)
+	"organizer" (dict "@type" "Organization" "name" $sitename "url" $.Site.Home.Permalink)
 }}
 {{ with $desc }}{{ $event = merge $event (dict "description" .) }}{{ end }}
 {{ with $image }}{{ $event = merge $event (dict "image" .) }}{{ end }}
@@ -213,7 +220,7 @@
 	"headline" .Title
 	"url" .Permalink
 	"datePublished" (.Date.Format "2006-01-02T15:04:05-07:00")
-	"author" (dict "@type" "Person" "name" (.Params.author | default .Site.Title))
+	"author" (dict "@type" "Person" "name" (.Params.author | default $sitename))
 }}
 {{ with .Description }}{{ $entry = merge $entry (dict "description" .) }}{{ end }}
 {{ $blogPost = $blogPost | append $entry }}
@@ -221,7 +228,7 @@
 {{ $schema := dict
 	"@context" "https://schema.org"
 	"@type" "Blog"
-	"name" .Site.Title
+	"name" $sitename
 	"description" $desc
 	"url" .Permalink
 	"inLanguage" .Site.Language.LanguageCode
@@ -258,8 +265,8 @@
 	"description" $desc
 	"url" .Permalink
 	"dateModified" (.Lastmod.Format "2006-01-02T15:04:05-07:00")
-	"isPartOf" (dict "@type" "WebSite" "name" .Site.Title "url" .Site.Home.Permalink)
-	"publisher" (dict "@type" "Organization" "name" .Site.Title "url" .Site.Home.Permalink)
+	"isPartOf" (dict "@type" "WebSite" "name" $sitename "url" .Site.Home.Permalink)
+	"publisher" (dict "@type" "Organization" "name" $sitename "url" .Site.Home.Permalink)
 }}
 {{ with $image }}{{ $schema = merge $schema (dict "image" .) }}{{ end }}
 <script type="application/ld+json">{{ $schema | jsonify (dict "indent" "  ") | safeJS }}</script>

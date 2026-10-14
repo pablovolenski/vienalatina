@@ -1,6 +1,6 @@
-# {{ .Site.Title }}
+# {{ partial "site-name.html" . }}
 
-> {{ .Site.Params.description }}
+> {{ partial "site-tagline.html" . }}
 
 Site home: {{ .Site.Home.Permalink }}
 

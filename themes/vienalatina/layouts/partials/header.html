@@ -22,7 +22,7 @@
 			{{ end }}
 		</a>
 
-		<nav class="site-bar__nav" aria-label="Idioma">
+		<nav class="site-bar__nav" aria-label="{{ partial "t.html" (dict "key" "language" "lang" $.Site.Language.Lang) }}">
 			{{/* Desktop only; the mobile copy is at the foot of the menu panel
 			     below. Rendered twice rather than moved, because at 360px the bar
 			     cannot hold a brand, a button, a ☰ and three language letters
@@ -97,7 +97,7 @@
 	{{ end }}
 	{{ $pages = sort $pages "w" }}
 
-	<nav class="site-bar__pages" id="site-bar-pages" aria-label="Secciones">
+	<nav class="site-bar__pages" id="site-bar-pages" aria-label="{{ partial "t.html" (dict "key" "sections" "lang" $.Site.Language.Lang) }}">
 		<ul class="page-nav">
 			{{/* config.yaml still says the entry exists and where it sits —
 			     `weight` decides the side, and a data file cannot override a

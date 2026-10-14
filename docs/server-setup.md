@@ -1619,6 +1619,49 @@ The public menu keeps its entry in `config.yaml` — a data file cannot override
 carries `identifier: home`, and `header.html` looks its *label* up in the table.
 The entry and its weight stay in config; the word is editable.
 
+**`$.` and never a bare `.`** at a `t.html` call site. Inside a `{{ with }}` the
+dot is whatever that block holds — `.Params.author` is a string — and `.Site` on
+a string fails the build rather than producing a wrong word. Two call sites
+shipped that way and only broke on a post that happened to carry an `author`; a
+guard now holds every call site to `$.`.
+
+#### A language left empty, filled by the pipeline
+
+`scripts/translate.py` gained a pass over `data/ui.yaml` — it walked `content/`
+only before, so `data/` had never been touched by it. For every key with Spanish
+set and a language left blank, it translates and writes **`data/ui_auto.yaml`**.
+
+**Two files, not one, and that is the design.** `ui.yaml` is regenerated
+wholesale from the override store every time somebody presses *Guardar*, so
+anything the pipeline wrote into it would be destroyed by the next save — and
+the members area cannot write back into the repository's copy. Each file has one
+writer that owns it outright, and the split names the provenance.
+
+Each entry records the Spanish it came **from**, as `_source`. Reword the
+Spanish and the stored German stops matching and is translated again; leave it
+alone and nothing is recomputed, so a build that changed no label commits
+nothing and never loads the model.
+
+`t.html`'s order is therefore **override → automatic → shipped → Spanish**. The
+automatic file only ever holds a key whose Spanish was overridden, so it beats
+the shipped word without displacing one nobody touched: rename «Inicio» to
+«Escritorio» and the shipped «Start» is no longer a translation of anything.
+
+Said once, plainly: a one-word label is the worst case for machine translation.
+This fills a box somebody left empty; the screen has three boxes so it does not
+have to be relied on.
+
+#### A bug this phase found rather than caused
+
+`site-name.html` and `site-tagline.html` have existed since §11.18b so that
+Identidad can rename the site — and **eleven places read `.Site.Title` or
+`.Site.Params.description` directly**, going round them. The human-facing
+surfaces had been converted and the machine-facing ones had not, so renaming the
+site updated every `og:` tag and left the old name in every JSON-LD `publisher`,
+`author` and `isPartOf`, in `llms.txt` and in the `.ics` product id — the home
+page emitted two JSON-LD blocks that openly disagreed. All eleven now read
+through the partials, and a guard fails on a twelfth.
+
 ### 11.20 The three admin tools
 
 **Estado del sistema** (superadministrator). The backups panel reads

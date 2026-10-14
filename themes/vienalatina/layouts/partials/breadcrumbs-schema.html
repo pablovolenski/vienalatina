@@ -9,7 +9,7 @@
 
      A subpage says Inicio → its parent → itself, read from the same `parent`
      basename the menu is built from, so the trail and the menu cannot disagree. */}}
-{{ $items := slice (dict "@type" "ListItem" "position" 1 "name" "Inicio" "item" .Site.Home.Permalink) }}
+{{ $items := slice (dict "@type" "ListItem" "position" 1 "name" (partial "t.html" (dict "key" "home" "lang" $.Site.Language.Lang)) "item" .Site.Home.Permalink) }}
 {{ $position := 2 }}
 
 {{ if ne .Section "post" }}

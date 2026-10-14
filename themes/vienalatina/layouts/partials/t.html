@@ -48,6 +48,10 @@
 	"back"     (dict "es" "← Volver al inicio" "de" "← Zurück zur Startseite" "pt-br" "← Voltar ao início")
 	"by"       (dict "es" "por" "de" "von" "pt-br" "por")
 	"faq"      (dict "es" "Preguntas frecuentes" "de" "Häufige Fragen" "pt-br" "Perguntas frequentes")
+	"sections" (dict "es" "Secciones" "de" "Bereiche" "pt-br" "Seções")
+	"language" (dict "es" "Idioma" "de" "Sprache" "pt-br" "Idioma")
+	"pages"    (dict "es" "Páginas del sitio" "de" "Seiten" "pt-br" "Páginas do site")
+	"social"   (dict "es" "Redes" "de" "Soziale Netzwerke" "pt-br" "Redes")
 -}}
 {{- /* What Gestión → Textos has said instead, if anything. Read through
       nested `with` rather than as site.Data.ui.<key>.<lang>, because on a site
@@ -58,6 +62,21 @@
 {{- with site.Data.ui -}}
 {{- with index . $.key -}}
 {{- with index . $.lang }}{{ $said = . }}{{ end -}}
+{{- end -}}
+{{- end -}}
+{{- /* Then what the pipeline translated into the languages that box was left
+      empty in — data/ui_auto.yaml, written by scripts/translate.py.
+
+      It only ever holds a key whose Spanish somebody overrode, so it beats the
+      shipped word without ever displacing one nobody touched. That ordering is
+      a judgement: rename «Inicio» to «Escritorio» and the shipped «Start» is
+      no longer a translation of anything, it describes the old section. Leave
+      the key alone and this file has no entry and nothing changes. */ -}}
+{{- if not $said -}}
+{{- with site.Data.ui_auto -}}
+{{- with index . $.key -}}
+{{- with index . $.lang }}{{ $said = . }}{{ end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- if $said -}}

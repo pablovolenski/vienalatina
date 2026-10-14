@@ -17,7 +17,7 @@
 {{- $stamp := now.UTC.Format "20060102T150405Z" -}}
 BEGIN:VCALENDAR{{ printf "\r" }}
 VERSION:2.0{{ printf "\r" }}
-PRODID:-//{{ .Site.Title }}//agenda//ES{{ printf "\r" }}
+PRODID:-//{{ partial "site-name.html" . }}//agenda//ES{{ printf "\r" }}
 CALSCALE:GREGORIAN{{ printf "\r" }}
 METHOD:PUBLISH{{ printf "\r" }}
 BEGIN:VEVENT{{ printf "\r" }}

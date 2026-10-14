@@ -57,6 +57,17 @@ def build_provider():
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT_DIR = REPO_ROOT / "content"
 
+# The site's own labels — menu entries, button words — written by Gestión →
+# Textos, and the file this script fills the gaps in. Two files rather than one
+# because each has a writer that owns it outright: `ui.yaml` is regenerated
+# wholesale from the members area's override store on every save, so anything
+# written into it here would be destroyed by the next person to press Guardar,
+# and the members area cannot write back into the repository's copy. Keeping
+# them apart also names the provenance, which matters for a machine
+# translation of a one-word label.
+UI_FILE = REPO_ROOT / "data" / "ui.yaml"
+UI_AUTO_FILE = REPO_ROOT / "data" / "ui_auto.yaml"
+
 # Frontmatter strings translated alongside the body.
 # `event_location` is deliberately absent: an address is how somebody finds the
 # place, and a translated street or venue name is worse than an untranslated one.
@@ -282,6 +293,92 @@ def translate_file(source: Path, basename: str, src_lang: str, provider) -> list
     return written
 
 
+def translate_ui(provider_factory) -> list[Path]:
+    """Fill the languages Gestión → Textos left empty.
+
+    A label is prose with no markup, so `translate_text` handles it directly —
+    it already protects «Viena Latina» as a term, which is the one thing in a
+    menu that must survive.
+
+    Each entry records the Spanish it was translated **from**. Reword the
+    Spanish and the stored German stops matching its source and is translated
+    again; leave it alone and nothing is recomputed. Without that the file would
+    drift into German that describes a label nobody uses any more, and nothing
+    would ever say so.
+
+    Worth stating plainly, once: a one-word label is the worst case for machine
+    translation. This is a fallback for a box somebody left empty, not the
+    intended path — the screen has a box per language precisely so this does not
+    have to be relied on.
+    """
+    if not UI_FILE.exists():
+        return []
+    overrides = yaml.safe_load(UI_FILE.read_text(encoding="utf-8")) or {}
+    previous = {}
+    if UI_AUTO_FILE.exists():
+        previous = yaml.safe_load(UI_AUTO_FILE.read_text(encoding="utf-8")) or {}
+
+    wanted = {}
+    for key, values in overrides.items():
+        if not isinstance(values, dict):
+            continue
+        source = str(values.get("es", "")).strip()
+        if not source:
+            # Nothing authored in Spanish, so there is nothing to translate
+            # from. The theme's own default stands in every language.
+            continue
+        missing = [lang for lang in SITE_LANGS
+                   if lang != "es" and not str(values.get(lang, "")).strip()]
+        if not missing:
+            continue
+        wanted[key] = (source, missing)
+
+    if not wanted and previous == {}:
+        return []
+
+    # Only now, because loading a 237MB model to decide there is nothing to do
+    # is the difference between a push that costs seconds and one that costs a
+    # minute. Most pushes change no labels at all.
+    provider = None
+    filled = {}
+    for key, (source, missing) in sorted(wanted.items()):
+        before = previous.get(key) or {}
+        keep = str(before.get("_source", "")) == source
+        entry = {"_source": source}
+        for lang in missing:
+            if keep and str(before.get(lang, "")).strip():
+                entry[lang] = before[lang]
+                continue
+            if provider is None:
+                print("Translating the site's own labels:")
+                provider = provider_factory()
+            entry[lang] = translate_text(source, "es", lang, provider)
+            print(f"  {key} [{lang}]: {source!r} -> {entry[lang]!r}")
+        filled[key] = entry
+
+    if filled == {k: v for k, v in previous.items()}:
+        return []
+
+    UI_AUTO_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["# Traducciones automáticas de los textos de Gestión → Textos.",
+             "# Las escribe el pipeline; lo escrito a mano está en ui.yaml y manda.",
+             "# `_source` es el español del que salió cada una: si cambia, se rehace."]
+    for key in sorted(filled):
+        lines.append(f"{key}:")
+        for lang in SITE_LANGS:
+            if lang != "es" and filled[key].get(lang):
+                lines.append(f"  {lang}: {_quote(filled[key][lang])}")
+        lines.append(f"  _source: {_quote(filled[key]['_source'])}")
+    UI_AUTO_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return [UI_AUTO_FILE]
+
+
+def _quote(value: str) -> str:
+    """A double-quoted YAML scalar. Backslashes and quotes are the only two
+    characters that can end one, and both are escapable inside it."""
+    return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def commit_and_push(files: list[Path], summary: str) -> None:
     branch = os.environ.get("CI_COMMIT_BRANCH", "main")
     run("git", "config", "user.name", BOT_NAME)
@@ -334,6 +431,12 @@ def main() -> None:
         orphan.unlink()
         removed.append(orphan)
         print(f"  {orphan.relative_to(REPO_ROOT)}: source deleted — removed")
+
+    # The site's own labels, which live in `data/` and so are outside everything
+    # above — `changed_markdown` filters on the `content/` prefix, so a push
+    # that only touches a label reaches here with no sources at all, which is
+    # exactly the case this fills.
+    written.extend(translate_ui(build_provider))
 
     touched = written + removed
     if not touched:

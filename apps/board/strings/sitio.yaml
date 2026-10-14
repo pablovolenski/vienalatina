@@ -140,3 +140,27 @@ site.askmasto:
   de: "Auf welchem Mastodon-Server hast du dein Konto? Zum Beispiel: mastodon.social"
   pt-br: "Em qual servidor do Mastodon está a sua conta? Por exemplo: mastodon.social"
   _note: "La pregunta antes de compartir en Mastodon."
+
+site.sections:
+  es: "Secciones"
+  de: "Bereiche"
+  pt-br: "Seções"
+  _note: "No se ve: nombra la barra de navegación para un lector de pantalla."
+
+site.language:
+  es: "Idioma"
+  de: "Sprache"
+  pt-br: "Idioma"
+  _note: "No se ve: nombra el selector de idioma."
+
+site.pages:
+  es: "Páginas del sitio"
+  de: "Seiten"
+  pt-br: "Páginas do site"
+  _note: "No se ve: nombra la lista de páginas del pie."
+
+site.social:
+  es: "Redes"
+  de: "Soziale Netzwerke"
+  pt-br: "Redes"
+  _note: "No se ve: nombra los iconos de redes del pie."

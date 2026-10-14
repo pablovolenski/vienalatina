@@ -82,6 +82,33 @@ def test_every_theme_call_site_passes_the_page_explicitly():
         f"build inside a `with`: {offenders}")
 
 
+def test_nothing_reads_the_site_name_around_the_override():
+    """`site-name.html` and `site-tagline.html` exist so that Gestión →
+    Identidad can rename the site. Reading `.Site.Title` directly goes round
+    them.
+
+    That had been true since Identidad shipped, and quietly: the human-facing
+    surfaces were converted and the machine-facing ones were not, so renaming
+    the site updated every og: tag and left the old name in every JSON-LD
+    `publisher`, `author` and `isPartOf`, in `llms.txt` and in the .ics product
+    id. The home page emitted two JSON-LD blocks that disagreed with each other.
+    """
+    offenders = []
+    for path in THEME.rglob("*"):
+        if not path.is_file() or path.suffix in (".css", ".js", ".toml"):
+            continue
+        # The two partials are the override; reading the config is their job.
+        if path.name in ("site-name.html", "site-tagline.html"):
+            continue
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            code = line.split("*/")[-1] if "*/" in line else line
+            if re.search(r"\{\{[^}]*\bsite\.(Title|Params\.description)\b", code, re.I):
+                offenders.append(f"{path.relative_to(THEME)}:{line_no}")
+    assert not offenders, (
+        "these read the site's name or tagline directly instead of through "
+        f"site-name.html / site-tagline.html, so Identidad cannot reach them: {offenders}")
+
+
 def test_the_theme_and_the_catalogue_agree_on_the_public_defaults():
     """Two copies, deliberately — Hugo reads the repository and the members area
     reads its own image, and neither can read the other's file. The same trade
@@ -335,3 +362,136 @@ def test_erasing_whoever_chose_the_words_leaves_them_standing(client, db, post, 
     row = db.execute("SELECT strings_json, updated_by FROM strings").fetchone()
     assert json.loads(row["strings_json"]) == {"nav.inicio": {"es": "Escritorio"}}
     assert row["updated_by"] is None
+
+
+# --- the pipeline filling a language somebody left empty -------------------
+
+def _translate_module():
+    """`scripts/translate.py` is a script, not a package — same loader
+    `test_content.py` uses."""
+    import importlib.util
+    import sys
+    sys.path.insert(0, str(ROOT / "scripts"))
+    spec = importlib.util.spec_from_file_location(
+        "vl_translate_ui", ROOT / "scripts" / "translate.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class _Shouty:
+    """A provider that never loads a model. What matters here is which strings
+    were asked for and how often — the engine is tested in its own suite."""
+
+    def __init__(self):
+        self.asked = []
+
+    def translate(self, texts, src, tgt):
+        self.asked += [(text, src, tgt) for text in texts]
+        return [f"{text.upper()}-{tgt}" for text in texts]
+
+
+@pytest.fixture
+def pipeline(tmp_path, monkeypatch):
+    """translate.py pointed at a throwaway `data/` directory."""
+    module = _translate_module()
+    monkeypatch.setattr(module, "UI_FILE", tmp_path / "ui.yaml")
+    monkeypatch.setattr(module, "UI_AUTO_FILE", tmp_path / "ui_auto.yaml")
+    return module
+
+
+def test_a_language_left_empty_is_filled_from_the_spanish(pipeline):
+    pipeline.UI_FILE.write_text('home:\n  es: "Escritorio"\n', encoding="utf-8")
+    provider = _Shouty()
+
+    written = pipeline.translate_ui(lambda: provider)
+
+    assert written == [pipeline.UI_AUTO_FILE]
+    out = pipeline.UI_AUTO_FILE.read_text(encoding="utf-8")
+    assert 'de: "ESCRITORIO-de"' in out
+    assert 'pt-br: "ESCRITORIO-pt-br"' in out
+    # The Spanish it came from, so a reword can invalidate it.
+    assert '_source: "Escritorio"' in out
+    # And Spanish is never translated into itself.
+    assert all(tgt != "es" for _, _, tgt in provider.asked)
+
+
+def test_a_language_somebody_typed_is_left_alone(pipeline):
+    """The three boxes are the real path; this only fills what was skipped."""
+    pipeline.UI_FILE.write_text(
+        'home:\n  es: "Escritorio"\n  de: "Schreibtisch"\n', encoding="utf-8")
+    provider = _Shouty()
+
+    pipeline.translate_ui(lambda: provider)
+
+    out = pipeline.UI_AUTO_FILE.read_text(encoding="utf-8")
+    assert "Schreibtisch" not in out, "a hand-written language must not be regenerated"
+    assert [tgt for _, _, tgt in provider.asked] == ["pt-br"]
+
+
+def test_nothing_is_translated_twice(pipeline):
+    """A push that changed no label must not re-run the engine — and must not
+    rewrite the file, or every build would commit a no-op."""
+    pipeline.UI_FILE.write_text('home:\n  es: "Escritorio"\n', encoding="utf-8")
+    pipeline.translate_ui(lambda: _Shouty())
+
+    second = _Shouty()
+    written = pipeline.translate_ui(lambda: second)
+
+    assert second.asked == []
+    assert written == []
+
+
+def test_rewording_the_spanish_redoes_the_translation(pipeline):
+    """What `_source` is for. Without it the German would describe a label
+    nobody uses any more, and nothing would ever say so."""
+    pipeline.UI_FILE.write_text('home:\n  es: "Escritorio"\n', encoding="utf-8")
+    pipeline.translate_ui(lambda: _Shouty())
+
+    pipeline.UI_FILE.write_text('home:\n  es: "Novedades"\n', encoding="utf-8")
+    again = _Shouty()
+    pipeline.translate_ui(lambda: again)
+
+    out = pipeline.UI_AUTO_FILE.read_text(encoding="utf-8")
+    assert 'de: "NOVEDADES-de"' in out and "ESCRITORIO" not in out
+    assert '_source: "Novedades"' in out
+
+
+def test_the_model_is_not_loaded_when_there_is_nothing_to_fill(pipeline):
+    """Loading a 237MB model to decide there is no work is the difference
+    between a push that costs seconds and one that costs a minute, and most
+    pushes change no labels at all."""
+    pipeline.UI_FILE.write_text(
+        'home:\n  es: "Escritorio"\n  de: "Schreibtisch"\n  pt-br: "Escrivaninha"\n',
+        encoding="utf-8")
+
+    def refuse():
+        raise AssertionError("the provider was built with nothing to translate")
+
+    assert pipeline.translate_ui(refuse) == []
+
+
+def test_a_key_with_no_spanish_is_not_guessed_at(pipeline):
+    """Nothing authored means nothing to translate from — the theme's own
+    default stands in every language."""
+    pipeline.UI_FILE.write_text('home:\n  de: "Schreibtisch"\n', encoding="utf-8")
+
+    def refuse():
+        raise AssertionError("the provider was built with no source language")
+
+    assert pipeline.translate_ui(refuse) == []
+
+
+def test_no_overrides_at_all_means_no_file(pipeline):
+    assert pipeline.translate_ui(lambda: _Shouty()) == []
+    assert not pipeline.UI_AUTO_FILE.exists()
+
+
+def test_a_quote_in_a_translation_cannot_break_the_file(pipeline):
+    pipeline.UI_FILE.write_text('home:\n  es: "El \\"Escritorio\\""\n', encoding="utf-8")
+
+    pipeline.translate_ui(lambda: _Shouty())
+
+    import yaml
+    loaded = yaml.safe_load(pipeline.UI_AUTO_FILE.read_text(encoding="utf-8"))
+    assert loaded["home"]["_source"] == 'El "Escritorio"'

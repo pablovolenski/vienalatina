@@ -2,7 +2,7 @@
 <footer class="site-foot">
 	{{ $pages := where .Site.RegularPages "Section" "page" }}
 	{{ if $pages }}
-	<nav class="site-foot__nav" aria-label="Páginas del sitio">
+	<nav class="site-foot__nav" aria-label="{{ partial "t.html" (dict "key" "pages" "lang" $.Site.Language.Lang) }}">
 		{{ range first 8 $pages }}
 		<a href="{{ .Permalink }}">{{ .Title }}</a>
 		{{ end }}
@@ -15,7 +15,7 @@
 	{{ $social := dict }}
 	{{ with site.Data.site }}{{ with .social }}{{ $social = . }}{{ end }}{{ end }}
 	{{ with $social }}
-	<nav class="site-foot__social" aria-label="Redes">
+	<nav class="site-foot__social" aria-label="{{ partial "t.html" (dict "key" "social" "lang" $.Site.Language.Lang) }}">
 		{{ range $name, $url := . }}
 		<a href="{{ $url }}" rel="me nofollow noopener">{{ $name | title }}</a>
 		{{ end }}
