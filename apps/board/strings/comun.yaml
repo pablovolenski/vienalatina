@@ -32,9 +32,67 @@ comun.opcional:
   es: "(opcional)"
   _note: "Detrás del nombre de un campo que se puede dejar vacío. Sale catorce veces."
 
+comun.volver:
+  es: "Volver"
+  _note: "El enlace de arriba de una página que se abrió desde una lista."
+
+comun.fijar:
+  es: "Fijar"
+  _note: >-
+    Pone algo arriba del todo, en el muro y en el sitio público. Lo ven
+    moderadores y administración.
+
+comun.no_fijar:
+  es: "No fijar"
+  _note: "El mismo botón cuando ya está fijado."
+
 comun.titulo:
   es: "Título"
   _note: "El campo del título, en todos los formularios que tienen uno."
+
+comun.resumen:
+  es: "Resumen"
+  _note: "El campo de la frase que se ve en los listados y al compartir el enlace."
+
+comun.fecha:
+  es: "Fecha"
+  _note: "La columna y el campo de la fecha de publicación."
+
+comun.evento:
+  es: "Evento"
+  _note: "La columna de la fecha del evento, en la lista de lo publicado."
+
+comun.imagen:
+  es: "Imagen"
+  _note: "El campo para adjuntar una sola foto."
+
+comun.si_evento:
+  es: "Si es un evento"
+  _note: "El desplegable de los dos formularios de publicación, cerrado."
+
+comun.si_evento_campos:
+  es: "(fecha, hora, lugar)"
+  _note: "Lo que sale en gris detrás de esa frase."
+
+comun.evento_fecha:
+  es: "Fecha del evento"
+  _note: "El día en que es el evento, que no es el día en que se publica."
+
+comun.evento_hora:
+  es: "Hora"
+  _note: "La hora del evento."
+
+comun.evento_hora_nota:
+  es: "Déjala vacía si dura todo el día."
+  _note: "Debajo del campo de la hora."
+
+comun.evento_lugar:
+  es: "Lugar"
+  _note: "Dónde es el evento."
+
+comun.evento_lugar_nota:
+  es: "Dónde es: el sitio, la calle, el barrio."
+  _note: "Debajo del campo del lugar."
 
 comun.imagenes:
   es: "Imágenes"
@@ -43,6 +101,12 @@ comun.imagenes:
 comun.markdown:
   es: "Se puede usar Markdown: **negrita**, listas, enlaces."
   _note: "La pista dentro de las cajas de escribir, cuando están vacías."
+
+comun.markdown_largo:
+  es: "Se puede usar Markdown: **negrita**, ## títulos, listas, enlaces."
+  _note: >-
+    La misma pista en las cajas grandes, las de un texto que va al sitio
+    público: ahí los títulos sí tienen sentido.
 
 comun.ia:
   es: "Generado con IA"

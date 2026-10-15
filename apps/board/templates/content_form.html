@@ -1,12 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Editar' if item else 'Nuevo' }} {{ meta.singular|lower }}{% endblock %}
+{#- `meta.new_label` rather than «Nuevo » and the singular: Spanish gives
+    the article a gender, and that is why `content.py` spells the label out. -#}
+{% block title %}{{ t('contenido.editar_algo', cosa=meta.singular|lower) if item
+                    else meta.new_label }}{% endblock %}
 
 {% set f = fields or {} %}
 
 {% block main %}
 {% if preview_html %}
 <article class="card">
-	<div class="card__meta"><span class="tag tag--quiet">Vista previa</span></div>
+	<div class="card__meta"><span class="tag tag--quiet">{{ t('contenido.vista_previa') }}</span></div>
 	<h1 class="card__title">{{ f.title }}</h1>
 	<div class="prose">{{ preview_html }}</div>
 </article>
@@ -27,13 +30,14 @@
 	<input type="hidden" name="author_url" value="{{ f.author_url or '' }}">
 	{% endif %}
 
-	<h1>{{ ('Editar ' ~ meta.singular|lower) if item else meta.new_label }}</h1>
+	<h1>{{ t('contenido.editar_algo', cosa=meta.singular|lower) if item
+	       else meta.new_label }}</h1>
 
-	<label for="title">Título</label>
+	<label for="title">{{ t('comun.titulo') }}</label>
 	<input id="title" name="title" maxlength="140" value="{{ f.title or '' }}">
 
 	{% if meta.dated %}
-	<label for="date">Fecha</label>
+	<label for="date">{{ t('comun.fecha') }}</label>
 	<input id="date" name="date" type="date" required value="{{ f.date_input or today }}">
 	{#- The publication time the post already carries. Hugo sorts the blog by
 	    the whole of it and a date field is only a day, so without this, saving
@@ -47,27 +51,27 @@
 	   themselves, so a page published here appears on the site by itself —
 	   choosing a parent puts it in the submenu under that page instead of on the
 	   top row. The choice is made once and holds in the three languages. #}
-	<label for="parent">En el menú</label>
+	<label for="parent">{{ t('contenido.menu') }}</label>
 	{% set names = parents | map(attribute='base') | list %}
 	<select id="parent" name="parent">
-		<option value="">En la barra principal</option>
+		<option value="">{{ t('contenido.menu_raiz') }}</option>
 		{% if f.parent and f.parent not in names %}
 		{# The page it hung under has been deleted, or the git server could not be
 		   reached to list them. Either way the relationship is kept and said out
 		   loud, rather than dropped silently by the next save. #}
-		<option value="{{ f.parent }}" selected>Dentro de «{{ f.parent }}» (no encontrada)</option>
+		<option value="{{ f.parent }}" selected>{{ t('contenido.menu_dentro_perdida', titulo=f.parent) }}</option>
 		{% endif %}
 		{% for other in parents %}
 		<option value="{{ other.base }}" {{ 'selected' if f.parent == other.base }}>
-			Dentro de «{{ other.title }}»
+			{{ t('contenido.menu_dentro', titulo=other.title) }}
 		</option>
 		{% endfor %}
 	</select>
 
-	<label for="weight">Orden</label>
+	<label for="weight">{{ t('contenido.orden') }}</label>
 	<input id="weight" name="weight" type="number" min="0" max="999"
 	       value="{{ f.weight or 50 }}">
-	<p class="muted small">Menor número, más a la izquierda. 50 si da igual.</p>
+	<p class="muted small">{{ t('contenido.orden_nota') }}</p>
 	{% endif %}
 
 	{% if collection == 'post' %}
@@ -79,74 +83,63 @@
 	    most people scroll past. Open by itself when the post already has a
 	    date, so editing an event does not hide the thing being edited. -#}
 	<details class="fold" {{ 'open' if f.event_date }}>
-		<summary>Si es un evento <span class="muted small">(fecha, hora, lugar)</span></summary>
-		<p class="muted small">
-			Pon la fecha y será un evento: aparecerá en la agenda del sitio, con el
-			día y el lugar destacados, y se podrá añadir al calendario del móvil.
-			Déjala vacía y es un artículo normal.
-		</p>
+		<summary>{{ t('comun.si_evento') }} <span class="muted small">{{ t('comun.si_evento_campos') }}</span></summary>
+		<p class="muted small">{{ t('contenido.evento_nota') }}</p>
 
-		<label for="event_date">Fecha del evento</label>
+		<label for="event_date">{{ t('comun.evento_fecha') }}</label>
 		<input id="event_date" name="event_date" type="date" value="{{ f.event_date or '' }}">
 
-		<label for="event_time">Hora <span class="muted small">(opcional)</span></label>
+		<label for="event_time">{{ t('comun.evento_hora') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 		<input id="event_time" name="event_time" type="time" value="{{ f.event_time or '' }}">
-		<p class="muted small">Déjala vacía si dura todo el día.</p>
+		<p class="muted small">{{ t('comun.evento_hora_nota') }}</p>
 
-		<label for="event_location">Lugar <span class="muted small">(opcional)</span></label>
+		<label for="event_location">{{ t('comun.evento_lugar') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 		<input id="event_location" name="event_location" maxlength="200"
 		       value="{{ f.event_location or '' }}">
-		<p class="muted small">Dónde es: el sitio, la calle, el barrio.</p>
+		<p class="muted small">{{ t('comun.evento_lugar_nota') }}</p>
 	</details>
 
-	<label for="description">Resumen</label>
+	<label for="description">{{ t('comun.resumen') }}</label>
 	<textarea id="description" name="description" rows="2">{{ f.description or '' }}</textarea>
-	<p class="muted small">
-		Una o dos frases que se entiendan solas: es lo que aparece en los
-		listados, en WhatsApp al compartir el enlace y lo que citan los
-		buscadores. Mejor concreta («El sábado 12 en Ottakring») que general.
-	</p>
+	<p class="muted small">{{ t('contenido.resumen_nota') }}</p>
 
-	<label for="picture">Imagen destacada</label>
+	<label for="picture">{{ t('contenido.imagen') }}</label>
 	{% if f.image %}
-	<p class="muted small">Actual: <span class="mono">{{ f.image }}</span> — sube otra para reemplazarla.</p>
+	<p class="muted small">{{ t('contenido.imagen_actual_antes') }} <span class="mono">{{ f.image }}</span> {{ t('contenido.imagen_actual_despues') }}</p>
 	<input type="hidden" name="image" value="{{ f.image }}">
 	{% endif %}
 	<input id="picture" name="picture" type="file" accept="image/*">
 
-	<label for="image_alt">Texto alternativo de la imagen</label>
+	<label for="image_alt">{{ t('contenido.alt') }}</label>
 	<input id="image_alt" name="image_alt" maxlength="200" value="{{ f.image_alt or '' }}">
-	<p class="muted small">
-		Qué se ve en la foto, en una frase. Lo lee quien no puede ver la imagen y
-		lo leen también los buscadores.
-	</p>
+	<p class="muted small">{{ t('contenido.alt_nota') }}</p>
 	{% endif %}
 
-	<label for="body">Cuerpo</label>
+	<label for="body">{{ t('contenido.cuerpo') }}</label>
 	<textarea id="body" data-markdown data-rich="full" name="body" rows="18" required
-	          placeholder="Markdown: **negrita**, ## títulos, listas, [enlaces](https://…).">{{ body }}</textarea>
+	          placeholder="{{ t('contenido.cuerpo_pista') }}">{{ body }}</textarea>
 	{#- The stored markdown, rendered by the server for the editor to adopt.
 	    There is no markdown parser in the browser: this is how the box can
 	    show the formatting without a second opinion about what somebody's
 	    text means. Ignored entirely when scripting is off. -#}
 	<template data-rich-html="body">{{ to_html(body, breaks=False) }}</template>
 
-	<label for="faq">Preguntas frecuentes <span class="muted small">(opcional)</span></label>
+	<label for="faq">{{ t('contenido.faq') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<textarea id="faq" name="faq" rows="5"
-	          placeholder="¿Dónde es?|En la plaza de Ottakring, junto al mercado.">{{ f.faq or '' }}</textarea>
+	          placeholder="{{ t('contenido.faq_ejemplo') }}">{{ f.faq or '' }}</textarea>
 	<p class="muted small">
-		Una por línea, con el formato <span class="mono">pregunta|respuesta</span>.
-		Se muestran al final de la página y son lo que mejor citan los buscadores
-		y los asistentes de IA: pregunta concreta, respuesta corta y verificable.
+		{{ t('contenido.faq_nota_antes') }}
+		<span class="mono">pregunta|respuesta</span>.
+		{{ t('contenido.faq_nota_despues') }}
 	</p>
 
 	<label class="check">
 		<input type="checkbox" name="manual_translation" {{ 'checked' if f.manual_translation }}>
-		Traducción manual — no generar alemán ni portugués para esto
+		{{ t('contenido.traduccion_manual') }}
 	</label>
 
 	<div class="actions">
-		<button class="btn" type="submit">{{ 'Guardar' if item else 'Publicar' }}</button>
+		<button class="btn" type="submit">{{ t('comun.guardar') if item else t('comun.publicar') }}</button>
 		{#- Beside the button that publishes, because that is the moment it is
 		    answered. One line rather than a fieldset: it has to be seen, not
 		    to take up the form. -#}
@@ -156,7 +149,7 @@
 			    state. No script: a control that needs one is a control that
 			    does nothing under this Content-Security-Policy. -#}
 			<span class="toggle__track" aria-hidden="true"></span>
-			<span class="toggle__text">Contenido generado con IA</span>
+			<span class="toggle__text">{{ t('comun.ia_campo') }}</span>
 		</label>
 
 		{#- The same switch for the pin, next to it. The moment it was pinned
@@ -166,7 +159,7 @@
 		<label class="toggle">
 			<input type="checkbox" name="pinned" {{ 'checked' if f.pinned }}>
 			<span class="toggle__track" aria-hidden="true"></span>
-			<span class="toggle__text">Fijar arriba</span>
+			<span class="toggle__text">{{ t('contenido.fijar_arriba') }}</span>
 		</label>
 		<input type="hidden" name="pinned_at" value="{{ f.pinned_at or '' }}">
 
@@ -174,9 +167,9 @@
 		    row, and a bare link wedged between two buttons reads as unfinished. -#}
 		<button class="btn btn--quiet" type="submit"
 		        formaction="{{ url_for('content.preview', collection=collection) }}">
-			Vista previa
+			{{ t('contenido.vista_previa') }}
 		</button>
-		<a class="btn btn--quiet" href="{{ url_for('content.index', collection=collection) }}">Cancelar</a>
+		<a class="btn btn--quiet" href="{{ url_for('content.index', collection=collection) }}">{{ t('comun.cancelar') }}</a>
 	</div>
 </form>
 {% endblock %}

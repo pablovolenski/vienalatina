@@ -24,13 +24,8 @@ muro.respuestas:
   es: "{n} respuestas"
   _note: "Debajo de un tema que tiene ninguna o más de una."
 
-muro.fijar:
-  es: "Fijar"
-  _note: "Pone el tema arriba del todo. Lo ven moderadores y administración."
-
-muro.no_fijar:
-  es: "No fijar"
-  _note: "El mismo botón cuando el tema ya está fijado."
+# «Fijar» y «No fijar» están en comun.yaml: es el mismo gesto en el muro y en
+# lo ya publicado, y cambiarlo en un sitio y no en el otro sería un descuido.
 
 muro.cerrar:
   es: "Cerrar"

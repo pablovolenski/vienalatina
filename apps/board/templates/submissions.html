@@ -1,37 +1,32 @@
 {% extends "base.html" %}
 {% from "_person.html" import person %}
-{% block title %}Publicaciones{% endblock %}
+{% block title %}{{ t('nav.publicaciones') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Publicaciones</h1>
+	<h1>{{ t('nav.publicaciones') }}</h1>
 	{% if can_moderate %}
 	{# A moderator cannot open Gestión, so this is their only route to what is
 	   already on the site. It was a clause inside a paragraph below, which is
 	   the same as not being there. #}
 	<div class="feed-head__actions">
-		<a class="linkish" href="{{ url_for('content.index', collection='post') }}">Ya publicado</a>
-		<a class="btn" href="{{ url_for('content.new', collection='post') }}">Publicar</a>
+		<a class="linkish" href="{{ url_for('content.index', collection='post') }}">{{ t('publicaciones.ya_publicado') }}</a>
+		<a class="btn" href="{{ url_for('content.new', collection='post') }}">{{ t('comun.publicar') }}</a>
 	</div>
 	{% else %}
-	<a class="btn" href="{{ url_for('submissions.propose') }}">Proponer</a>
+	<a class="btn" href="{{ url_for('submissions.propose') }}">{{ t('publicaciones.proponer') }}</a>
 	{% endif %}
 </div>
 
 <p class="muted">
-	{% if can_moderate %}
-	Lo que publicas aquí sale al sitio en cuanto lo guardas. Lo que proponen los
-	miembros espera en esta cola hasta que tú u otro moderador lo apruebe.
-	{% else %}
-	Esto va a vienalatina.com, donde lo lee cualquiera. Un moderador lo lee
-	primero: si hace falta cambiar algo te lo devuelve con el motivo.
-	{% endif %}
+	{{ t('publicaciones.intro_moderador') if can_moderate
+	   else t('publicaciones.intro_miembro') }}
 </p>
 
 {% if can_moderate %}
-<h2 class="section-head">Esperando revisión</h2>
+<h2 class="section-head">{{ t('publicaciones.esperando') }}</h2>
 {% if not queue %}
-<article class="card"><p class="muted">Nada pendiente. La cola está vacía.</p></article>
+<article class="card"><p class="muted">{{ t('publicaciones.cola_vacia') }}</p></article>
 {% endif %}
 {% for item in queue %}
 <article class="card">
@@ -43,21 +38,18 @@
 	</h3>
 	<p class="card__excerpt">{{ excerpt(item.body_md) }}</p>
 	<div class="card__foot actions actions--row">
-		<a class="linkish" href="{{ url_for('submissions.show', submission_id=item.id) }}">Leer y revisar</a>
+		<a class="linkish" href="{{ url_for('submissions.show', submission_id=item.id) }}">{{ t('publicaciones.leer_revisar') }}</a>
 	</div>
 </article>
 {% endfor %}
 {% endif %}
 
-<h2 class="section-head">Lo que he propuesto</h2>
+<h2 class="section-head">{{ t('publicaciones.mis_propuestas') }}</h2>
 {% if not mine %}
 <article class="card">
 	<p class="muted">
-		{% if can_moderate %}
-		Nada. Tus publicaciones no pasan por aquí: van directas al sitio.
-		{% else %}
-		Todavía no has propuesto nada.
-		{% endif %}
+		{{ t('publicaciones.sin_propuestas_moderador') if can_moderate
+		   else t('publicaciones.sin_propuestas') }}
 	</p>
 </article>
 {% endif %}
@@ -73,18 +65,18 @@
 	{% if item.state == 'rejected' and item.note %}
 	{# The reason, on the list rather than one click away: it is the only thing
 	   the author needs in order to know what to do next. #}
-	<p class="card__excerpt"><strong>Motivo:</strong> {{ item.note }}</p>
+	<p class="card__excerpt"><strong>{{ t('publicaciones.motivo') }}</strong> {{ item.note }}</p>
 	{% endif %}
 	<div class="card__foot actions actions--row">
 		{% if item.state != 'approved' %}
-		<a class="linkish" href="{{ url_for('submissions.edit', submission_id=item.id) }}">Editar</a>
+		<a class="linkish" href="{{ url_for('submissions.edit', submission_id=item.id) }}">{{ t('comun.editar') }}</a>
 		<form method="post" action="{{ url_for('submissions.withdraw', submission_id=item.id) }}"
-		      data-confirm="Se borrará la propuesta «{{ item.title }}». ¿Seguro?">
+		      data-confirm="{{ t('publicaciones.retirar_confirmar_titulo', titulo=item.title) }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<button class="linkish linkish--danger" type="submit">Retirar</button>
+			<button class="linkish linkish--danger" type="submit">{{ t('publicaciones.retirar') }}</button>
 		</form>
 		{% elif item.published_path %}
-		<span class="muted small">Publicado en {{ item.published_path }}</span>
+		<span class="muted small">{{ t('publicaciones.publicado_en', ruta=item.published_path) }}</span>
 		{% endif %}
 	</div>
 </article>

@@ -1,0 +1,160 @@
+# Publicaciones: proponer algo para el sitio público, y la cola de revisión.
+#
+# La misma pantalla dice cosas distintas según quién la abra: un moderador ve
+# una cola de trabajo y un miembro ve lo que ha propuesto. Por eso hay pares de
+# claves que parecen repetidas y no lo son — la frase de arriba, por ejemplo,
+# explica dos situaciones opuestas.
+
+publicaciones.ya_publicado:
+  es: "Ya publicado"
+  _note: >-
+    El enlace a lo que está en el sitio. Es la única puerta que tiene un
+    moderador, porque no puede abrir Gestión.
+
+publicaciones.proponer:
+  es: "Proponer"
+  _note: "El botón de arriba, para un miembro."
+
+publicaciones.intro_moderador:
+  es: >-
+    Lo que publicas aquí sale al sitio en cuanto lo guardas. Lo que proponen los
+    miembros espera en esta cola hasta que tú u otro moderador lo apruebe.
+  _note: "El párrafo de arriba, para moderadores y administración."
+
+publicaciones.intro_miembro:
+  es: >-
+    Esto va a vienalatina.com, donde lo lee cualquiera. Un moderador lo lee
+    primero: si hace falta cambiar algo te lo devuelve con el motivo.
+  _note: "El mismo párrafo para un miembro."
+
+publicaciones.esperando:
+  es: "Esperando revisión"
+  _note: "El título de la cola. Sólo lo ven moderadores y administración."
+
+publicaciones.cola_vacia:
+  es: "Nada pendiente. La cola está vacía."
+  _note: "Cuando no hay nada que revisar."
+
+publicaciones.leer_revisar:
+  es: "Leer y revisar"
+  _note: "El enlace de cada propuesta de la cola."
+
+publicaciones.mis_propuestas:
+  es: "Lo que he propuesto"
+  _note: "El título de la segunda mitad de la pantalla."
+
+publicaciones.sin_propuestas:
+  es: "Todavía no has propuesto nada."
+  _note: "Cuando un miembro no ha propuesto nada."
+
+publicaciones.sin_propuestas_moderador:
+  es: "Nada. Tus publicaciones no pasan por aquí: van directas al sitio."
+  _note: "Lo mismo para un moderador, que publica sin pasar por la cola."
+
+publicaciones.motivo:
+  es: "Motivo:"
+  _note: "Delante del motivo de una devolución, en la lista."
+
+publicaciones.retirar:
+  es: "Retirar"
+  _note: "Borra una propuesta propia."
+
+publicaciones.retirar_confirmar_titulo:
+  es: "Se borrará la propuesta «{titulo}». ¿Seguro?"
+  _note: "La pregunta antes de retirarla desde la lista, donde hay varias."
+
+publicaciones.retirar_confirmar:
+  es: "Se borrará la propuesta. ¿Seguro?"
+  _note: "La misma pregunta desde la propuesta abierta, donde ya se sabe cuál es."
+
+publicaciones.publicado_en:
+  es: "Publicado en {ruta}"
+  _note: "Debajo de una propuesta aprobada, en la lista."
+
+publicaciones.evento_el:
+  es: "Evento el {fecha}"
+  _note: "En la ficha de una propuesta que lleva fecha de evento."
+
+publicaciones.imagen_de:
+  es: "Imagen de «{titulo}»"
+  _note: >-
+    No se ve: es lo que lee un lector de pantalla al llegar a la imagen de una
+    propuesta.
+
+publicaciones.motivo_titulo:
+  es: "Motivo de la devolución"
+  _note: "El título del recuadro con lo que pidió cambiar el moderador."
+
+publicaciones.publicado_por_en:
+  es: "Publicado por {quien} en {ruta}."
+  _note: "En una propuesta ya aprobada: quién la aprobó y dónde quedó."
+
+publicaciones.publicado_sin_detalle:
+  es: "Publicado."
+  _note: "Lo mismo cuando no consta quién la aprobó o dónde quedó."
+
+publicaciones.traduccion_tarda:
+  es: "La traducción al alemán y al portugués tarda un par de minutos."
+  _note: "Detrás de esa frase, para que nadie crea que la traducción se perdió."
+
+publicaciones.aprobar:
+  es: "Aprobar y publicar"
+  _note: "El botón que saca una propuesta al sitio público."
+
+publicaciones.aprobar_confirmar:
+  es: "Se publicará en vienalatina.com con el nombre de {autor}. ¿Seguro?"
+  _note: "La pregunta antes de aprobar."
+
+publicaciones.aprobar_nota:
+  es: >-
+    Al aprobar se publica tal cual está, firmado por {autor} — en el sitio y en
+    el historial del repositorio.
+  _note: "Lo que explica ese botón, encima de él."
+
+publicaciones.devolver_label:
+  es: "Devolver con un motivo"
+  _note: "El nombre de la caja donde se escribe qué hay que cambiar."
+
+publicaciones.devolver_pista:
+  es: "Qué hay que cambiar para que se pueda publicar."
+  _note: "La pista dentro de esa caja."
+
+publicaciones.devolver:
+  es: "Devolver al autor"
+  _note: "El botón que la devuelve con el motivo escrito."
+
+publicaciones.proponer_titulo:
+  es: "Proponer una publicación"
+  _note: "El título del formulario cuando se escribe algo nuevo."
+
+publicaciones.editar_propuesta:
+  es: "Editar propuesta"
+  _note: "El mismo título al corregir una propuesta que ya existe."
+
+publicaciones.proponer_nota:
+  es: >-
+    Esto no es el muro: va a vienalatina.com, en español, y se traduce solo al
+    alemán y al portugués. Un moderador lo lee antes de que salga.
+  _note: "El párrafo de arriba del formulario."
+
+publicaciones.resumen_nota:
+  es: "Una o dos líneas: es lo que se ve en los listados."
+  _note: "Debajo del campo del resumen."
+
+publicaciones.evento_nota:
+  es: >-
+    Pon la fecha y será un evento: aparecerá en la agenda del sitio, con el día
+    y el lugar destacados. Déjala vacía y es un artículo normal.
+  _note: "Lo que explica el desplegable del evento al abrirlo."
+
+publicaciones.texto:
+  es: "Texto"
+  _note: "El campo grande, el del cuerpo de la publicación."
+
+publicaciones.imagen_ya:
+  es: "Ya tiene una imagen. Si eliges otra, la sustituye."
+  _note: "Debajo del campo de la imagen, al editar algo que ya tiene una."
+
+publicaciones.enviar_revision:
+  es: "Enviar a revisión"
+  _note: "El botón que manda la propuesta a la cola."

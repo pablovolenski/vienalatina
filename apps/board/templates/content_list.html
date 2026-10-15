@@ -3,11 +3,11 @@
 
 {% block main %}
 <div class="feed-head">
-	<h1>Contenido</h1>
+	<h1>{{ t('contenido.titulo') }}</h1>
 	<a class="btn" href="{{ url_for('content.new', collection=collection) }}">{{ meta.new_label }}</a>
 </div>
 
-<nav class="tabs" aria-label="Tipo de contenido">
+<nav class="tabs" aria-label="{{ t('contenido.tipos') }}">
 	{% for key, other in collections.items() %}
 	<a class="tab {{ 'tab--on' if key == collection }}"
 	   href="{{ url_for('content.index', collection=key) }}">{{ other.label }}</a>
@@ -16,12 +16,12 @@
 
 {% if not items %}
 <article class="card">
-	<p class="muted">Todavía no hay nada aquí.</p>
+	<p class="muted">{{ t('contenido.vacio') }}</p>
 </article>
 {% else %}
 <table class="table">
 	<thead>
-		<tr><th>Título</th>{% if meta.dated %}<th>Fecha</th>{% endif %}{% if meta.dated %}<th>Evento</th>{% endif %}<th></th></tr>
+		<tr><th>{{ t('comun.titulo') }}</th>{% if meta.dated %}<th>{{ t('comun.fecha') }}</th>{% endif %}{% if meta.dated %}<th>{{ t('comun.evento') }}</th>{% endif %}<th></th></tr>
 	</thead>
 	<tbody>
 	{% for item in items %}
@@ -29,16 +29,16 @@
 			<td>
 				<a href="{{ url_for('content.edit', collection=collection, name=item.name) }}">{{ item.title }}</a>
 				<div class="muted small mono">{{ item.name }}</div>
-				{% if item.pinned %}<span class="tag">Fijado</span>{% endif %}
-				{% if item.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
+				{% if item.pinned %}<span class="tag">{{ t('comun.fijado') }}</span>{% endif %}
+				{% if item.ai_generated %}<span class="tag tag--ai" title="{{ t('comun.ia_ayuda') }}">{{ t('comun.ia') }}</span>{% endif %}
 			</td>
 			{# data-label is drawn by board.css under 640px, where the header row
 			   is hidden and a bare date in a stacked card says nothing. #}
-			{% if meta.dated %}<td data-label="Fecha">{{ item.date }}</td>{% endif %}
+			{% if meta.dated %}<td data-label="{{ t('comun.fecha') }}">{{ item.date }}</td>{% endif %}
 			{# The column that used to hold the categories. An event date is the
 			   one thing left that changes what a post is, and it is what a
 			   moderator scanning this list is looking for. #}
-			{% if meta.dated %}<td data-label="Evento">{{ item.event_date }}</td>{% endif %}
+			{% if meta.dated %}<td data-label="{{ t('comun.evento') }}">{{ item.event_date }}</td>{% endif %}
 			{# The flex row goes INSIDE the cell, never on it. `.actions` is
 			   display:flex, and a <td> told to be a flex container stops being a
 			   table cell: it leaves the row's layout and draws its bottom border
@@ -47,7 +47,7 @@
 			   it. test_templates.py now fails if it comes back. #}
 			<td>
 				<div class="actions actions--row">
-					<a class="linkish" href="{{ url_for('content.edit', collection=collection, name=item.name) }}">Editar</a>
+					<a class="linkish" href="{{ url_for('content.edit', collection=collection, name=item.name) }}">{{ t('comun.editar') }}</a>
 					{#- One press from the screen that shows what is already
 					    fijado, rather than opening the post to find out. It
 					    commits, like every other write here. -#}
@@ -55,13 +55,13 @@
 					      action="{{ url_for('content.pin', collection=collection, name=item.name) }}">
 						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 						<input type="hidden" name="value" value="{{ 0 if item.pinned else 1 }}">
-						<button class="linkish" type="submit">{{ 'No fijar' if item.pinned else 'Fijar' }}</button>
+						<button class="linkish" type="submit">{{ t('comun.no_fijar') if item.pinned else t('comun.fijar') }}</button>
 					</form>
 					<form method="post"
 					      action="{{ url_for('content.delete', collection=collection, name=item.name) }}"
-					      data-confirm="Se eliminará «{{ item.title }}» del sitio público. ¿Seguro?">
+					      data-confirm="{{ t('contenido.eliminar_confirmar', titulo=item.title) }}">
 						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-						<button class="linkish linkish--danger" type="submit">Eliminar</button>
+						<button class="linkish linkish--danger" type="submit">{{ t('comun.eliminar') }}</button>
 					</form>
 				</div>
 			</td>
@@ -71,9 +71,5 @@
 </table>
 {% endif %}
 
-<p class="muted small">
-	Se escribe en español. El alemán y el portugués los genera la traducción
-	automática un par de minutos después de publicar, y no se editan aquí: para
-	corregir una traducción a mano, marca «traducción manual» en ese archivo.
-</p>
+<p class="muted small">{{ t('contenido.nota_traduccion') }}</p>
 {% endblock %}

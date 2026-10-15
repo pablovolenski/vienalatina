@@ -1,0 +1,137 @@
+# Contenido: lo que ya está en el sitio público, y el formulario que lo escribe.
+#
+# Los nombres de los tipos — «Artículos», «Páginas», «Nuevo artículo» — todavía
+# no están aquí: viven en `content.py`, junto a la carpeta y el formato de
+# archivo de cada uno, y vendrán con las cadenas de Python. Lo que hay aquí es
+# todo lo que la pantalla dice por su cuenta.
+
+contenido.titulo:
+  es: "Contenido"
+  _note: "El título de la pantalla de lo ya publicado."
+
+contenido.tipos:
+  es: "Tipo de contenido"
+  _note: "No se ve: es el nombre de la fila de pestañas para un lector de pantalla."
+
+contenido.vacio:
+  es: "Todavía no hay nada aquí."
+  _note: "Cuando un tipo de contenido no tiene ninguna entrada."
+
+contenido.eliminar_confirmar:
+  es: "Se eliminará «{titulo}» del sitio público. ¿Seguro?"
+  _note: "La pregunta antes de borrar algo que está publicado."
+
+contenido.nota_traduccion:
+  es: >-
+    Se escribe en español. El alemán y el portugués los genera la traducción
+    automática un par de minutos después de publicar, y no se editan aquí: para
+    corregir una traducción a mano, marca «traducción manual» en ese archivo.
+  _note: "El párrafo del final de la lista."
+
+contenido.editar_algo:
+  es: "Editar {cosa}"
+  _note: >-
+    El título del formulario al corregir algo que ya existe. «{cosa}» es el tipo
+    — artículo, página — y llega en minúscula.
+
+contenido.vista_previa:
+  es: "Vista previa"
+  _note: "El botón que muestra cómo quedará, y la etiqueta del recuadro que aparece."
+
+contenido.menu:
+  es: "En el menú"
+  _note: "Dónde se cuelga una página dentro del menú del sitio público."
+
+contenido.menu_raiz:
+  es: "En la barra principal"
+  _note: "La opción de arriba de ese desplegable: una página de primer nivel."
+
+contenido.menu_dentro:
+  es: "Dentro de «{titulo}»"
+  _note: "Cada una de las demás opciones: colgarla debajo de otra página."
+
+contenido.menu_dentro_perdida:
+  es: "Dentro de «{titulo}» (no encontrada)"
+  _note: >-
+    La misma opción cuando la página madre ya no existe o no se pudo consultar.
+    Se conserva la relación en lugar de perderla sin avisar.
+
+contenido.orden:
+  es: "Orden"
+  _note: "En qué lugar del menú queda la página."
+
+contenido.orden_nota:
+  es: "Menor número, más a la izquierda. 50 si da igual."
+  _note: "Debajo de ese campo."
+
+contenido.evento_nota:
+  es: >-
+    Pon la fecha y será un evento: aparecerá en la agenda del sitio, con el día
+    y el lugar destacados, y se podrá añadir al calendario del móvil. Déjala
+    vacía y es un artículo normal.
+  _note: "Lo que explica el desplegable del evento al abrirlo."
+
+contenido.resumen_nota:
+  es: >-
+    Una o dos frases que se entiendan solas: es lo que aparece en los listados,
+    en WhatsApp al compartir el enlace y lo que citan los buscadores. Mejor
+    concreta («El sábado 12 en Ottakring») que general.
+  _note: "Debajo del campo del resumen."
+
+contenido.imagen:
+  es: "Imagen destacada"
+  _note: "La foto que encabeza la publicación y la que se ve al compartirla."
+
+contenido.imagen_actual_antes:
+  es: "Actual:"
+  _note: "El principio de la frase que rodea el nombre del archivo que ya hay."
+
+contenido.imagen_actual_despues:
+  es: "— sube otra para reemplazarla."
+  _note: "El final de esa frase, después del nombre del archivo."
+
+contenido.alt:
+  es: "Texto alternativo de la imagen"
+  _note: "Qué se ve en la foto, para quien no puede verla."
+
+contenido.alt_nota:
+  es: >-
+    Qué se ve en la foto, en una frase. Lo lee quien no puede ver la imagen y lo
+    leen también los buscadores.
+  _note: "Debajo de ese campo."
+
+contenido.cuerpo:
+  es: "Cuerpo"
+  _note: "El campo grande, el del texto de la publicación."
+
+contenido.cuerpo_pista:
+  es: "Markdown: **negrita**, ## títulos, listas, [enlaces](https://…)."
+  _note: "La pista dentro de ese campo, cuando está vacío."
+
+contenido.faq:
+  es: "Preguntas frecuentes"
+  _note: "Las preguntas y respuestas que se muestran al final de la página."
+
+contenido.faq_ejemplo:
+  es: "¿Dónde es?|En la plaza de Ottakring, junto al mercado."
+  _note: "El ejemplo que sale dentro de ese campo mientras está vacío."
+
+contenido.faq_nota_antes:
+  es: "Una por línea, con el formato"
+  _note: "El principio de la frase que rodea el formato «pregunta|respuesta»."
+
+contenido.faq_nota_despues:
+  es: >-
+    Se muestran al final de la página y son lo que mejor citan los buscadores y
+    los asistentes de IA: pregunta concreta, respuesta corta y verificable.
+  _note: "El final de esa frase, después del formato."
+
+contenido.traduccion_manual:
+  es: "Traducción manual — no generar alemán ni portugués para esto"
+  _note: >-
+    El interruptor que deja un texto fuera de la traducción automática, para
+    cuando las otras lenguas se escriben a mano.
+
+contenido.fijar_arriba:
+  es: "Fijar arriba"
+  _note: "El interruptor que pone la publicación arriba del todo en el sitio público."

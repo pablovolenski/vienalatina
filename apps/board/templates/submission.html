@@ -5,39 +5,47 @@
 {% block main %}
 <div class="feed-head">
 	<h1>{{ item.title }}</h1>
-	<a class="linkish" href="{{ url_for('submissions.index') }}">Volver</a>
+	<a class="linkish" href="{{ url_for('submissions.index') }}">{{ t('comun.volver') }}</a>
 </div>
 
 <article class="card">
 	<div class="card__meta">
 		<span class="tag tag--{{ item.state }}">{{ labels[item.state] }}</span>
 		<span>{{ person(item.author, item.author_login) }}</span> · <time>{{ item.created_at }}</time>
-		{% if item.event_date %} · <span>Evento el {{ item.event_date }}</span>{% endif %}
+		{% if item.event_date %} · <span>{{ t('publicaciones.evento_el', fecha=item.event_date) }}</span>{% endif %}
 		{#- Shown to the moderator before they decide: a disclosure the reviewer
 		    cannot see is one they cannot weigh. -#}
-		{% if item.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
+		{% if item.ai_generated %}<span class="tag tag--ai" title="{{ t('comun.ia_ayuda') }}">{{ t('comun.ia') }}</span>{% endif %}
 	</div>
 	{% if item.description %}<p class="muted">{{ item.description }}</p>{% endif %}
 	{% if item.photo_name %}
 	<img class="attachment"
 	     src="{{ url_for('submissions.photo', stored_name=item.photo_name) }}"
-	     alt="Imagen de «{{ item.title }}»">
+	     alt="{{ t('publicaciones.imagen_de', titulo=item.title) }}">
 	{% endif %}
 	<div class="prose">{{ body_html }}</div>
 </article>
 
 {% if item.state == 'rejected' and item.note %}
 <article class="card">
-	<h2>Motivo de la devolución</h2>
+	<h2>{{ t('publicaciones.motivo_titulo') }}</h2>
 	<p>{{ item.note }}</p>
 	{% if item.reviewer %}<p class="muted small">— {{ item.reviewer }}, {{ item.reviewed_at }}</p>{% endif %}
 </article>
 {% endif %}
 
 {% if item.state == 'approved' %}
+{#- Two keys rather than four: a sentence that names the moderator and the
+    path, and a bare «Publicado.» for the states where one of the two is
+    missing. The path loses its `mono` face to the placeholder, which is the
+    price of one editable sentence instead of three fragments. -#}
 <p class="muted">
-	Publicado{% if item.reviewer %} por {{ item.reviewer }}{% endif %}{% if item.published_path %} en <span class="mono">{{ item.published_path }}</span>{% endif %}.
-	La traducción al alemán y al portugués tarda un par de minutos.
+	{% if item.reviewer and item.published_path %}
+	{{ t('publicaciones.publicado_por_en', quien=item.reviewer, ruta=item.published_path) }}
+	{% else %}
+	{{ t('publicaciones.publicado_sin_detalle') }}
+	{% endif %}
+	{{ t('publicaciones.traduccion_tarda') }}
 </p>
 {% endif %}
 
@@ -46,31 +54,28 @@
    variations of the same action, and the reason is required for only one. #}
 <form class="card" method="post"
       action="{{ url_for('submissions.approve', submission_id=item.id) }}"
-      data-confirm="Se publicará en vienalatina.com con el nombre de {{ item.author }}. ¿Seguro?">
+      data-confirm="{{ t('publicaciones.aprobar_confirmar', autor=item.author) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<p class="muted small">
-		Al aprobar se publica tal cual está, firmado por {{ item.author }} — en el
-		sitio y en el historial del repositorio.
-	</p>
-	<button class="btn" type="submit">Aprobar y publicar</button>
+	<p class="muted small">{{ t('publicaciones.aprobar_nota', autor=item.author) }}</p>
+	<button class="btn" type="submit">{{ t('publicaciones.aprobar') }}</button>
 </form>
 
 <form class="card" method="post" action="{{ url_for('submissions.reject', submission_id=item.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<label for="note">Devolver con un motivo</label>
+	<label for="note">{{ t('publicaciones.devolver_label') }}</label>
 	<textarea id="note" name="note" rows="3"
-	          placeholder="Qué hay que cambiar para que se pueda publicar."></textarea>
-	<button class="linkish" type="submit">Devolver al autor</button>
+	          placeholder="{{ t('publicaciones.devolver_pista') }}"></textarea>
+	<button class="linkish" type="submit">{{ t('publicaciones.devolver') }}</button>
 </form>
 {% endif %}
 
 {% if mine and item.state != 'approved' %}
 <div class="actions">
-	<a class="btn" href="{{ url_for('submissions.edit', submission_id=item.id) }}">Editar</a>
+	<a class="btn" href="{{ url_for('submissions.edit', submission_id=item.id) }}">{{ t('comun.editar') }}</a>
 	<form method="post" action="{{ url_for('submissions.withdraw', submission_id=item.id) }}"
-	      data-confirm="Se borrará la propuesta. ¿Seguro?">
+	      data-confirm="{{ t('publicaciones.retirar_confirmar') }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button class="linkish linkish--danger" type="submit">Retirar</button>
+		<button class="linkish linkish--danger" type="submit">{{ t('publicaciones.retirar') }}</button>
 	</form>
 </div>
 {% endif %}
