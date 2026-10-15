@@ -4,7 +4,7 @@
 {% block main %}
 <div class="feed-head">
 	<h1>{{ event.title }}</h1>
-	<a class="linkish" href="{{ url_for('events.month', mes=event.starts_on[:7]) }}">Volver al calendario</a>
+	<a class="linkish" href="{{ url_for('events.month', mes=event.starts_on[:7]) }}">{{ t('calendario.volver') }}</a>
 </div>
 
 <article class="card">
@@ -21,21 +21,21 @@
 	{% if event.body_md %}<div class="prose">{{ body_html }}</div>{% endif %}
 
 	<div class="actions actions--row">
-		<a class="btn" href="{{ url_for('events.ics', event_id=event.id) }}">Añadir a mi calendario</a>
+		<a class="btn" href="{{ url_for('events.ics', event_id=event.id) }}">{{ t('calendario.anadir_al_mio') }}</a>
 		{% if may_edit %}
-		<a class="linkish" href="{{ url_for('events.edit', event_id=event.id) }}">Editar</a>
+		<a class="linkish" href="{{ url_for('events.edit', event_id=event.id) }}">{{ t('comun.editar') }}</a>
 		<form method="post" action="{{ url_for('events.delete', event_id=event.id) }}"
-		      data-confirm="Se quitará «{{ event.title }}» del calendario. ¿Seguro?">
+		      data-confirm="{{ t('calendario.eliminar_confirmar', titulo=event.title) }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<button class="linkish linkish--danger" type="submit">Eliminar</button>
+			<button class="linkish linkish--danger" type="submit">{{ t('comun.eliminar') }}</button>
 		</form>
 		{% endif %}
 	</div>
 </article>
 
 <p class="muted small">
-	Este evento sólo se ve desde el área de miembros. Para anunciar algo a todo
-	el mundo, usa <a href="{{ url_for('submissions.index') }}">Publicaciones</a>
-	poniéndole una fecha de evento.
+	{{ t('calendario.nota_interno_antes') }}
+	<a href="{{ url_for('submissions.index') }}">{{ t('nav.publicaciones') }}</a>
+	{{ t('calendario.nota_interno_despues') }}
 </p>
 {% endblock %}

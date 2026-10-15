@@ -1,0 +1,127 @@
+# El calendario interno: la rejilla del mes, un evento y su formulario.
+#
+# Los nombres de los meses y de los días de la semana no están aquí: los da
+# Python a partir de la fecha, y traducirlos es cosa del idioma del servidor y
+# no de esta pantalla.
+
+calendario.anadir:
+  es: "Añadir evento"
+  _note: "El botón de arriba del calendario. Lo ven moderadores y administración."
+
+calendario.anadir_dia:
+  es: "Añadir evento este día"
+  _note: >-
+    Lo que sale al posar el ratón sobre el «+» de una casilla. Abre el
+    formulario con ese día ya puesto.
+
+calendario.agenda_perdida:
+  es: >-
+    No se pudo leer la agenda pública del servidor de git, así que aquí abajo
+    faltan los eventos del sitio. Los internos están todos.
+  _note: "Cuando el calendario no pudo consultar los eventos del sitio público."
+
+calendario.mes:
+  es: "Mes"
+  _note: "No se ve: es el nombre de la barra del mes para un lector de pantalla."
+
+calendario.mes_anterior:
+  es: "Mes anterior"
+  _note: "No se ve: es lo que lee un lector de pantalla en la flecha de la izquierda."
+
+calendario.mes_siguiente:
+  es: "Mes siguiente"
+  _note: "Lo mismo en la flecha de la derecha."
+
+calendario.este_mes:
+  es: "Ir a este mes"
+  _note: "El enlace debajo de la barra, para volver al mes de hoy."
+
+calendario.vacio:
+  es: "No hay nada en {mes}."
+  _note: >-
+    Encima de la rejilla, cuando el mes está vacío. La rejilla se dibuja igual:
+    un mes que no dibuja nada parece roto.
+
+calendario.evento_dia:
+  es: "{n} evento el {dia}"
+  _note: >-
+    No se ve: es lo que lee un lector de pantalla en los puntos de una casilla
+    con un solo evento.
+
+calendario.eventos_dia:
+  es: "{n} eventos el {dia}"
+  _note: "Lo mismo cuando hay más de uno."
+
+calendario.eventos_mes:
+  es: "Eventos del mes"
+  _note: >-
+    No se ve: es el nombre de la lista que sale debajo de la rejilla en el
+    móvil, para un lector de pantalla.
+
+calendario.dia_de:
+  es: "{dia} de {mes}"
+  _note: "El encabezado de cada día en esa lista."
+
+calendario.publico:
+  es: "público"
+  _note: "La etiqueta de un evento que además está en el sitio público."
+
+calendario.nota_publico_antes:
+  es: "Los eventos marcados"
+  _note: "El principio de la frase del final, que rodea esa etiqueta."
+
+calendario.nota_publico_despues:
+  es: "están en vienalatina.com y los ve cualquiera. Los demás sólo se ven desde aquí."
+  _note: "El final de esa frase, después de la etiqueta."
+
+calendario.volver:
+  es: "Volver al calendario"
+  _note: "El enlace de arriba de un evento."
+
+calendario.anadir_al_mio:
+  es: "Añadir a mi calendario"
+  _note: >-
+    Descarga el evento para el calendario del teléfono o del ordenador. No
+    avisa a nadie: es un archivo.
+
+calendario.eliminar_confirmar:
+  es: "Se quitará «{titulo}» del calendario. ¿Seguro?"
+  _note: "La pregunta antes de borrar un evento."
+
+calendario.nota_interno_antes:
+  es: >-
+    Este evento sólo se ve desde el área de miembros. Para anunciar algo a todo
+    el mundo, usa
+  _note: >-
+    El párrafo del final de un evento. Le sigue el enlace a Publicaciones, así
+    que la frase termina sin punto.
+
+calendario.nota_interno_despues:
+  es: "poniéndole una fecha de evento."
+  _note: "El final de esa frase, después del enlace."
+
+calendario.nuevo_evento:
+  es: "Nuevo evento"
+  _note: "El título del formulario al añadir un evento."
+
+calendario.editar_evento:
+  es: "Editar evento"
+  _note: "El mismo título al corregir uno que ya existe."
+
+calendario.formulario_nota:
+  es: >-
+    Esto va al calendario de la comunidad, que sólo ven los miembros. No sale al
+    sitio público ni se comparte fuera.
+  _note: "El párrafo de arriba del formulario."
+
+calendario.detalles:
+  es: "Detalles"
+  _note: "El campo grande del formulario de un evento."
+
+calendario.detalles_pista:
+  es: "Qué llevar, cómo llegar, a quién avisar."
+  _note: "La pista dentro de ese campo, cuando está vacío."
+
+calendario.imagen_ya:
+  es: "Ya tiene una. Subir otra la reemplaza."
+  _note: "Debajo del campo de la imagen, al editar un evento que ya tiene una."

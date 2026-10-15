@@ -1,144 +1,120 @@
 {% extends "base.html" %}
-{% block title %}Gestión{% endblock %}
+{% block title %}{{ t('nav.gestion') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Gestión</h1>
+	<h1>{{ t('nav.gestion') }}</h1>
 </div>
 
-<p class="muted">
-	Lo que sólo hace la administración. Todo lo demás — el muro, los privados,
-	las publicaciones — está en las otras secciones y funciona igual para ti que
-	para cualquier miembro.
-</p>
+<p class="muted">{{ t('gestion.intro') }}</p>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Miembros</h2>
-		<a class="linkish" href="{{ url_for('members.new') }}">Dar de alta</a>
+		<h2>{{ t('nav.miembros') }}</h2>
+		<a class="linkish" href="{{ url_for('members.new') }}">{{ t('miembros.alta') }}</a>
 	</div>
 	<p class="panel__row">
-		{{ counts.members }} en total · {{ counts.moderators }} pueden moderar
-		{% if counts.suspended %} · {{ counts.suspended }} suspendido{{ '' if counts.suspended == 1 else 's' }}{% endif %}
+		{{ t('gestion.cuenta_miembros', total=counts.members, moderadores=counts.moderators) }}
+		{% if counts.suspended %} · {{ t('gestion.suspendido', n=counts.suspended) if counts.suspended == 1
+		                               else t('gestion.suspendidos', n=counts.suspended) }}{% endif %}
 	</p>
 	<p class="muted small">
-		El directorio está en <a href="{{ url_for('members.index') }}">Miembros</a>,
-		que ahora es una sección como las demás. Invitar de nuevo, cambiar el rol,
-		suspender y eliminar están en la ficha de cada persona.
+		{{ t('gestion.miembros_nota_antes') }}
+		<a href="{{ url_for('members.index') }}">{{ t('nav.miembros') }}</a>,
+		{{ t('gestion.miembros_nota_despues') }}
 	</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Artículos publicados</h2>
-		<a class="linkish" href="{{ url_for('content.index', collection='post') }}">Abrir</a>
+		<h2>{{ t('gestion.articulos') }}</h2>
+		<a class="linkish" href="{{ url_for('content.index', collection='post') }}">{{ t('gestion.abrir') }}</a>
 	</div>
 	<p class="muted small">
-		Lo que ya está en vienalatina.com: editar, corregir o retirar. Para
-		publicar algo nuevo, o para revisar lo que proponen los miembros, está
-		<a href="{{ url_for('submissions.index') }}">Publicaciones</a>.
+		{{ t('gestion.articulos_nota_antes') }}
+		<a href="{{ url_for('submissions.index') }}">{{ t('nav.publicaciones') }}</a>.
 	</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Páginas del sitio</h2>
-		<a class="linkish" href="{{ url_for('content.index', collection='page') }}">Abrir</a>
+		<h2>{{ t('gestion.paginas') }}</h2>
+		<a class="linkish" href="{{ url_for('content.index', collection='page') }}">{{ t('gestion.abrir') }}</a>
 	</div>
 	<p class="muted small">
-		Acerca de, contacto y las demás páginas fijas de vienalatina.com. Las
-		publicaciones no están aquí: eso es
-		<a href="{{ url_for('submissions.index') }}">Publicaciones</a>, que los
-		moderadores comparten contigo.
+		{{ t('gestion.paginas_nota_antes') }}
+		<a href="{{ url_for('submissions.index') }}">{{ t('nav.publicaciones') }}</a>,
+		{{ t('gestion.paginas_nota_despues') }}
 	</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Biblioteca de medios</h2>
-		<a class="linkish" href="{{ url_for('media.index') }}">Abrir</a>
+		<h2>{{ t('gestion.medios') }}</h2>
+		<a class="linkish" href="{{ url_for('media.index') }}">{{ t('gestion.abrir') }}</a>
 	</div>
-	<p class="muted small">
-		Todas las imágenes del sitio público y qué artículo usa cada una. Las que
-		no usa nadie —de artículos que se borraron— se pueden quitar desde ahí.
-	</p>
+	<p class="muted small">{{ t('gestion.medios_nota') }}</p>
 </section>
 
 {% if g.member.role == 'superadmin' %}
 <section class="panel">
 	<div class="panel__head">
-		<h2>Marca</h2>
-		<a class="linkish" href="{{ url_for('brand.edit') }}">Abrir</a>
+		<h2>{{ t('gestion.marca') }}</h2>
+		<a class="linkish" href="{{ url_for('brand.edit') }}">{{ t('gestion.abrir') }}</a>
 	</div>
 	{% if brand.updated_at and not brand.published_at %}
-	<p class="panel__row">Hay cambios guardados que no han llegado al sitio público.</p>
+	<p class="panel__row">{{ t('gestion.sin_publicar') }}</p>
 	{% endif %}
-	<p class="muted small">
-		Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
-		sitio. Con un apartado avanzado para quien sepa CSS, y un botón para
-		volver a lo de fábrica.
-	</p>
+	<p class="muted small">{{ t('gestion.marca_nota') }}</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Identidad</h2>
-		<a class="linkish" href="{{ url_for('identity.edit') }}">Abrir</a>
+		<h2>{{ t('gestion.identidad') }}</h2>
+		<a class="linkish" href="{{ url_for('identity.edit') }}">{{ t('gestion.abrir') }}</a>
 	</div>
 	{% set site = identity() %}{% if site.updated_at and not site.published_at %}
-	<p class="panel__row">Hay cambios guardados que no han llegado al sitio público.</p>
+	<p class="panel__row">{{ t('gestion.sin_publicar') }}</p>
 	{% endif %}
-	<p class="muted small">
-		El nombre y el lema en los tres idiomas, los perfiles de la asociación en
-		otros sitios, el contacto y el pie de página.
-	</p>
+	<p class="muted small">{{ t('gestion.identidad_nota') }}</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Textos</h2>
-		<a class="linkish" href="{{ url_for('ui.edit') }}">Abrir</a>
+		<h2>{{ t('gestion.textos') }}</h2>
+		<a class="linkish" href="{{ url_for('ui.edit') }}">{{ t('gestion.abrir') }}</a>
 	</div>
 	{% set words = ui_state() %}{% if words.updated_at and not words.published_at %}
-	<p class="panel__row">Hay cambios guardados que no han llegado al sitio público.</p>
+	<p class="panel__row">{{ t('gestion.sin_publicar') }}</p>
 	{% endif %}
-	<p class="muted small">
-		Cómo se llaman las secciones y qué dicen los botones y los avisos, en las
-		dos mitades del sitio. Si aquí dentro preferís «Escritorio» a «Inicio», o
-		«Socios» a «Miembros», se cambia desde aquí.
-	</p>
+	<p class="muted small">{{ t('gestion.textos_nota') }}</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Estado del sistema</h2>
-		<a class="linkish" href="{{ url_for('status.index') }}">Abrir</a>
+		<h2>{{ t('gestion.estado') }}</h2>
+		<a class="linkish" href="{{ url_for('status.index') }}">{{ t('gestion.abrir') }}</a>
 	</div>
-	<p class="muted small">
-		Si el token para publicar funciona de verdad, si el correo sale, cuándo fue
-		la última copia de seguridad y cuánto disco queda. No cambia nada: responde.
-	</p>
+	<p class="muted small">{{ t('gestion.estado_nota') }}</p>
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Registro de actividad</h2>
-		<a class="linkish" href="{{ url_for('activity.index') }}">Abrir</a>
+		<h2>{{ t('gestion.registro') }}</h2>
+		<a class="linkish" href="{{ url_for('activity.index') }}">{{ t('gestion.abrir') }}</a>
 	</div>
-	<p class="muted small">
-		Quién cambió un rol, aprobó una publicación, tocó el aspecto del sitio o
-		eliminó a alguien.
-	</p>
+	<p class="muted small">{{ t('gestion.registro_nota') }}</p>
 </section>
 {% endif %}
 
 {% if counts.pending %}
 <section class="panel panel--attention">
 	<div class="panel__head">
-		<h2>Pendiente de revisar</h2>
-		<a class="linkish" href="{{ url_for('submissions.index') }}">Ver</a>
+		<h2>{{ t('gestion.pendiente_titulo') }}</h2>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">{{ t('gestion.ver') }}</a>
 	</div>
-	<p class="panel__row">{{ counts.pending }} propuesta{{ '' if counts.pending == 1 else 's' }} esperando a un moderador.</p>
+	<p class="panel__row">{{ t('gestion.pendiente', n=counts.pending) if counts.pending == 1
+	                        else t('gestion.pendientes', n=counts.pending) }}</p>
 </section>
 {% endif %}
 {% endblock %}

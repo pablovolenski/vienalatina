@@ -142,3 +142,7 @@ comun.anteriores:
 comun.siguientes:
   es: "Siguientes →"
   _note: "Para ir a la siguiente."
+
+comun.volver_gestion:
+  es: "Volver a Gestión"
+  _note: "Arriba a la derecha en las pantallas de administración."

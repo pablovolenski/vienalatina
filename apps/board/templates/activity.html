@@ -1,25 +1,21 @@
 {# Gestión → Registro de actividad. Read-only by construction: there is nothing
    here to press, because an audit trail you can edit is not one. #}
 {% extends "base.html" %}
-{% block title %}Registro{% endblock %}
+{% block title %}{{ t('gestion.registro_titulo_pestana') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Registro de actividad</h1>
-	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+	<h1>{{ t('gestion.registro') }}</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion') }}</a>
 </div>
 
-<p class="muted">
-	Lo que se ha hecho que cambia quién puede hacer qué, o qué ve el público. No
-	están las visitas ni los inicios de sesión correctos: un registro que lo
-	apunta todo es un registro que nadie lee.
-</p>
+<p class="muted">{{ t('gestion.registro_intro') }}</p>
 
 {% if not rows %}
-<p class="muted">Todavía no hay nada apuntado.</p>
+<p class="muted">{{ t('gestion.registro_vacio') }}</p>
 {% else %}
 <table class="table">
-	<thead><tr><th>Cuándo</th><th>Quién</th><th>Qué</th></tr></thead>
+	<thead><tr><th>{{ t('gestion.cuando') }}</th><th>{{ t('gestion.quien') }}</th><th>{{ t('gestion.que') }}</th></tr></thead>
 	<tbody>
 	{% for row in rows %}
 	<tr>
@@ -28,7 +24,7 @@
 			{# A name that is simply gone, rather than a tombstone: the row stays
 			   when somebody is erased and the name does not, which is the whole
 			   arrangement. #}
-			{{ row.actor or 'Alguien que ya no está' }}
+			{{ row.actor or t('gestion.actor_ausente') }}
 		</td>
 		<td>
 			{{ row.sentence }}
@@ -41,10 +37,10 @@
 
 <div class="actions">
 	{% if page > 0 %}
-	<a class="linkish" href="{{ url_for('activity.index', p=page - 1) }}">← Más reciente</a>
+	<a class="linkish" href="{{ url_for('activity.index', p=page - 1) }}">{{ t('gestion.mas_reciente') }}</a>
 	{% endif %}
 	{% if more %}
-	<a class="linkish" href="{{ url_for('activity.index', p=page + 1) }}">Más antiguo →</a>
+	<a class="linkish" href="{{ url_for('activity.index', p=page + 1) }}">{{ t('gestion.mas_antiguo') }}</a>
 	{% endif %}
 </div>
 {% endif %}

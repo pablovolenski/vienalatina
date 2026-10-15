@@ -1,55 +1,54 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Editar evento' if event else 'Nuevo evento' }}{% endblock %}
+{% block title %}{{ t('calendario.editar_evento') if event
+                       else t('calendario.nuevo_evento') }}{% endblock %}
 
 {% set f = fields or event %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>{{ 'Editar evento' if event else 'Nuevo evento' }}</h1>
+	<h1>{{ t('calendario.editar_evento') if event
+	       else t('calendario.nuevo_evento') }}</h1>
 </div>
 
-<p class="muted">
-	Esto va al calendario de la comunidad, que sólo ven los miembros. No sale al
-	sitio público ni se comparte fuera.
-</p>
+<p class="muted">{{ t('calendario.formulario_nota') }}</p>
 
 <form class="card" method="post" enctype="multipart/form-data"
       action="{{ url_for('events.edit', event_id=event.id) if event else url_for('events.new') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-	<label for="title">Título</label>
+	<label for="title">{{ t('comun.titulo') }}</label>
 	<input id="title" name="title" maxlength="140" required
 	       value="{{ f.title if f else '' }}">
 
-	<label for="starts_on">Fecha</label>
+	<label for="starts_on">{{ t('comun.fecha') }}</label>
 	<input id="starts_on" name="starts_on" type="date" required
 	       value="{{ (f.starts_on if f else '') or suggested }}">
 
-	<label for="starts_at">Hora <span class="muted small">(opcional)</span></label>
+	<label for="starts_at">{{ t('comun.evento_hora') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="starts_at" name="starts_at" type="time" value="{{ (f.starts_at if f else '') or '' }}">
-	<p class="muted small">Déjala vacía si dura todo el día.</p>
+	<p class="muted small">{{ t('comun.evento_hora_nota') }}</p>
 
-	<label for="location">Lugar <span class="muted small">(opcional)</span></label>
+	<label for="location">{{ t('comun.evento_lugar') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="location" name="location" maxlength="200" value="{{ (f.location if f else '') or '' }}">
 
-	<label for="body">Detalles <span class="muted small">(opcional)</span></label>
+	<label for="body">{{ t('calendario.detalles') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<textarea id="body" name="body" rows="8" data-markdown data-rich="full"
-	          placeholder="Qué llevar, cómo llegar, a quién avisar.">{{ (f.body_md if event and not fields else (f.body if f else '')) or '' }}</textarea>
+	          placeholder="{{ t('calendario.detalles_pista') }}">{{ (f.body_md if event and not fields else (f.body if f else '')) or '' }}</textarea>
 	{#- The stored markdown, rendered by the server for the editor to adopt.
 	    There is no markdown parser in the browser: this is how the box can
 	    show the formatting without a second opinion about what somebody's
 	    text means. Ignored entirely when scripting is off. -#}
 	<template data-rich-html="body">{{ to_html((f.body_md if event and not fields else (f.body if f else '')) or '') }}</template>
 
-	<label for="picture">Imagen <span class="muted small">(opcional)</span></label>
+	<label for="picture">{{ t('comun.imagen') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="picture" name="picture" type="file" accept="image/*">
 	{% if event and event.photo_name %}
-	<p class="muted small">Ya tiene una. Subir otra la reemplaza.</p>
+	<p class="muted small">{{ t('calendario.imagen_ya') }}</p>
 	{% endif %}
 
 	<div class="actions">
-		<button class="btn" type="submit">Guardar</button>
-		<a class="btn btn--quiet" href="{{ url_for('events.month') }}">Cancelar</a>
+		<button class="btn" type="submit">{{ t('comun.guardar') }}</button>
+		<a class="btn btn--quiet" href="{{ url_for('events.month') }}">{{ t('comun.cancelar') }}</a>
 	</div>
 </form>
 {% endblock %}

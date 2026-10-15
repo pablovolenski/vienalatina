@@ -1,0 +1,273 @@
+# Gestión: la portada de la administración, el estado del servidor, el registro
+# de actividad y la biblioteca de medios.
+#
+# Los párrafos de cada tarjeta son casi todo lo que hay aquí, y son los que más
+# falta hace poder reescribir: dicen qué hace cada pantalla, y una asociación
+# que llame a las cosas de otra manera tiene que poder decirlo con sus palabras.
+
+gestion.intro:
+  es: >-
+    Lo que sólo hace la administración. Todo lo demás — el muro, los privados,
+    las publicaciones — está en las otras secciones y funciona igual para ti que
+    para cualquier miembro.
+  _note: "El párrafo de arriba de Gestión."
+
+gestion.abrir:
+  es: "Abrir"
+  _note: "El enlace de cada tarjeta de Gestión."
+
+gestion.ver:
+  es: "Ver"
+  _note: "El enlace de la tarjeta de lo que está esperando a un moderador."
+
+gestion.sin_publicar:
+  es: "Hay cambios guardados que no han llegado al sitio público."
+  _note: >-
+    En Marca, Identidad y Textos, cuando algo se guardó pero el sitio público
+    todavía no lo tiene.
+
+gestion.cuenta_miembros:
+  es: "{total} en total · {moderadores} pueden moderar"
+  _note: "La línea de números de la tarjeta de Miembros."
+
+gestion.suspendido:
+  es: "{n} suspendido"
+  _note: "Detrás de esa línea, cuando hay exactamente una cuenta suspendida."
+
+gestion.suspendidos:
+  es: "{n} suspendidos"
+  _note: "Lo mismo cuando hay más de una."
+
+gestion.miembros_nota_antes:
+  es: "El directorio está en"
+  _note: "El principio de la frase que rodea el enlace a Miembros."
+
+gestion.miembros_nota_despues:
+  es: >-
+    que ahora es una sección como las demás. Invitar de nuevo, cambiar el rol,
+    suspender y eliminar están en la ficha de cada persona.
+  _note: "El final de esa frase, después del enlace."
+
+gestion.articulos:
+  es: "Artículos publicados"
+  _note: "La tarjeta de lo que ya está en el sitio público."
+
+gestion.articulos_nota_antes:
+  es: >-
+    Lo que ya está en vienalatina.com: editar, corregir o retirar. Para publicar
+    algo nuevo, o para revisar lo que proponen los miembros, está
+  _note: >-
+    El texto de esa tarjeta. Le sigue el enlace a Publicaciones, así que la
+    frase termina sin punto.
+
+gestion.paginas:
+  es: "Páginas del sitio"
+  _note: "La tarjeta de las páginas fijas: acerca de, contacto y las demás."
+
+gestion.paginas_nota_antes:
+  es: >-
+    Acerca de, contacto y las demás páginas fijas de vienalatina.com. Las
+    publicaciones no están aquí: eso es
+  _note: "El texto de esa tarjeta, antes del enlace a Publicaciones."
+
+gestion.paginas_nota_despues:
+  es: "que los moderadores comparten contigo."
+  _note: "El final de esa frase, después del enlace."
+
+gestion.medios:
+  es: "Biblioteca de medios"
+  _note: "La tarjeta de las imágenes del sitio público, y el título de esa pantalla."
+
+gestion.medios_nota:
+  es: >-
+    Todas las imágenes del sitio público y qué artículo usa cada una. Las que no
+    usa nadie —de artículos que se borraron— se pueden quitar desde ahí.
+  _note: "El texto de esa tarjeta."
+
+gestion.marca:
+  es: "Marca"
+  _note: "La tarjeta de los colores, el logotipo y el icono."
+
+gestion.marca_nota:
+  es: >-
+    Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
+    sitio. Con un apartado avanzado para quien sepa CSS, y un botón para volver
+    a lo de fábrica.
+  _note: "El texto de esa tarjeta."
+
+gestion.identidad:
+  es: "Identidad"
+  _note: "La tarjeta del nombre, el lema y el contacto de la asociación."
+
+gestion.identidad_nota:
+  es: >-
+    El nombre y el lema en los tres idiomas, los perfiles de la asociación en
+    otros sitios, el contacto y el pie de página.
+  _note: "El texto de esa tarjeta."
+
+gestion.textos:
+  es: "Textos"
+  _note: "La tarjeta de esta misma lista de palabras."
+
+gestion.textos_nota:
+  es: >-
+    Cómo se llaman las secciones y qué dicen los botones y los avisos, en las
+    dos mitades del sitio. Si aquí dentro preferís «Escritorio» a «Inicio», o
+    «Socios» a «Miembros», se cambia desde aquí.
+  _note: "El texto de esa tarjeta."
+
+gestion.estado:
+  es: "Estado del sistema"
+  _note: "La tarjeta del estado del servidor, y el título de esa pantalla."
+
+gestion.estado_nota:
+  es: >-
+    Si el token para publicar funciona de verdad, si el correo sale, cuándo fue
+    la última copia de seguridad y cuánto disco queda. No cambia nada: responde.
+  _note: "El texto de esa tarjeta."
+
+gestion.registro:
+  es: "Registro de actividad"
+  _note: "La tarjeta del registro, y el título de esa pantalla."
+
+gestion.registro_nota:
+  es: >-
+    Quién cambió un rol, aprobó una publicación, tocó el aspecto del sitio o
+    eliminó a alguien.
+  _note: "El texto de esa tarjeta."
+
+gestion.pendiente_titulo:
+  es: "Pendiente de revisar"
+  _note: "La tarjeta que sólo sale cuando hay propuestas esperando."
+
+gestion.pendiente:
+  es: "{n} propuesta esperando a un moderador."
+  _note: "Dentro de esa tarjeta, cuando hay exactamente una."
+
+gestion.pendientes:
+  es: "{n} propuestas esperando a un moderador."
+  _note: "Lo mismo cuando hay más de una."
+
+gestion.estado_titulo_pestana:
+  es: "Estado"
+  _note: "El título de la pestaña del navegador en la pantalla del estado."
+
+gestion.estado_intro:
+  es: >-
+    Lo que es verdad del servidor ahora mismo, preguntado al sistema y no a un
+    archivo. Esta página no cambia nada: sólo responde.
+  _note: "El párrafo de arriba de esa pantalla."
+
+gestion.todo_responde:
+  es: "Todo responde."
+  _note: "Arriba de esa pantalla, cuando ninguna comprobación se queja."
+
+gestion.bien:
+  es: "Bien"
+  _note: "La etiqueta de una comprobación que responde como debe."
+
+gestion.atencion:
+  es: "Atención"
+  _note: "La de una comprobación que funciona pero conviene mirar."
+
+gestion.mal:
+  es: "Mal"
+  _note: "La de una comprobación que no responde."
+
+gestion.cuantas_cosas:
+  es: "Cuántas cosas hay"
+  _note: "El título del recuadro de números del estado del sistema."
+
+gestion.estado_miembros:
+  es: "{total} miembros · {cargos} con algún cargo"
+  _note: "La primera línea de ese recuadro."
+
+gestion.estado_cosas:
+  es: >-
+    {articulos} artículos publicados · {hilos} hilos en el muro · {eventos}
+    eventos en el calendario
+  _note: "La segunda línea."
+
+gestion.estado_pendiente:
+  es: "{n} propuesta esperando"
+  _note: "El final de esa línea, cuando hay exactamente una."
+
+gestion.estado_pendientes:
+  es: "{n} propuestas esperando"
+  _note: "Lo mismo cuando hay más de una."
+
+gestion.registro_titulo_pestana:
+  es: "Registro"
+  _note: "El título de la pestaña del navegador en la pantalla del registro."
+
+gestion.registro_intro:
+  es: >-
+    Lo que se ha hecho que cambia quién puede hacer qué, o qué ve el público. No
+    están las visitas ni los inicios de sesión correctos: un registro que lo
+    apunta todo es un registro que nadie lee.
+  _note: "El párrafo de arriba del registro."
+
+gestion.registro_vacio:
+  es: "Todavía no hay nada apuntado."
+  _note: "Cuando el registro está vacío."
+
+gestion.cuando:
+  es: "Cuándo"
+  _note: "La primera columna del registro."
+
+gestion.quien:
+  es: "Quién"
+  _note: "La segunda."
+
+gestion.que:
+  es: "Qué"
+  _note: "La tercera."
+
+gestion.actor_ausente:
+  es: "Alguien que ya no está"
+  _note: >-
+    En la columna de quién, cuando esa persona fue eliminada: la línea se queda
+    y el nombre no.
+
+gestion.mas_reciente:
+  es: "← Más reciente"
+  _note: "Para ir a la página anterior del registro."
+
+gestion.mas_antiguo:
+  es: "Más antiguo →"
+  _note: "Para ir a la siguiente."
+
+gestion.medios_titulo_pestana:
+  es: "Medios"
+  _note: "El título de la pestaña del navegador en la biblioteca de medios."
+
+gestion.medios_intro:
+  es: "Todas las imágenes que lleva el sitio público, y qué artículo usa cada una."
+  _note: "El párrafo de arriba de la biblioteca."
+
+gestion.medios_huerfanas:
+  es: "{n} no la usa nadie"
+  _note: >-
+    Detrás de esa frase, en negrita, cuando hay imágenes que no usa ningún
+    artículo.
+
+gestion.medios_huerfanas_nota:
+  es: >-
+    se subieron con un artículo que luego se borró, y siguen ahí ocupando sitio.
+  _note: "El final de esa frase."
+
+gestion.medios_vacio:
+  es: "No hay imágenes todavía."
+  _note: "Cuando el sitio no tiene ninguna imagen."
+
+gestion.medios_sin_uso:
+  es: "No la usa ningún artículo."
+  _note: "Debajo de una imagen que no usa nadie."
+
+gestion.borrar:
+  es: "Borrar"
+  _note: "El botón que quita una imagen del repositorio."
+
+gestion.borrar_confirmar:
+  es: "Se borrará {archivo} del repositorio. ¿Seguro?"
+  _note: "La pregunta antes de borrarla."

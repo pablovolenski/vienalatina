@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Calendario{% endblock %}
+{% block title %}{{ t('nav.calendario') }}{% endblock %}
 
 {#- One definition of what an event looks like, used in the grid cell and again
     in the list underneath it. Two copies of this markup would drift the first
@@ -7,23 +7,20 @@
 {% macro event_link(item) %}
 <a class="cal__event {{ 'cal__event--public' if item.public }}" href="{{ item.url }}">
 	{%- if item.starts_at %}<time>{{ item.starts_at }}</time> {% endif %}{{ item.title }}
-	{%- if item.public %} <span class="tag tag--quiet">público</span>{% endif %}
+	{%- if item.public %} <span class="tag tag--quiet">{{ t('calendario.publico') }}</span>{% endif %}
 </a>
 {% endmacro %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Calendario</h1>
+	<h1>{{ t('nav.calendario') }}</h1>
 	{% if may_edit %}
-	<a class="btn" href="{{ url_for('events.new') }}">Añadir evento</a>
+	<a class="btn" href="{{ url_for('events.new') }}">{{ t('calendario.anadir') }}</a>
 	{% endif %}
 </div>
 
 {% if public_missing %}
-<p class="flash flash--error">
-	No se pudo leer la agenda pública del servidor de git, así que aquí abajo
-	faltan los eventos del sitio. Los internos están todos.
-</p>
+<p class="flash flash--error">{{ t('calendario.agenda_perdida') }}</p>
 {% endif %}
 
 {#- Two round controls with the month between them, rather than three runs of
@@ -31,22 +28,22 @@
     Siguiente →» pushed the next-month link off the right edge, which is how a
     month became impossible to leave. The same shape as the public agenda's
     bar, which has never had that problem. -#}
-<nav class="cal-bar" aria-label="Mes">
-	<a class="cal-bar__move" rel="prev" aria-label="Mes anterior"
+<nav class="cal-bar" aria-label="{{ t('calendario.mes') }}">
+	<a class="cal-bar__move" rel="prev" aria-label="{{ t('calendario.mes_anterior') }}"
 	   href="{{ url_for('events.month', mes=previous) }}">←</a>
 	<strong class="cal-bar__label">{{ label }}</strong>
-	<a class="cal-bar__move" rel="next" aria-label="Mes siguiente"
+	<a class="cal-bar__move" rel="next" aria-label="{{ t('calendario.mes_siguiente') }}"
 	   href="{{ url_for('events.month', mes=next) }}">→</a>
 </nav>
 <p class="muted small cal-bar__today">
-	<a href="{{ url_for('events.month', mes=this_month) }}">Ir a este mes</a>
+	<a href="{{ url_for('events.month', mes=this_month) }}">{{ t('calendario.este_mes') }}</a>
 </p>
 
 {# Said above the grid rather than below it, so a thumb meets it first. The
    grid is drawn either way: a month that draws nothing because it holds
    nothing looks broken, and looking broken is what it did. #}
 {% if not by_day %}
-<p class="muted cal__empty">No hay nada en {{ label }}.</p>
+<p class="muted cal__empty">{{ t('calendario.vacio', mes=label) }}</p>
 {% endif %}
 
 <ol class="cal__head" aria-hidden="true">
@@ -79,7 +76,9 @@
 		   stay readable. Above 640px they are hidden and the titles sit in the
 		   cell itself. #}
 		<a class="cal__dots" href="#eventos-{{ day }}"
-		   aria-label="{{ by_day.get(day)|length }} evento{{ '' if by_day.get(day)|length == 1 else 's' }} el {{ day }}">
+		   aria-label="{{ t('calendario.evento_dia', n=by_day.get(day)|length, dia=day)
+	                 if by_day.get(day)|length == 1
+	                 else t('calendario.eventos_dia', n=by_day.get(day)|length, dia=day) }}">
 			{% for item in by_day.get(day)[:4] %}<i class="cal__dot {{ 'cal__dot--public' if item.public }}"></i>{% endfor %}
 		</a>
 		{% endif %}
@@ -89,7 +88,7 @@
 		{% if may_edit %}
 		{# The day is carried into the form, so adding something to the 24th
 		   starts with the 24th already filled in. #}
-		<a class="cal__add" title="Añadir evento este día"
+		<a class="cal__add" title="{{ t('calendario.anadir_dia') }}"
 		   href="{{ url_for('events.new', dia='%s-%02d'|format(month_key, day)) }}">+</a>
 		{% endif %}
 	</li>
@@ -100,17 +99,18 @@
 
 {# Only the days that have something in them, and only on a phone — above 640px
    every title is already in its cell and this would say it all twice. #}
-<section class="cal__list" aria-label="Eventos del mes">
+<section class="cal__list" aria-label="{{ t('calendario.eventos_mes') }}">
 	{% for day, items in by_day|dictsort %}
 	<div class="cal__listday" id="eventos-{{ day }}">
-		<h2 class="cal__listhead">{{ day }} de {{ label }}</h2>
+		<h2 class="cal__listhead">{{ t('calendario.dia_de', dia=day, mes=label) }}</h2>
 		{% for item in items %}{{ event_link(item) }}{% endfor %}
 	</div>
 	{% endfor %}
 </section>
 
 <p class="muted small">
-	Los eventos marcados <span class="tag tag--quiet">público</span> están en
-	vienalatina.com y los ve cualquiera. Los demás sólo se ven desde aquí.
+	{{ t('calendario.nota_publico_antes') }}
+	<span class="tag tag--quiet">{{ t('calendario.publico') }}</span>
+	{{ t('calendario.nota_publico_despues') }}
 </p>
 {% endblock %}

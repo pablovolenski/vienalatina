@@ -4,24 +4,24 @@
    listing sorted by name buries them among the pictures doing their job, which
    is how they went unnoticed for the life of the site. #}
 {% extends "base.html" %}
-{% block title %}Medios{% endblock %}
+{% block title %}{{ t('gestion.medios_titulo_pestana') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Biblioteca de medios</h1>
-	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+	<h1>{{ t('gestion.medios') }}</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion') }}</a>
 </div>
 
 <p class="muted">
-	Todas las imágenes que lleva el sitio público, y qué artículo usa cada una.
+	{{ t('gestion.medios_intro') }}
 	{% if orphans %}
-	<strong>{{ orphans }} no la usa nadie</strong>: se subieron con un artículo que
-	luego se borró, y siguen ahí ocupando sitio.
+	<strong>{{ t('gestion.medios_huerfanas', n=orphans) }}</strong>:
+	{{ t('gestion.medios_huerfanas_nota') }}
 	{% endif %}
 </p>
 
 {% if not items %}
-<p class="muted">No hay imágenes todavía.</p>
+<p class="muted">{{ t('gestion.medios_vacio') }}</p>
 {% else %}
 <ul class="media-grid">
 	{% for item in items %}
@@ -32,12 +32,12 @@
 		{% if item.posts %}
 		<p class="muted small">{{ item.posts|join(', ') }}</p>
 		{% else %}
-		<p class="muted small">No la usa ningún artículo.</p>
+		<p class="muted small">{{ t('gestion.medios_sin_uso') }}</p>
 		<form method="post" action="{{ url_for('media.delete', name=item.name) }}"
-		      data-confirm="Se borrará {{ item.name }} del repositorio. ¿Seguro?">
+		      data-confirm="{{ t('gestion.borrar_confirmar', archivo=item.name) }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" name="sha" value="{{ item.sha }}">
-			<button class="linkish linkish--danger" type="submit">Borrar</button>
+			<button class="linkish linkish--danger" type="submit">{{ t('gestion.borrar') }}</button>
 		</form>
 		{% endif %}
 	</li>
