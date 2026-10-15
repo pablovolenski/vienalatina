@@ -4,6 +4,127 @@
 # datos y valen en la siguiente visita, sin esperar a que el sitio público se
 # vuelva a construir.
 
+cuenta.entrar:
+  es: "Entrar"
+  _note: "El botón de la pantalla de acceso, y el título de su pestaña."
+
+cuenta.entrar_titulo:
+  es: "Área de la comunidad"
+  _note: "El título grande de la pantalla de acceso. Es lo primero que se lee del sitio privado."
+
+cuenta.entrar_nota:
+  es: "Este espacio es sólo para miembros de Viena Latina."
+  _note: "Debajo de ese título."
+
+cuenta.identificador:
+  es: "Usuario o correo"
+  _note: "El primer campo de la pantalla de acceso: sirven los dos."
+
+cuenta.contrasena:
+  es: "Contraseña"
+  _note: "El campo de la contraseña."
+
+cuenta.olvidada:
+  es: "¿Olvidaste tu contraseña?"
+  _note: "El enlace debajo del botón de entrar, y el título de esa pantalla."
+
+cuenta.sin_cuenta:
+  es: >-
+    ¿No tienes cuenta? Pídesela a un administrador: las cuentas se crean a mano,
+    no hay registro abierto.
+  _note: "Lo último de la pantalla de acceso, para quien llega sin cuenta."
+
+cuenta.recuperar_titulo:
+  es: "Recuperar contraseña"
+  _note: "El título de la pestaña del navegador en la pantalla de recuperación."
+
+cuenta.recuperar_apagado_titulo:
+  es: "Todavía no"
+  _note: "Cuando el servidor no puede cambiar contraseñas todavía."
+
+cuenta.recuperar_apagado:
+  es: >-
+    Este servidor aún no puede cambiar contraseñas, así que un enlace de
+    recuperación no serviría de nada. Escribe a un administrador y te darán
+    acceso a mano.
+  _note: "Lo que explica ese caso."
+
+cuenta.volver_entrar:
+  es: "Volver a entrar"
+  _note: "El enlace que lleva de vuelta a la pantalla de acceso."
+
+cuenta.revisa_correo:
+  es: "Revisa tu correo"
+  _note: "Después de pedir un enlace para elegir contraseña nueva."
+
+cuenta.revisa_correo_nota:
+  es: >-
+    Si esa dirección pertenece a un miembro, le enviamos un enlace para elegir
+    una contraseña nueva. Caduca en una hora.
+  _note: >-
+    Dice lo mismo exista o no esa cuenta, a propósito: confirmarlo convertiría
+    el formulario en una manera de averiguar quién es miembro.
+
+cuenta.recuperar_nota:
+  es: >-
+    Escribe el correo con el que te dieron de alta y te enviamos un enlace para
+    elegir una nueva.
+  _note: "Debajo del título de la pantalla de recuperación."
+
+cuenta.enviar_enlace:
+  es: "Enviar enlace"
+  _note: "El botón de esa pantalla."
+
+cuenta.elegir_titulo:
+  es: "Elige tu contraseña"
+  _note: "El título de la pestaña al abrir un enlace de invitación."
+
+cuenta.elegir_apagado_titulo:
+  es: "Todavía no podemos guardar tu contraseña"
+  _note: "Cuando el enlace es bueno pero el servidor no puede guardar la contraseña."
+
+cuenta.elegir_apagado:
+  es: >-
+    Tu enlace sigue siendo válido, así que guárdalo. Lo que falta está en el
+    servidor: aún no puede cambiar contraseñas. Avisa a un administrador y
+    vuelve a abrir este enlace cuando te lo confirme.
+  _note: "Lo que explica ese caso, antes de que aparezca ningún campo."
+
+cuenta.enlace_gastado_titulo:
+  es: "Este enlace ya no sirve"
+  _note: >-
+    Un solo mensaje para un enlace caducado, ya usado o que nunca existió:
+    distinguirlos diría algo de la cuenta a quien tiene el enlace.
+
+cuenta.enlace_gastado_antes:
+  es: >-
+    Los enlaces caducan y sólo se pueden usar una vez. Pide uno nuevo desde
+  _note: "El principio de esa explicación. Le sigue el enlace de recuperación."
+
+cuenta.enlace_gastado_despues:
+  es: "o a un administrador si aún no habías entrado nunca."
+  _note: "El final de esa frase, después del enlace."
+
+cuenta.hola:
+  es: "Hola, {nombre}"
+  _note: "El saludo al abrir un enlace de invitación bueno."
+
+cuenta.elegir_nota_antes:
+  es: "Elige una contraseña para entrar al área de la comunidad. Tu usuario es"
+  _note: "El principio de la frase que rodea el nombre de usuario."
+
+cuenta.minimo:
+  es: "Al menos {n} caracteres."
+  _note: "Debajo del campo de la contraseña."
+
+cuenta.repite:
+  es: "Repite la contraseña"
+  _note: "El segundo campo, para no guardar una contraseña escrita con un desliz."
+
+cuenta.guardar_contrasena:
+  es: "Guardar contraseña"
+  _note: "El botón que la guarda."
+
 cuenta.perfil_titulo:
   es: "Mi perfil público"
   _note: "El título de la pantalla donde cada uno escribe su perfil."

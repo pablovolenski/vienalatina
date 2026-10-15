@@ -143,6 +143,20 @@ comun.siguientes:
   es: "Siguientes →"
   _note: "Para ir a la siguiente."
 
+comun.volver_inicio:
+  es: "Volver a Inicio"
+  _note: "El botón de las páginas de error."
+
+comun.me_gusta:
+  es: "Me gusta"
+  _note: >-
+    No se ve: es lo que lee un lector de pantalla en el botón del pulgar. El
+    dibujo no dice nada por sí solo.
+
+comun.quitar_me_gusta:
+  es: "Quitar mi me gusta"
+  _note: "Lo mismo cuando ya lo has pulsado."
+
 comun.volver_gestion:
   es: "Volver a Gestión"
   _note: "Arriba a la derecha en las pantallas de administración."

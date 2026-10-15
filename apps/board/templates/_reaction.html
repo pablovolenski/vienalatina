@@ -12,7 +12,8 @@
 	<input type="hidden" name="back" value="{{ back }}">
 	<button class="reaction__button {{ 'reaction__button--mine' if state and state.mine }}"
 	        type="submit"
-	        aria-label="{{ 'Quitar mi me gusta' if state and state.mine else 'Me gusta' }}">
+	        aria-label="{{ t('comun.quitar_me_gusta') if state and state.mine
+	                      else t('comun.me_gusta') }}">
 		<span aria-hidden="true">👍</span>
 		{% if state and state.count %}<span class="reaction__count">{{ state.count }}</span>{% endif %}
 	</button>

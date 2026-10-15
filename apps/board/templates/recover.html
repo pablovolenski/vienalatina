@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Recuperar contraseña{% endblock %}
+{% block title %}{{ t('cuenta.recuperar_titulo') }}{% endblock %}
 
 {% block main %}
 {% if unavailable %}
@@ -8,40 +8,30 @@
    the identical answer below — so the one case where the server knows in
    advance that it cannot help has to be said plainly. #}
 <article class="card card--center">
-	<h1>Todavía no</h1>
-	<p class="muted">
-		Este servidor aún no puede cambiar contraseñas, así que un enlace de
-		recuperación no serviría de nada. Escribe a un administrador y te darán
-		acceso a mano.
-	</p>
-	<p><a class="linkish" href="{{ url_for('auth.login') }}">Volver a entrar</a></p>
+	<h1>{{ t('cuenta.recuperar_apagado_titulo') }}</h1>
+	<p class="muted">{{ t('cuenta.recuperar_apagado') }}</p>
+	<p><a class="linkish" href="{{ url_for('auth.login') }}">{{ t('cuenta.volver_entrar') }}</a></p>
 </article>
 {% elif sent %}
 <article class="card card--center">
-	<h1>Revisa tu correo</h1>
+	<h1>{{ t('cuenta.revisa_correo') }}</h1>
 	{# Says the same thing whether or not that address belongs to a member.
 	   Confirming it would turn this form into a way to find out who is one. #}
-	<p class="muted">
-		Si esa dirección pertenece a un miembro, le enviamos un enlace para elegir
-		una contraseña nueva. Caduca en una hora.
-	</p>
-	<p><a class="linkish" href="{{ url_for('auth.login') }}">Volver a entrar</a></p>
+	<p class="muted">{{ t('cuenta.revisa_correo_nota') }}</p>
+	<p><a class="linkish" href="{{ url_for('auth.login') }}">{{ t('cuenta.volver_entrar') }}</a></p>
 </article>
 {% else %}
 <form class="card" method="post" action="{{ url_for('auth.recover') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<h1>¿Olvidaste tu contraseña?</h1>
-	<p class="muted">
-		Escribe el correo con el que te dieron de alta y te enviamos un enlace para
-		elegir una nueva.
-	</p>
+	<h1>{{ t('cuenta.olvidada') }}</h1>
+	<p class="muted">{{ t('cuenta.recuperar_nota') }}</p>
 
-	<label for="email">Correo</label>
+	<label for="email">{{ t('miembros.correo') }}</label>
 	<input id="email" name="email" type="email" required autocomplete="email">
 
 	<div class="actions">
-		<button class="btn" type="submit">Enviar enlace</button>
-		<a class="btn btn--quiet" href="{{ url_for('auth.login') }}">Cancelar</a>
+		<button class="btn" type="submit">{{ t('cuenta.enviar_enlace') }}</button>
+		<a class="btn btn--quiet" href="{{ url_for('auth.login') }}">{{ t('comun.cancelar') }}</a>
 	</div>
 </form>
 {% endif %}

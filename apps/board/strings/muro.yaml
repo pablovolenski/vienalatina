@@ -59,6 +59,10 @@ muro.editar_tema:
   es: "Editar tema"
   _note: "El mismo título al corregir un tema que ya existe."
 
+muro.editar_respuesta:
+  es: "Editar respuesta"
+  _note: "El título de la pantalla al corregir una respuesta ya publicada."
+
 muro.mensaje:
   es: "Mensaje"
   _note: "El nombre del campo grande donde se escribe el tema."

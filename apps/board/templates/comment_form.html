@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Editar respuesta{% endblock %}
+{% block title %}{{ t('muro.editar_respuesta') }}{% endblock %}
 
 {% block main %}
 <form class="card" method="post" action="{{ url_for('board.edit_comment', comment_id=comment.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<h1>Editar respuesta</h1>
+	<h1>{{ t('muro.editar_respuesta') }}</h1>
 
-	<label for="body">Mensaje</label>
+	<label for="body">{{ t('muro.mensaje') }}</label>
 	<textarea id="body" data-markdown name="body" rows="10" required>{{ comment.body_md }}</textarea>
 	{#- The stored markdown, rendered by the server for the editor to adopt.
 	    There is no markdown parser in the browser: this is how the box can
@@ -15,8 +15,8 @@
 	<template data-rich-html="body">{{ to_html(comment.body_md) }}</template>
 
 	<div class="actions">
-		<button class="btn" type="submit">Guardar</button>
-		<a class="btn btn--quiet" href="{{ url_for('board.thread', thread_id=comment.thread_id) }}">Cancelar</a>
+		<button class="btn" type="submit">{{ t('comun.guardar') }}</button>
+		<a class="btn btn--quiet" href="{{ url_for('board.thread', thread_id=comment.thread_id) }}">{{ t('comun.cancelar') }}</a>
 	</div>
 </form>
 {% endblock %}

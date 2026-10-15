@@ -1,33 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Entrar{% endblock %}
+{% block title %}{{ t('cuenta.entrar') }}{% endblock %}
 
 {% block main %}
 <form class="card card--center" method="post" action="{{ url_for('auth.login') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<input type="hidden" name="next" value="{{ next }}">
-	<h1>Área de la comunidad</h1>
-	<p class="muted">
-		Este espacio es sólo para miembros de Viena Latina.
-	</p>
+	<h1>{{ t('cuenta.entrar_titulo') }}</h1>
+	<p class="muted">{{ t('cuenta.entrar_nota') }}</p>
 
-	<label for="identifier">Usuario o correo</label>
+	<label for="identifier">{{ t('cuenta.identificador') }}</label>
 	<input id="identifier" name="identifier" required autocomplete="username"
 	       autocapitalize="none" autofocus>
 
-	<label for="password">Contraseña</label>
+	<label for="password">{{ t('cuenta.contrasena') }}</label>
 	<input id="password" name="password" type="password" required
 	       autocomplete="current-password">
 
 	<div class="actions">
-		<button class="btn" type="submit">Entrar</button>
+		<button class="btn" type="submit">{{ t('cuenta.entrar') }}</button>
 	</div>
 
 	<p class="muted small">
-		<a href="{{ url_for('auth.recover') }}">¿Olvidaste tu contraseña?</a>
+		<a href="{{ url_for('auth.recover') }}">{{ t('cuenta.olvidada') }}</a>
 	</p>
-	<p class="muted small">
-		¿No tienes cuenta? Pídesela a un administrador: las cuentas se crean a
-		mano, no hay registro abierto.
-	</p>
+	<p class="muted small">{{ t('cuenta.sin_cuenta') }}</p>
 </form>
 {% endblock %}
