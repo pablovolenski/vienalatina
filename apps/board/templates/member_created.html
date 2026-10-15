@@ -1,52 +1,41 @@
 {% extends "base.html" %}
-{% block title %}Miembro dado de alta{% endblock %}
+{% block title %}{{ t('miembros.alta_hecha_titulo') }}{% endblock %}
 
 {% block main %}
 <article class="card">
-	<h1>{{ login }} ya es {{ role_label|lower }}</h1>
+	<h1>{{ t('miembros.alta_hecha', usuario=login, rol=role_label|lower) }}</h1>
 
 	{% if invite_link %}
 	{# The account exists but the invitation never left the building. Showing the
 	   link is the difference between a delayed invitation and a person who
 	   simply never gets in. #}
 	{% if mail_problem == 'unconfigured' %}
-	<p class="flash">
-		Este servidor todavía no envía correo. Pásale este enlace por un canal
-		privado — sirve una sola vez y caduca en 7 días.
-	</p>
+	<p class="flash">{{ t('miembros.correo_apagado') }}</p>
 	{% else %}
-	<p class="flash flash--error">
-		No se pudo enviar el correo: el servidor de correo rechazó el envío o no
-		respondió. Pásale este enlace por un canal privado — sirve una sola vez y
-		caduca en 7 días.
-	</p>
+	<p class="flash flash--error">{{ t('miembros.correo_fallo') }}</p>
 	{% endif %}
 	<p class="password mono">{{ invite_link }}</p>
+	{#- The two identifiers were in <span class="mono"> and are now plain:
+	    one editable sentence beats three fragments around markup, and this
+	    one is an instruction to whoever runs the server, not a label. -#}
 	<p class="muted small">
-		{% if mail_problem == 'unconfigured' %}
-		Añade los valores <span class="mono">MAIL_*</span> en
-		<span class="mono">/srv/board/.env</span> para que la próxima invitación
-		salga sola.
-		{% else %}
-		Revisa la configuración de correo del servidor para que la próxima
-		invitación salga sola.
-		{% endif %}
+		{{ t('miembros.correo_apagado_nota') if mail_problem == 'unconfigured'
+		   else t('miembros.correo_fallo_nota') }}
 	</p>
 
 	{% else %}
+	{#- Two keys around the address rather than one with a placeholder, so
+	    the address keeps its own typeface. -#}
 	<p>
-		Le enviamos un correo a <span class="mono">{{ email }}</span> con un enlace
-		para elegir su contraseña.
+		{{ t('miembros.correo_enviado_antes') }}
+		<span class="mono">{{ email }}</span>
+		{{ t('miembros.correo_enviado_despues') }}
 	</p>
-	<p class="muted small">
-		El enlace caduca en 7 días y sirve una sola vez. Nadie conoce su contraseña
-		— ni tú ni el servidor — hasta que la elija. Si no llega, que mire en spam,
-		o pídele que use «¿olvidaste tu contraseña?».
-	</p>
+	<p class="muted small">{{ t('miembros.invitacion_nota') }}</p>
 	{% endif %}
 
 	<div class="actions">
-		<a class="btn" href="{{ url_for('members.index') }}">Volver a miembros</a>
+		<a class="btn" href="{{ url_for('members.index') }}">{{ t('miembros.volver') }}</a>
 	</div>
 </article>
 {% endblock %}

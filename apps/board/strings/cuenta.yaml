@@ -1,0 +1,88 @@
+# La cuenta de cada uno: su perfil, y la página pública que puede publicar.
+#
+# Las claves son de esta aplicación y no de «sitio»: se guardan en su base de
+# datos y valen en la siguiente visita, sin esperar a que el sitio público se
+# vuelva a construir.
+
+cuenta.perfil_titulo:
+  es: "Mi perfil público"
+  _note: "El título de la pantalla donde cada uno escribe su perfil."
+
+cuenta.usuario_ocupado:
+  es: >-
+    Tu usuario coincide con una dirección que ya usa el sitio, así que tu página
+    no se podría abrir. Pide a un administrador que te cambie el nombre de
+    usuario.
+  _note: >-
+    Un aviso que casi nadie verá: sale cuando el usuario de alguien choca con
+    una dirección del sitio público y su página no podría abrirse.
+
+cuenta.sobre_ti:
+  es: "Sobre ti"
+  _note: "El campo del perfil donde se escribe quién eres."
+
+cuenta.sobre_ti_pista:
+  es: "Se puede usar Markdown."
+  _note: "La pista dentro de ese campo, cuando está vacío."
+
+cuenta.enlaces:
+  es: "Enlaces"
+  _note: "El campo de las direcciones propias: redes, web, lo que sea."
+
+cuenta.enlaces_ejemplo:
+  es: "Instagram|https://instagram.com/tu-cuenta"
+  _note: "El ejemplo que sale dentro de ese campo mientras está vacío."
+
+cuenta.enlaces_nota_antes:
+  es: "Uno por línea, con el formato"
+  _note: "El principio de la frase que rodea el formato «Nombre|dirección»."
+
+cuenta.enlaces_nota_despues:
+  es: "Sólo direcciones que empiecen por http:// o https://."
+  _note: "El final de esa frase, después del formato."
+
+cuenta.foto:
+  es: "Foto"
+  _note: "El campo de la foto del perfil."
+
+cuenta.foto_ya_tienes:
+  es: "Ya tienes una. Subir otra la reemplaza."
+  _note: "Debajo del campo de la foto, cuando ya hay una subida."
+
+cuenta.foto_nota_antes:
+  es: "Tu foto aparece en"
+  _note: "El principio de la frase que rodea el enlace a Miembros."
+
+cuenta.foto_nota_despues:
+  es: >-
+    que sólo ven las personas que han entrado. Fuera del sitio sólo se ve si
+    publicas tu página, abajo.
+  _note: "El final de esa frase, después del enlace."
+
+cuenta.publicar_pagina:
+  es: "Publicar mi página"
+  _note: "El interruptor que pone la página de alguien en el sitio público."
+
+cuenta.publicar_nota_antes:
+  es: "Mientras esté publicada, cualquiera puede verla en"
+  _note: "El principio de la frase que rodea la dirección de la página."
+
+cuenta.publicar_nota_despues:
+  es: >-
+    y los buscadores pueden indexarla. Puedes dejar de publicarla cuando
+    quieras: la página y la foto desaparecen en el momento.
+  _note: "El final de esa frase, después de la dirección."
+
+cuenta.ver_pagina:
+  es: "Ver mi página"
+  _note: "El enlace junto a Guardar, cuando la página ya está publicada."
+
+cuenta.editar_perfil:
+  es: "Editar mi perfil"
+  _note: "En tu propia ficha, cuando todavía no has publicado tu página."
+
+# La página pública de un miembro (`profile.html`) no tiene claves aquí a
+# propósito: lo único que dice por su cuenta es el nombre del sitio, tres
+# veces, y el nombre del sitio es cosa de Identidad y no de Textos. Ponerlo
+# aquí sería escribirlo dos veces en dos pantallas distintas, que es
+# exactamente lo que Identidad existe para evitar.

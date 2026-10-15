@@ -1,22 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Miembros{% endblock %}
+{% block title %}{{ t('nav.miembros') }}{% endblock %}
 
 {% set me = g.member %}
 {% set is_admin = is_at_least(me.role, 'admin') %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Miembros</h1>
+	<h1>{{ t('nav.miembros') }}</h1>
 	{% if is_admin %}
-	<a class="btn" href="{{ url_for('members.new') }}">Dar de alta</a>
+	<a class="btn" href="{{ url_for('members.new') }}">{{ t('miembros.alta') }}</a>
 	{% endif %}
 </div>
 
-<p class="muted">
-	Abre la ficha de alguien para escribirle en privado y leer lo que os habéis
-	escrito. Los mensajes privados viven en la ficha de cada persona; no hay
-	bandeja aparte.
-</p>
+<p class="muted">{{ t('miembros.intro') }}</p>
 
 {# Faces and names, and the whole card is the link. This was a page of cards
    each carrying a bio, a couple of links and a fold-out admin panel — four
@@ -41,11 +37,11 @@
 			<span class="person-card__who">
 				<span class="person-card__name">
 					{{ m.display_name }}
-					{% if m.id == me.id %}<span class="muted small">(tú)</span>{% endif %}
+					{% if m.id == me.id %}<span class="muted small">{{ t('comun.tu') }}</span>{% endif %}
 					{% if m.unread %}
 					{# Who wrote, not just that somebody did — and the cards are
 					   sorted so this one is at the top of the page. #}
-					<span class="tag" aria-label="{{ m.unread }} sin leer">{{ m.unread }}</span>
+					<span class="tag" aria-label="{{ t('miembros.sin_leer', n=m.unread) }}">{{ m.unread }}</span>
 					{% endif %}
 				</span>
 				{# The username is shown to everyone: it is not a secret, it is
@@ -54,7 +50,7 @@
 				   The email stays on their page, inside the admin block. #}
 				<span class="muted small">
 					<span class="mono">{{ m.gitea_login }}</span> · {{ labels[m.role] }}
-					{% if not m.active %} · Suspendido{% endif %}
+					{% if not m.active %} · {{ t('miembros.suspendido') }}{% endif %}
 				</span>
 			</span>
 		</a>
@@ -63,12 +59,6 @@
 </ul>
 
 {% if is_admin %}
-<p class="muted small">
-	Hay un solo superadministrador y un solo responsable. El superadministrador
-	lleva la plataforma: las cuentas de administrador, el aspecto y la identidad
-	del sitio. El responsable lleva la asociación: los miembros, los moderadores
-	y las invitaciones. Suspender, cambiar el rol, reenviar la invitación y
-	eliminar están en la ficha de cada persona, bajo «Gestionar».
-</p>
+<p class="muted small">{{ t('miembros.nota_roles') }}</p>
 {% endif %}
 {% endblock %}

@@ -63,6 +63,10 @@ comun.fijado:
   es: "Fijado"
   _note: "La etiqueta de algo puesto arriba a propósito."
 
+comun.tu:
+  es: "(tú)"
+  _note: "Detrás de tu propio nombre, en el directorio y en tu ficha."
+
 comun.editado:
   es: "(editado)"
   _note: "Detrás de la fecha, cuando alguien ha cambiado lo que escribió."

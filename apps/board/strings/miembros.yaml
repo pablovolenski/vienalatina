@@ -1,0 +1,279 @@
+# Miembros: el directorio, la ficha de cada persona y el alta.
+#
+# La ficha es tres cosas en una página — quién es, lo que os habéis escrito y
+# lo que la administración puede hacer con la cuenta — así que aquí hay
+# etiquetas de botón junto a frases enteras. Las preguntas de confirmación
+# («¿Seguro?») también están, porque son lo último que lee alguien antes de
+# hacer algo irreversible y vale la pena poder afinarlas.
+
+miembros.alta:
+  es: "Dar de alta"
+  _note: "El botón de arriba del directorio, y el del formulario de alta. Sólo lo ve la administración."
+
+miembros.intro:
+  es: >-
+    Abre la ficha de alguien para escribirle en privado y leer lo que os habéis
+    escrito. Los mensajes privados viven en la ficha de cada persona; no hay
+    bandeja aparte.
+  _note: "El párrafo de arriba del directorio, debajo del título."
+
+miembros.sin_leer:
+  es: "{n} sin leer"
+  _note: >-
+    No se ve: es lo que lee en voz alta un lector de pantalla al llegar al
+    número de mensajes sin leer de una persona.
+
+miembros.suspendido:
+  es: "Suspendido"
+  _note: "Detrás del rol, en el directorio y en la ficha, cuando la cuenta no puede entrar."
+
+miembros.nota_roles:
+  es: >-
+    Hay un solo superadministrador y un solo responsable. El superadministrador
+    lleva la plataforma: las cuentas de administrador, el aspecto y la identidad
+    del sitio. El responsable lleva la asociación: los miembros, los moderadores
+    y las invitaciones. Suspender, cambiar el rol, reenviar la invitación y
+    eliminar están en la ficha de cada persona, bajo «Gestionar».
+  _note: "El párrafo del final del directorio. Sólo lo ve la administración."
+
+miembros.todos:
+  es: "Todos los miembros"
+  _note: "El enlace de arriba de una ficha, para volver al directorio."
+
+miembros.pagina_publica:
+  es: "Su página pública"
+  _note: "En la ficha de alguien que ha publicado su página, para abrirla."
+
+miembros.sin_pagina:
+  es: "No ha publicado una página pública."
+  _note: "En la ficha de alguien que no la ha publicado."
+
+miembros.tu_ficha:
+  es: >-
+    Esta es tu ficha, tal como la ven los demás. Para escribir a alguien, abre
+    su ficha desde
+  _note: >-
+    Cuando abres tu propia ficha. Le sigue el enlace a Miembros, así que la
+    frase termina sin punto.
+
+miembros.conversacion:
+  es: "Conversación privada"
+  _note: "El título de la mitad de abajo de una ficha, donde están los mensajes."
+
+miembros.solo_vosotros:
+  es: "Sólo vosotros dos podéis leer esto."
+  _note: "Debajo de ese título."
+
+miembros.sin_mensajes:
+  es: "Todavía no os habéis escrito. Empieza abajo."
+  _note: "Cuando no hay ningún mensaje con esa persona."
+
+miembros.mensaje:
+  es: "Mensaje"
+  _note: "El nombre de la caja donde se escribe un mensaje privado."
+
+miembros.enviar:
+  es: "Enviar"
+  _note: "El botón debajo de esa caja."
+
+miembros.bloqueo:
+  es: "Hay un bloqueo entre vosotros, así que ninguno de los dos puede escribir."
+  _note: "En lugar de la caja de escribir, cuando alguno de los dos ha bloqueado al otro."
+
+miembros.quitar_bloqueo:
+  es: "Quitar mi bloqueo"
+  _note: "El botón que levanta el bloqueo que pusiste tú."
+
+miembros.bloqueo_ajeno:
+  es: "Si el bloqueo lo puso la otra persona, esto no lo quita."
+  _note: "Debajo de ese botón, porque nadie puede levantar el bloqueo de otro."
+
+miembros.suspendido_sin_mensajes:
+  es: "{nombre} tiene el acceso suspendido y no puede recibir mensajes."
+  _note: "En lugar de la caja de escribir, cuando la cuenta de la otra persona está suspendida."
+
+miembros.bloquear_a:
+  es: "Bloquear a {nombre}"
+  _note: "El desplegable del final de una ficha, cerrado."
+
+miembros.bloqueo_nota:
+  es: >-
+    Un bloqueo va en los dos sentidos: ninguno de los dos podrá escribir al
+    otro. Lo puedes quitar cuando quieras, pero sólo el tuyo.
+  _note: "Lo que explica ese desplegable al abrirlo."
+
+miembros.bloquear_confirmar:
+  es: "Ninguno de los dos podrá escribir al otro. ¿Seguro?"
+  _note: "La pregunta antes de bloquear a alguien."
+
+miembros.bloquear:
+  es: "Bloquear"
+  _note: "El botón que lo hace."
+
+miembros.gestionar:
+  es: "Gestionar"
+  _note: >-
+    El desplegable de la ficha con lo que la administración puede hacer con la
+    cuenta. No sale en la ficha del responsable ni en la del superadministrador.
+
+miembros.suspender:
+  es: "Suspender"
+  _note: "Deja a alguien sin acceso sin borrar nada de lo que escribió."
+
+miembros.reactivar:
+  es: "Reactivar"
+  _note: "El mismo botón cuando la cuenta ya está suspendida."
+
+miembros.invitar:
+  es: "Enviar invitación"
+  _note: "Manda un enlace nuevo para elegir contraseña. Sólo sale si la cuenta tiene correo."
+
+miembros.invitar_confirmar:
+  es: "Se enviará un enlace nuevo a {correo} y el anterior dejará de servir. ¿Seguro?"
+  _note: "La pregunta antes de reenviar la invitación."
+
+miembros.rol_de:
+  es: "Rol de {nombre}"
+  _note: "No se ve: es el nombre del desplegable de roles para un lector de pantalla."
+
+miembros.cambiar_rol:
+  es: "Cambiar rol"
+  _note: "El botón junto a ese desplegable."
+
+miembros.nombrar_responsable:
+  es: "Nombrar responsable"
+  _note: "Pasa a esa persona el mando de la asociación. Sólo lo ve quien lo tiene."
+
+miembros.responsable_confirmar:
+  es: "{nombre} pasará a ser el responsable de la asociación. ¿Seguro?"
+  _note: "La pregunta antes de hacerlo."
+
+miembros.entregar_plataforma:
+  es: "Entregar la plataforma"
+  _note: >-
+    Pasa a esa persona el mando de la plataforma. Sólo lo ve el
+    superadministrador, y sólo sale en la ficha de un administrador.
+
+miembros.plataforma_confirmar:
+  es: >-
+    {nombre} pasará a ser el superadministrador y tú pasarás a ser
+    administrador. No podrás deshacerlo tú mismo. ¿Seguro?
+  _note: "La pregunta antes de entregar la plataforma. No hay vuelta desde este lado."
+
+miembros.eliminar_confirmar:
+  es: "Se borrarán sus datos personales. Sus mensajes quedarán como «Miembro eliminado». ¿Seguro?"
+  _note: "La pregunta antes de eliminar a alguien."
+
+miembros.dado_de_alta_por:
+  es: "Dado de alta por {nombre}."
+  _note: "Al final del desplegable de gestión, debajo del correo."
+
+miembros.alta_titulo:
+  es: "Dar de alta a alguien"
+  _note: "El título del formulario de alta."
+
+miembros.usuario:
+  es: "Usuario"
+  _note: "El campo del nombre de usuario, que es también la dirección de su página."
+
+miembros.usuario_ejemplo:
+  es: "maria.lopez"
+  _note: "El ejemplo que sale dentro de ese campo mientras está vacío."
+
+miembros.usuario_nota:
+  es: "Letras, números, punto, guion y guion bajo."
+  _note: "Lo que se puede escribir en ese campo."
+
+miembros.nombre:
+  es: "Nombre"
+  _note: "El campo del nombre con el que aparecerá en el sitio."
+
+miembros.nombre_ejemplo:
+  es: "María López"
+  _note: "El ejemplo que sale dentro de ese campo."
+
+miembros.correo:
+  es: "Correo"
+  _note: "El campo de la dirección de correo."
+
+miembros.correo_ejemplo:
+  es: "maria@ejemplo.com"
+  _note: "El ejemplo que sale dentro de ese campo."
+
+miembros.correo_nota:
+  es: "Ahí llega la invitación para elegir contraseña."
+  _note: "Debajo del campo de correo."
+
+miembros.sin_correo_aviso:
+  es: >-
+    Este servidor todavía no envía correo, así que la invitación no se enviará
+    sola: al terminar te mostraremos el enlace para que se lo pases.
+  _note: "En el formulario de alta, cuando el servidor no tiene correo configurado."
+
+miembros.rol:
+  es: "Rol"
+  _note: "El campo del rol, en el formulario de alta."
+
+miembros.rol_miembro:
+  es: "Miembro — escribe en el muro y propone publicaciones"
+  _note: "La primera opción de ese desplegable, con la explicación incluida."
+
+miembros.rol_moderador:
+  es: "Moderador — además aprueba lo que proponen"
+  _note: "La segunda opción."
+
+miembros.rol_administrador:
+  es: "Administrador — además gestiona miembros y páginas"
+  _note: "La tercera. Sólo la ve el responsable."
+
+miembros.solo_responsable:
+  es: "Sólo el responsable puede nombrar administradores."
+  _note: "Debajo del desplegable, para quien no puede elegir esa opción."
+
+miembros.alta_hecha_titulo:
+  es: "Miembro dado de alta"
+  _note: "El título de la pestaña del navegador en la pantalla de después del alta."
+
+miembros.alta_hecha:
+  es: "{usuario} ya es {rol}"
+  _note: "El título de esa pantalla. El rol llega en minúscula."
+
+miembros.correo_apagado:
+  es: >-
+    Este servidor todavía no envía correo. Pásale este enlace por un canal
+    privado — sirve una sola vez y caduca en 7 días.
+  _note: "Cuando la cuenta se creó pero la invitación no pudo salir por falta de configuración."
+
+miembros.correo_apagado_nota:
+  es: "Añade los valores MAIL_* en /srv/board/.env para que la próxima invitación salga sola."
+  _note: "Debajo del enlace, en ese caso. Es una instrucción para quien lleva el servidor."
+
+miembros.correo_fallo:
+  es: >-
+    No se pudo enviar el correo: el servidor de correo rechazó el envío o no
+    respondió. Pásale este enlace por un canal privado — sirve una sola vez y
+    caduca en 7 días.
+  _note: "Cuando el correo está configurado pero el envío falló."
+
+miembros.correo_fallo_nota:
+  es: "Revisa la configuración de correo del servidor para que la próxima invitación salga sola."
+  _note: "Debajo del enlace, en ese caso."
+
+miembros.correo_enviado_antes:
+  es: "Le enviamos un correo a"
+  _note: "El principio de la frase que rodea la dirección a la que salió la invitación."
+
+miembros.correo_enviado_despues:
+  es: "con un enlace para elegir su contraseña."
+  _note: "El final de esa frase, después de la dirección."
+
+miembros.invitacion_nota:
+  es: >-
+    El enlace caduca en 7 días y sirve una sola vez. Nadie conoce su contraseña
+    — ni tú ni el servidor — hasta que la elija. Si no llega, que mire en spam,
+    o pídele que use «¿olvidaste tu contraseña?».
+  _note: "Debajo de esa frase, cuando la invitación sí salió."
+
+miembros.volver:
+  es: "Volver a miembros"
+  _note: "El botón del final de la pantalla de después del alta."

@@ -1,66 +1,62 @@
 {% extends "base.html" %}
-{% block title %}Mi perfil{% endblock %}
+{% block title %}{{ t('account.perfil') }}{% endblock %}
 
 {% block main %}
 <form class="card" method="post" enctype="multipart/form-data"
       action="{{ url_for('profiles.edit') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<h1>Mi perfil público</h1>
+	<h1>{{ t('cuenta.perfil_titulo') }}</h1>
 
 	{% if not available %}
 	{# The routing gives the static site every collision, so this page would
 	   simply never load. Better said here than discovered by a friend who
 	   cannot open the link. #}
-	<p class="flash flash--error">
-		Tu usuario coincide con una dirección que ya usa el sitio, así que tu
-		página no se podría abrir. Pide a un administrador que te cambie el
-		nombre de usuario.
-	</p>
+	<p class="flash flash--error">{{ t('cuenta.usuario_ocupado') }}</p>
 	{% endif %}
 
-	<label for="bio">Sobre ti</label>
+	<label for="bio">{{ t('cuenta.sobre_ti') }}</label>
 	<textarea id="bio" data-markdown name="bio" rows="8"
-	          placeholder="Se puede usar Markdown.">{{ g.member.bio or '' }}</textarea>
+	          placeholder="{{ t('cuenta.sobre_ti_pista') }}">{{ g.member.bio or '' }}</textarea>
 	{#- The stored markdown, rendered by the server for the editor to adopt.
 	    There is no markdown parser in the browser: this is how the box can
 	    show the formatting without a second opinion about what somebody's
 	    text means. Ignored entirely when scripting is off. -#}
 	<template data-rich-html="bio">{{ to_html(g.member.bio or '') }}</template>
 
-	<label for="links">Enlaces</label>
+	<label for="links">{{ t('cuenta.enlaces') }}</label>
 	<textarea id="links" name="links" rows="5"
-	          placeholder="Instagram|https://instagram.com/tu-cuenta">{{ links_text }}</textarea>
+	          placeholder="{{ t('cuenta.enlaces_ejemplo') }}">{{ links_text }}</textarea>
 	<p class="muted small">
-		Uno por línea, con el formato <span class="mono">Nombre|dirección</span>.
-		Sólo direcciones que empiecen por http:// o https://.
+		{{ t('cuenta.enlaces_nota_antes') }}
+		<span class="mono">Nombre|dirección</span>.
+		{{ t('cuenta.enlaces_nota_despues') }}
 	</p>
 
-	<label for="photo">Foto</label>
+	<label for="photo">{{ t('cuenta.foto') }}</label>
 	<input id="photo" name="photo" type="file" accept="image/*">
 	{% if g.member.photo_name %}
-	<p class="muted small">Ya tienes una. Subir otra la reemplaza.</p>
+	<p class="muted small">{{ t('cuenta.foto_ya_tienes') }}</p>
 	{% endif %}
 	<p class="muted small">
-		Tu foto aparece en <a href="{{ url_for('members.index') }}">Miembros</a>,
-		que sólo ven las personas que han entrado. Fuera del sitio sólo se ve si
-		publicas tu página, abajo.
+		{{ t('cuenta.foto_nota_antes') }}
+		<a href="{{ url_for('members.index') }}">{{ t('nav.miembros') }}</a>,
+		{{ t('cuenta.foto_nota_despues') }}
 	</p>
 
 	<label class="check">
 		<input type="checkbox" name="published" {{ 'checked' if g.member.profile_published }}>
-		Publicar mi página
+		{{ t('cuenta.publicar_pagina') }}
 	</label>
 	<p class="muted small">
-		Mientras esté publicada, cualquiera puede verla en
-		<span class="mono">vienalatina.com{{ address }}</span> y los buscadores
-		pueden indexarla. Puedes dejar de publicarla cuando quieras: la página y
-		la foto desaparecen en el momento.
+		{{ t('cuenta.publicar_nota_antes') }}
+		<span class="mono">vienalatina.com{{ address }}</span>
+		{{ t('cuenta.publicar_nota_despues') }}
 	</p>
 
 	<div class="actions">
-		<button class="btn" type="submit">Guardar</button>
+		<button class="btn" type="submit">{{ t('comun.guardar') }}</button>
 		{% if g.member.profile_published %}
-		<a class="linkish" href="{{ address }}">Ver mi página</a>
+		<a class="linkish" href="{{ address }}">{{ t('cuenta.ver_pagina') }}</a>
 		{% endif %}
 	</div>
 </form>
