@@ -1,0 +1,178 @@
+# Gestión → Marca: los colores, el logotipo, la tipografía y las esquinas.
+#
+# Falta aquí, a propósito, el aviso largo de «Antes de subir una tipografía,
+# lee esto»: son cuatro párrafos con negritas, nombres de archivo y siete
+# enlaces, y partirlos en trozos editables los dejaría peor de lo que están.
+# El título del desplegable sí se puede cambiar; lo de dentro vive en la
+# plantilla.
+
+marca.intro:
+  es: >-
+    Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
+    sitio. El área privada cambia al guardar; vienalatina.com se reconstruye en
+    un par de minutos.
+  _note: "El párrafo de arriba de Marca."
+
+marca.pendiente_nota:
+  es: >-
+    Lo de aquí está guardado, pero no ha llegado al sitio público: no se pudo
+    contactar con el servidor de git la última vez.
+  _note: "Lo que explica el aviso de «Pendiente de publicar» en esta pantalla."
+
+marca.reintentar_publicar:
+  es: "Reintentar publicar en el sitio"
+  _note: "El botón de ese aviso."
+
+marca.colores:
+  es: "Colores"
+  _note: "El primer apartado del formulario."
+
+marca.colores_nota:
+  es: >-
+    Seis colores. Los demás —los tonos claros y oscuros del principal— se
+    calculan a partir de él, para que no haya que acertar con cinco rojos
+    parecidos. Están en «Avanzado» si los quieres a mano.
+  _note: "Lo que explica ese apartado."
+
+marca.vista_meta:
+  es: "Ana Pérez · hace dos horas"
+  _note: >-
+    La tarjeta de ejemplo que cambia de color mientras eliges. Es un nombre
+    inventado: no hay nadie llamado así.
+
+marca.vista_texto:
+  es: "Así se verá una tarjeta del muro con estos colores."
+  _note: "El texto de esa tarjeta de ejemplo."
+
+marca.vista_boton:
+  es: "Un botón"
+  _note: "El botón de esa tarjeta de ejemplo. No se puede pulsar."
+
+marca.logotipo:
+  es: "Logotipo"
+  _note: "El apartado de la imagen de la cabecera."
+
+marca.logotipo_nota:
+  es: >-
+    PNG, JPG o WebP. Aparece en la cabecera de las dos mitades del sitio y es la
+    imagen que sale al compartir un enlace que no tiene foto propia.
+  _note: "Lo que explica ese apartado."
+
+marca.logotipo_ya:
+  es: "Ahora hay uno puesto; si eliges otro, lo reemplaza."
+  _note: "Detrás de esa explicación, cuando ya hay un logotipo subido."
+
+marca.logotipo_alt:
+  es: "El logotipo actual"
+  _note: "No se ve: describe la imagen del logotipo para un lector de pantalla."
+
+marca.icono:
+  es: "Icono de la pestaña"
+  _note: "El apartado del icono pequeño que sale en la pestaña del navegador."
+
+marca.icono_nota:
+  es: >-
+    PNG, y cuadrado: 32×32 o 180×180 van bien. Se sube aparte y no se saca del
+    logotipo — recortar un logotipo ancho a un cuadrado da un trozo de letra.
+  _note: "Lo que explica ese apartado."
+
+marca.icono_alt:
+  es: "El icono actual"
+  _note: "No se ve: describe la imagen del icono para un lector de pantalla."
+
+marca.tipografia:
+  es: "Tipografía"
+  _note: "El apartado de la letra del sitio."
+
+marca.tipografia_nota:
+  es: >-
+    Las cuatro primeras ya están en el ordenador de quien lee: no se descarga
+    nada de ningún sitio. Eso es a propósito — una hoja de estilos que pide una
+    fuente a Google le cuenta a Google la dirección IP de todo el que entra, y
+    eso no se puede consentir en nombre de quien visita la página.
+  _note: "Lo que explica ese apartado."
+
+marca.propia:
+  es: "Propia (subida aquí)"
+  _note: "La última opción de la letra: una tipografía subida a mano."
+
+marca.fuente_ya:
+  es: "Ya hay una tipografía subida. Si eliges otra, la sustituye."
+  _note: "Cuando ya hay un archivo de tipografía puesto."
+
+marca.archivo_fuente:
+  es: "Archivo .woff2"
+  _note: "El campo donde se sube la tipografía."
+
+marca.archivo_fuente_nota:
+  es: "(sólo para «Propia»)"
+  _note: "Detrás de ese campo: no sirve de nada si no está elegida «Propia»."
+
+marca.aviso_fuente:
+  es: "Antes de subir una tipografía, lee esto"
+  _note: >-
+    El desplegable con lo que hay que saber de las tipografías: las letras que
+    faltan, el tamaño del archivo y la licencia.
+
+marca.esquinas:
+  es: "Esquinas"
+  _note: "El apartado de lo redondeadas que son las tarjetas y los botones."
+
+marca.esquinas_nota:
+  es: >-
+    Lo redondeadas que son las tarjetas, los botones y las fotos. Un solo ajuste
+    para todo: un sitio con tarjetas redondas y botones cuadrados parece dos
+    sitios.
+  _note: "Lo que explica ese apartado."
+
+marca.avanzado:
+  es: "Avanzado"
+  _note: "El desplegable del final del formulario, para quien sepa CSS."
+
+marca.avanzado_nota:
+  es: >-
+    Para quien sepa CSS. Todo lo de aquí se aplica después de lo de arriba, así
+    que gana. Si algo sale mal, «Restaurar lo de fábrica» está al final de esta
+    página y esta página nunca carga este CSS, justamente para que se pueda
+    llegar a ese botón.
+  _note: "Lo que explica ese desplegable al abrirlo."
+
+marca.otros_colores:
+  es: "Los demás colores"
+  _note: "Dentro de «Avanzado»: los colores que normalmente se calculan solos."
+
+marca.otros_colores_nota:
+  es: >-
+    Déjalos en blanco para que se calculen desde el color principal ({lista}) o
+    queden como están de fábrica.
+  _note: "Lo que explica ese apartado. La lista de colores calculados llega puesta."
+
+marca.css:
+  es: "CSS propio"
+  _note: "La caja donde se escribe CSS a mano."
+
+marca.css_nota:
+  es: >-
+    Se añade al final de la hoja de estilos, en las dos mitades del sitio. No
+    puede contener «<» ni «>».
+  _note: "Lo que explica esa caja."
+
+marca.css_ejemplo:
+  es: ".site-bar__logo { max-height: 48px; }"
+  _note: "El ejemplo que sale dentro de esa caja mientras está vacía."
+
+marca.restaurar:
+  es: "Restaurar lo de fábrica"
+  _note: >-
+    El título y el botón del recuadro del final, que devuelve los colores
+    originales y quita el logotipo y el icono.
+
+marca.restaurar_nota:
+  es: >-
+    Deja los colores como estaban al principio y quita el logotipo y el icono.
+    Esto funciona siempre, incluso si el CSS propio ha roto el resto del sitio.
+  _note: "Lo que explica ese botón."
+
+marca.restaurar_confirmar:
+  es: "Se vuelve a los colores originales y se borran el logotipo y el icono. ¿Seguro?"
+  _note: "La pregunta antes de restaurarlos."

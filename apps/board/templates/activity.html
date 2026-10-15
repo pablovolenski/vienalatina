@@ -6,7 +6,7 @@
 {% block main %}
 <div class="feed-head">
 	<h1>{{ t('gestion.registro') }}</h1>
-	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion') }}</a>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion', seccion=t('nav.gestion')) }}</a>
 </div>
 
 <p class="muted">{{ t('gestion.registro_intro') }}</p>

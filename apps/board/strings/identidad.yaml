@@ -1,0 +1,117 @@
+# Gestión → Identidad: cómo se llama el sitio y dónde encontrarlo.
+#
+# El nombre y el lema de la asociación no están aquí: son un dato que se
+# escribe en esa pantalla, no una etiqueta de esta. Lo que hay aquí son las
+# palabras del formulario que los pide.
+
+identidad.intro:
+  es: >-
+    Cómo se llama el sitio, qué dice que es y dónde encontrarlo. Lo de aquí
+    alimenta también los datos estructurados: es lo que lee un buscador —o una
+    IA que responde preguntas— para saber que esta asociación y esas cuentas son
+    el mismo cuerpo.
+  _note: "El párrafo de arriba de Identidad."
+
+identidad.pendiente_nota:
+  es: >-
+    Guardado aquí, pero no ha llegado al sitio público: no se pudo contactar con
+    el servidor de git la última vez.
+  _note: "Lo que explica el aviso de «Pendiente de publicar» en esta pantalla."
+
+identidad.nombre_lema:
+  es: "Nombre y lema"
+  _note: "El primer apartado del formulario: uno por idioma."
+
+identidad.nombre_lema_nota_antes:
+  es: >-
+    Uno por idioma. El lema es la frase que sale al compartir un enlace, la que
+    describe al sitio en los buscadores y la primera línea de
+  _note: "El principio de esa explicación. Le sigue el nombre del archivo llms.txt."
+
+identidad.nombre_lema_nota_despues:
+  es: "Déjalo vacío para no cambiar lo que hay."
+  _note: "El final de esa explicación, después del nombre del archivo."
+
+identidad.nombre:
+  es: "Nombre"
+  _note: "El campo del nombre del sitio, en cada idioma."
+
+identidad.lema:
+  es: "Lema"
+  _note: "El campo de la frase que describe al sitio, en cada idioma."
+
+identidad.perfiles:
+  es: "Perfiles"
+  _note: "El apartado de las cuentas de la asociación en otros sitios."
+
+identidad.perfiles_nota_antes:
+  es: "Las cuentas de la asociación en otros sitios. Salen en el pie de página y como"
+  _note: "El principio de esa explicación. Le sigue la palabra «sameAs»."
+
+identidad.perfiles_nota_despues:
+  es: >-
+    en los datos estructurados, que es como un buscador sabe que esa cuenta de
+    Instagram y esta web son lo mismo.
+  _note: "El final de esa explicación."
+
+identidad.contacto:
+  es: "Contacto y lugar"
+  _note: "El apartado del correo, el teléfono y la dirección."
+
+identidad.contacto_nota:
+  es: >-
+    Público, y pensado para que lo lea una persona tanto como un buscador: una
+    dirección y una ciudad son lo que pone a una asociación en un resultado
+    local y no sólo en uno web.
+  _note: "Lo que explica ese apartado."
+
+identidad.correo:
+  es: "Correo público"
+  _note: "La dirección a la que puede escribir cualquiera."
+
+identidad.correo_ejemplo:
+  es: "hola@vienalatina.com"
+  _note: "El ejemplo que sale dentro de ese campo."
+
+identidad.telefono:
+  es: "Teléfono"
+  _note: "El teléfono público, si hay."
+
+identidad.ciudad:
+  es: "Ciudad"
+  _note: "La ciudad de la asociación."
+
+identidad.ciudad_ejemplo:
+  es: "Wien"
+  _note: "El ejemplo que sale dentro de ese campo."
+
+identidad.calle:
+  es: "Calle"
+  _note: "La dirección, si se quiere dar."
+
+identidad.compartir:
+  es: "Al compartir, y el pie"
+  _note: "El último apartado: la imagen por defecto y el texto del pie."
+
+identidad.imagen:
+  es: "Imagen por defecto"
+  _note: "La que sale al compartir algo que no tiene foto propia."
+
+identidad.imagen_ejemplo:
+  es: "/uploads/algo.png"
+  _note: "El ejemplo que sale dentro de ese campo."
+
+identidad.imagen_nota:
+  es: >-
+    La que sale al compartir un artículo que no tiene foto propia. Si la dejas
+    vacía se usa el logotipo, que casi siempre es lo que quieres: esto es para
+    cuando prefieres otra cosa —una foto de la ciudad, por ejemplo.
+  _note: "Lo que explica ese campo."
+
+identidad.pie:
+  es: "Texto del pie"
+  _note: "Lo que dice el pie de página del sitio público."
+
+identidad.pie_nota:
+  es: "Si lo dejas vacío, el pie pone el nombre y el año."
+  _note: "Debajo de ese campo."

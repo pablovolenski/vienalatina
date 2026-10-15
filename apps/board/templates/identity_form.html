@@ -6,31 +6,23 @@
    the fallback saves the fallback the first time anybody presses the button,
    and the default is frozen from then on. #}
 {% extends "base.html" %}
-{% block title %}Identidad{% endblock %}
+{% block title %}{{ t('gestion.identidad') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Identidad</h1>
-	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+	<h1>{{ t('gestion.identidad') }}</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion', seccion=t('nav.gestion')) }}</a>
 </div>
 
-<p class="muted">
-	Cómo se llama el sitio, qué dice que es y dónde encontrarlo. Lo de aquí
-	alimenta también los datos estructurados: es lo que lee un buscador —o una IA
-	que responde preguntas— para saber que esta asociación y esas cuentas son el
-	mismo cuerpo.
-</p>
+<p class="muted">{{ t('identidad.intro') }}</p>
 
 {% if state.updated_at and not state.published_at %}
 <section class="panel panel--attention">
-	<div class="panel__head"><h2>Pendiente de publicar</h2></div>
-	<p class="panel__row">
-		Guardado aquí, pero no ha llegado al sitio público: no se pudo contactar
-		con el servidor de git la última vez.
-	</p>
+	<div class="panel__head"><h2>{{ t('comun.pendiente_publicar') }}</h2></div>
+	<p class="panel__row">{{ t('identidad.pendiente_nota') }}</p>
 	<form method="post" action="{{ url_for('identity.publish') }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button class="btn" type="submit">Reintentar publicar</button>
+		<button class="btn" type="submit">{{ t('comun.reintentar_publicar') }}</button>
 	</form>
 </section>
 {% endif %}
@@ -38,33 +30,33 @@
 <form class="card" method="post" action="{{ url_for('identity.edit') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-	<h2 class="section-title">Nombre y lema</h2>
+	<h2 class="section-title">{{ t('identidad.nombre_lema') }}</h2>
 	<p class="muted small">
-		Uno por idioma. El lema es la frase que sale al compartir un enlace, la que
-		describe al sitio en los buscadores y la primera línea de
-		<span class="mono">llms.txt</span>. Déjalo vacío para no cambiar lo que hay.
+		{{ t('identidad.nombre_lema_nota_antes') }}
+		<span class="mono">llms.txt</span>.
+		{{ t('identidad.nombre_lema_nota_despues') }}
 	</p>
 
 	{% for code, label, _name, _tagline in languages %}
 	<fieldset class="fieldset">
 		<legend>{{ label }}</legend>
-		<label for="name-{{ code }}">Nombre</label>
+		<label for="name-{{ code }}">{{ t('identidad.nombre') }}</label>
 		<input id="name-{{ code }}" name="name-{{ code }}" type="text" maxlength="80"
 		       value="{{ state.languages[code].stored_name }}"
 		       placeholder="{{ state.languages[code].name }}">
 
-		<label for="tagline-{{ code }}">Lema</label>
+		<label for="tagline-{{ code }}">{{ t('identidad.lema') }}</label>
 		<textarea id="tagline-{{ code }}" name="tagline-{{ code }}" rows="2"
 		          maxlength="300"
 		          placeholder="{{ state.languages[code].tagline }}">{{ state.languages[code].stored_tagline }}</textarea>
 	</fieldset>
 	{% endfor %}
 
-	<h2 class="section-title">Perfiles</h2>
+	<h2 class="section-title">{{ t('identidad.perfiles') }}</h2>
 	<p class="muted small">
-		Las cuentas de la asociación en otros sitios. Salen en el pie de página y
-		como <span class="mono">sameAs</span> en los datos estructurados, que es
-		como un buscador sabe que esa cuenta de Instagram y esta web son lo mismo.
+		{{ t('identidad.perfiles_nota_antes') }}
+		<span class="mono">sameAs</span>
+		{{ t('identidad.perfiles_nota_despues') }}
 	</p>
 	{% for key, label, placeholder in networks %}
 	<label for="social-{{ key }}">{{ label }}</label>
@@ -72,41 +64,33 @@
 	       value="{{ state.social[key] }}" placeholder="{{ placeholder }}">
 	{% endfor %}
 
-	<h2 class="section-title">Contacto y lugar</h2>
-	<p class="muted small">
-		Público, y pensado para que lo lea una persona tanto como un buscador: una
-		dirección y una ciudad son lo que pone a una asociación en un resultado
-		local y no sólo en uno web.
-	</p>
-	<label for="email">Correo público</label>
+	<h2 class="section-title">{{ t('identidad.contacto') }}</h2>
+	<p class="muted small">{{ t('identidad.contacto_nota') }}</p>
+	<label for="email">{{ t('identidad.correo') }}</label>
 	<input id="email" name="email" type="email" maxlength="120" value="{{ state.email }}"
-	       placeholder="hola@vienalatina.com">
+	       placeholder="{{ t('identidad.correo_ejemplo') }}">
 
-	<label for="phone">Teléfono <span class="muted small">(opcional)</span></label>
+	<label for="phone">{{ t('identidad.telefono') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="phone" name="phone" type="text" maxlength="40" value="{{ state.phone }}">
 
-	<label for="city">Ciudad</label>
+	<label for="city">{{ t('identidad.ciudad') }}</label>
 	<input id="city" name="city" type="text" maxlength="80" value="{{ state.city }}"
-	       placeholder="Wien">
+	       placeholder="{{ t('identidad.ciudad_ejemplo') }}">
 
-	<label for="street">Calle <span class="muted small">(opcional)</span></label>
+	<label for="street">{{ t('identidad.calle') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="street" name="street" type="text" maxlength="160" value="{{ state.street }}">
 
-	<h2 class="section-title">Al compartir, y el pie</h2>
-	<label for="share_image">Imagen por defecto <span class="muted small">(opcional)</span></label>
+	<h2 class="section-title">{{ t('identidad.compartir') }}</h2>
+	<label for="share_image">{{ t('identidad.imagen') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="share_image" name="share_image" type="text" maxlength="200"
-	       value="{{ state.share_image }}" placeholder="/uploads/algo.png">
-	<p class="muted small">
-		La que sale al compartir un artículo que no tiene foto propia. Si la dejas
-		vacía se usa el logotipo, que casi siempre es lo que quieres: esto es para
-		cuando prefieres otra cosa —una foto de la ciudad, por ejemplo.
-	</p>
+	       value="{{ state.share_image }}" placeholder="{{ t('identidad.imagen_ejemplo') }}">
+	<p class="muted small">{{ t('identidad.imagen_nota') }}</p>
 
-	<label for="footer_text">Texto del pie <span class="muted small">(opcional)</span></label>
+	<label for="footer_text">{{ t('identidad.pie') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="footer_text" name="footer_text" type="text" maxlength="200"
 	       value="{{ state.footer_text }}">
-	<p class="muted small">Si lo dejas vacío, el pie pone el nombre y el año.</p>
+	<p class="muted small">{{ t('identidad.pie_nota') }}</p>
 
-	<button class="btn" type="submit">Guardar</button>
+	<button class="btn" type="submit">{{ t('comun.guardar') }}</button>
 </form>
 {% endblock %}

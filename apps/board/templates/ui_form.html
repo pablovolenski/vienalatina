@@ -10,32 +10,23 @@
    frozen from then on, which is the trap `identity_form.html` carries the same
    warning about. #}
 {% extends "base.html" %}
-{% block title %}{{ t('nav.gestion') }} · Textos{% endblock %}
+{% block title %}{{ t('nav.gestion') }} · {{ t('gestion.textos') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Textos</h1>
-	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a {{ t('nav.gestion') }}</a>
+	<h1>{{ t('gestion.textos') }}</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion', seccion=t('nav.gestion')) }}</a>
 </div>
 
-<p class="muted">
-	Las palabras que dice el programa: los nombres de las secciones, los botones
-	y los avisos. Deja una casilla vacía para que siga diciendo lo de siempre —
-	sólo se guarda lo que cambias, así que una mejora de la próxima versión te
-	llega sola si no la has tocado.
-</p>
+<p class="muted">{{ t('textos.intro') }}</p>
 
 {% if state.updated_at and not state.published_at %}
 <section class="panel panel--attention">
-	<div class="panel__head"><h2>Pendiente de publicar</h2></div>
-	<p class="panel__row">
-		Guardado aquí, pero las palabras del sitio público no han salido: no se
-		pudo contactar con el servidor de git la última vez. Las del área privada
-		ya están puestas.
-	</p>
+	<div class="panel__head"><h2>{{ t('comun.pendiente_publicar') }}</h2></div>
+	<p class="panel__row">{{ t('textos.pendiente_nota') }}</p>
 	<form method="post" action="{{ url_for('ui.publish') }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button class="btn" type="submit">Reintentar publicar</button>
+		<button class="btn" type="submit">{{ t('comun.reintentar_publicar') }}</button>
 	</form>
 </section>
 {% endif %}
@@ -43,25 +34,22 @@
 {# Areas as tabs and a search box beside them. Server-side, because the CSP has
    no 'unsafe-inline' and a filter that needs a script is a filter that silently
    does nothing. #}
-<nav class="tabs" aria-label="Apartados">
+<nav class="tabs" aria-label="{{ t('textos.apartados') }}">
 	{% for name in areas %}
 	<a class="tab {{ 'tab--on' if area == name }}"
 	   href="{{ url_for('ui.edit', area=name, q=q or None) }}">{{ name }}</a>
 	{% endfor %}
 	<a class="tab {{ 'tab--on' if area == 'todo' }}"
-	   href="{{ url_for('ui.edit', area='todo', q=q or None) }}">todo</a>
+	   href="{{ url_for('ui.edit', area='todo', q=q or None) }}">{{ t('textos.todo') }}</a>
 </nav>
 
 <form class="card" method="get" action="{{ url_for('ui.edit') }}">
 	<input type="hidden" name="area" value="todo">
-	<label for="q">Buscar en todos los apartados</label>
+	<label for="q">{{ t('textos.buscar_label') }}</label>
 	<input id="q" name="q" type="search" maxlength="80" value="{{ q }}"
-	       placeholder="una palabra que salga en pantalla">
-	<p class="muted small">
-		Busca en la clave, en la nota y en el texto mismo. Si no sabes dónde está
-		una palabra, escríbela aquí.
-	</p>
-	<button class="btn btn--quiet" type="submit">Buscar</button>
+	       placeholder="{{ t('textos.buscar_pista') }}">
+	<p class="muted small">{{ t('textos.buscar_nota') }}</p>
+	<button class="btn btn--quiet" type="submit">{{ t('textos.buscar') }}</button>
 </form>
 
 <form class="card" method="post"
@@ -69,13 +57,13 @@
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 	{% if not rows %}
-	<p class="muted">No hay nada aquí con «{{ q }}».</p>
+	<p class="muted">{{ t('textos.sin_resultados', busqueda=q) }}</p>
 	{% else %}
 	{% for row in rows %}
 	<div class="stringrow">
 		<div class="stringrow__head">
 			<span class="mono small">{{ row.key }}</span>
-			{% if row.public %}<span class="tag tag--quiet">sitio público</span>{% endif %}
+			{% if row.public %}<span class="tag tag--quiet">{{ t('textos.publico') }}</span>{% endif %}
 		</div>
 		{% if row.note %}<p class="muted small">{{ row.note }}</p>{% endif %}
 
@@ -95,30 +83,26 @@
 	{% endfor %}
 
 	<div class="actions">
-		<button class="btn" type="submit">Guardar</button>
+		<button class="btn" type="submit">{{ t('comun.guardar') }}</button>
 	</div>
 	{% endif %}
 </form>
 
 {% if rows and rows[0].public %}
 <p class="muted small">
-	Lo marcado <span class="tag tag--quiet">sitio público</span> va a
-	vienalatina.com y tarda un par de minutos en salir. Un idioma que dejes vacío
-	lo rellena la traducción automática en la siguiente publicación — que para
-	una palabra suelta acierta poco, así que merece la pena escribirlo.
+	{{ t('textos.nota_publico_antes') }}
+	<span class="tag tag--quiet">{{ t('textos.publico') }}</span>
+	{{ t('textos.nota_publico_despues') }}
 </p>
 {% endif %}
 
 {% if state.customised %}
 <form class="card" method="post" action="{{ url_for('ui.restore') }}"
-      data-confirm="Se vuelve a los textos originales en todos los apartados. ¿Seguro?">
+      data-confirm="{{ t('textos.restaurar_confirmar') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<h2 class="section-title">Restaurar los textos originales</h2>
-	<p class="muted small">
-		Deja todas las palabras como venían. No toca nada más: ni los colores, ni
-		la identidad, ni lo que haya escrito la gente.
-	</p>
-	<button class="btn btn--danger" type="submit">Restaurar los textos originales</button>
+	<h2 class="section-title">{{ t('textos.restaurar') }}</h2>
+	<p class="muted small">{{ t('textos.restaurar_nota') }}</p>
+	<button class="btn btn--danger" type="submit">{{ t('textos.restaurar') }}</button>
 </form>
 {% endif %}
 {% endblock %}

@@ -158,5 +158,18 @@ comun.quitar_me_gusta:
   _note: "Lo mismo cuando ya lo has pulsado."
 
 comun.volver_gestion:
-  es: "Volver a Gestión"
-  _note: "Arriba a la derecha en las pantallas de administración."
+  es: "Volver a {seccion}"
+  _note: >-
+    Arriba a la derecha en las seis pantallas de administración. El nombre de la
+    sección llega puesto, así que si Gestión se llama de otra manera este enlace
+    lo dice solo.
+
+comun.pendiente_publicar:
+  es: "Pendiente de publicar"
+  _note: >-
+    El título del aviso de Marca, Identidad y Textos cuando algo se guardó aquí
+    pero no llegó al sitio público.
+
+comun.reintentar_publicar:
+  es: "Reintentar publicar"
+  _note: "El botón de ese aviso, que lo vuelve a intentar."

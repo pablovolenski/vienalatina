@@ -1,0 +1,82 @@
+# Gestión → Textos: esta misma pantalla, la que cambia las palabras.
+#
+# Sí, las palabras de la pantalla de las palabras también se pueden cambiar
+# desde ella. No hay vuelta atrás que haga falta: «Restaurar los textos
+# originales» está en esta misma pantalla y no depende de lo que digan las
+# etiquetas.
+
+textos.intro:
+  es: >-
+    Las palabras que dice el programa: los nombres de las secciones, los botones
+    y los avisos. Deja una casilla vacía para que siga diciendo lo de siempre —
+    sólo se guarda lo que cambias, así que una mejora de la próxima versión te
+    llega sola si no la has tocado.
+  _note: "El párrafo de arriba de esta pantalla."
+
+textos.pendiente_nota:
+  es: >-
+    Guardado aquí, pero las palabras del sitio público no han salido: no se pudo
+    contactar con el servidor de git la última vez. Las del área privada ya
+    están puestas.
+  _note: "Lo que explica el aviso de «Pendiente de publicar» en esta pantalla."
+
+textos.apartados:
+  es: "Apartados"
+  _note: "No se ve: es el nombre de la fila de pestañas para un lector de pantalla."
+
+textos.todo:
+  es: "todo"
+  _note: "La última pestaña, la que muestra todos los apartados a la vez."
+
+textos.buscar_label:
+  es: "Buscar en todos los apartados"
+  _note: "El nombre de la caja de búsqueda."
+
+textos.buscar_pista:
+  es: "una palabra que salga en pantalla"
+  _note: "La pista dentro de esa caja."
+
+textos.buscar_nota:
+  es: >-
+    Busca en la clave, en la nota y en el texto mismo. Si no sabes dónde está
+    una palabra, escríbela aquí.
+  _note: "Debajo de la caja de búsqueda."
+
+textos.buscar:
+  es: "Buscar"
+  _note: "El botón de esa caja."
+
+textos.sin_resultados:
+  es: "No hay nada aquí con «{busqueda}»."
+  _note: "Cuando la búsqueda no encuentra ninguna palabra."
+
+textos.publico:
+  es: "sitio público"
+  _note: >-
+    La etiqueta de una palabra que sale en vienalatina.com, y que por eso tiene
+    una casilla por idioma y tarda un par de minutos en cambiar.
+
+textos.nota_publico_antes:
+  es: "Lo marcado"
+  _note: "El principio de la frase del final, que rodea esa etiqueta."
+
+textos.nota_publico_despues:
+  es: >-
+    va a vienalatina.com y tarda un par de minutos en salir. Un idioma que dejes
+    vacío lo rellena la traducción automática en la siguiente publicación — que
+    para una palabra suelta acierta poco, así que merece la pena escribirlo.
+  _note: "El final de esa frase, después de la etiqueta."
+
+textos.restaurar:
+  es: "Restaurar los textos originales"
+  _note: "El título y el botón del recuadro del final, que deja todas las palabras como venían."
+
+textos.restaurar_nota:
+  es: >-
+    Deja todas las palabras como venían. No toca nada más: ni los colores, ni la
+    identidad, ni lo que haya escrito la gente.
+  _note: "Lo que explica ese botón."
+
+textos.restaurar_confirmar:
+  es: "Se vuelve a los textos originales en todos los apartados. ¿Seguro?"
+  _note: "La pregunta antes de restaurarlos."

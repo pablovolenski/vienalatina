@@ -10,33 +10,26 @@
    The consequence is worth stating because it looks like an oversight: the
    colours an admin picks do not show on the page where they pick them. #}
 {% extends "base.html" %}
-{% block title %}Marca{% endblock %}
+{% block title %}{{ t('gestion.marca') }}{% endblock %}
 {% block brand_css %}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Marca</h1>
-	<a class="linkish" href="{{ url_for('home.gestion') }}">Volver a Gestión</a>
+	<h1>{{ t('gestion.marca') }}</h1>
+	<a class="linkish" href="{{ url_for('home.gestion') }}">{{ t('comun.volver_gestion', seccion=t('nav.gestion')) }}</a>
 </div>
 
-<p class="muted">
-	Los colores, el logotipo y el icono de la pestaña, para las dos mitades del
-	sitio. El área privada cambia al guardar; vienalatina.com se reconstruye en
-	un par de minutos.
-</p>
+<p class="muted">{{ t('marca.intro') }}</p>
 
 {% if state.updated_at and not state.published_at %}
 <section class="panel panel--attention">
 	<div class="panel__head">
-		<h2>Pendiente de publicar</h2>
+		<h2>{{ t('comun.pendiente_publicar') }}</h2>
 	</div>
-	<p class="panel__row">
-		Lo de aquí está guardado, pero no ha llegado al sitio público: no se pudo
-		contactar con el servidor de git la última vez.
-	</p>
+	<p class="panel__row">{{ t('marca.pendiente_nota') }}</p>
 	<form method="post" action="{{ url_for('brand.publish') }}">
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<button class="btn" type="submit">Reintentar publicar en el sitio</button>
+		<button class="btn" type="submit">{{ t('marca.reintentar_publicar') }}</button>
 	</form>
 </section>
 {% endif %}
@@ -49,12 +42,8 @@
       action="{{ url_for('brand.edit') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-	<h2 class="section-title">Colores</h2>
-	<p class="muted small">
-		Seis colores. Los demás —los tonos claros y oscuros del principal— se
-		calculan a partir de él, para que no haya que acertar con cinco rojos
-		parecidos. Están en «Avanzado» si los quieres a mano.
-	</p>
+	<h2 class="section-title">{{ t('marca.colores') }}</h2>
+	<p class="muted small">{{ t('marca.colores_nota') }}</p>
 
 	{# A real colour picker, which every current browser draws natively: no
 	   dependency, no script, and it works with a keyboard. The text beside each
@@ -77,44 +66,35 @@
 	<div class="brand-preview" data-brand-preview-target>
 		<div class="brand-preview__bar">Viena Latina</div>
 		<div class="brand-preview__card">
-			<p class="brand-preview__meta">Ana Pérez · hace dos horas</p>
-			<p>Así se verá una tarjeta del muro con estos colores.</p>
-			<span class="brand-preview__btn">Un botón</span>
+			<p class="brand-preview__meta">{{ t('marca.vista_meta') }}</p>
+			<p>{{ t('marca.vista_texto') }}</p>
+			<span class="brand-preview__btn">{{ t('marca.vista_boton') }}</span>
 		</div>
 	</div>
 
-	<h2 class="section-title">Logotipo</h2>
+	<h2 class="section-title">{{ t('marca.logotipo') }}</h2>
 	<p class="muted small">
-		PNG, JPG o WebP. Aparece en la cabecera de las dos mitades del sitio y es
-		la imagen que sale al compartir un enlace que no tiene foto propia.
-		{% if state.logo_name %}Ahora hay uno puesto; si eliges otro, lo reemplaza.{% endif %}
+		{{ t('marca.logotipo_nota') }}
+		{% if state.logo_name %}{{ t('marca.logotipo_ya') }}{% endif %}
 	</p>
 	{% if state.logo_name %}
 	<p><img class="brand-current"
 	        src="{{ url_for('brand.picture', stored_name=state.logo_name) }}?v={{ state.stamp }}"
-	        alt="El logotipo actual"></p>
+	        alt="{{ t('marca.logotipo_alt') }}"></p>
 	{% endif %}
 	<input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp">
 
-	<h2 class="section-title">Icono de la pestaña</h2>
-	<p class="muted small">
-		PNG, y cuadrado: 32×32 o 180×180 van bien. Se sube aparte y no se saca del
-		logotipo — recortar un logotipo ancho a un cuadrado da un trozo de letra.
-	</p>
+	<h2 class="section-title">{{ t('marca.icono') }}</h2>
+	<p class="muted small">{{ t('marca.icono_nota') }}</p>
 	{% if state.favicon_name %}
 	<p><img class="brand-current brand-current--small"
 	        src="{{ url_for('brand.picture', stored_name=state.favicon_name) }}?v={{ state.stamp }}"
-	        alt="El icono actual"></p>
+	        alt="{{ t('marca.icono_alt') }}"></p>
 	{% endif %}
 	<input id="favicon" name="favicon" type="file" accept="image/png">
 
-	<h2 class="section-title">Tipografía</h2>
-	<p class="muted small">
-		Las cuatro primeras ya están en el ordenador de quien lee: no se descarga
-		nada de ningún sitio. Eso es a propósito — una hoja de estilos que pide una
-		fuente a Google le cuenta a Google la dirección IP de todo el que entra, y
-		eso no se puede consentir en nombre de quien visita la página.
-	</p>
+	<h2 class="section-title">{{ t('marca.tipografia') }}</h2>
+	<p class="muted small">{{ t('marca.tipografia_nota') }}</p>
 
 	<div class="choices">
 		{% for key, (label, stack) in typefaces.items() %}
@@ -131,20 +111,26 @@
 		<label class="choice">
 			<input type="radio" name="typeface" value="propia"
 			       {{ 'checked' if state.typeface == 'propia' }}>
-			Propia (subida aquí)
+			{{ t('marca.propia') }}
 		</label>
 	</div>
 
 	{% if state.font_name %}
-	<p class="muted small">Ya hay una tipografía subida. Si eliges otra, la sustituye.</p>
+	<p class="muted small">{{ t('marca.fuente_ya') }}</p>
 	{% endif %}
-	<label for="font">Archivo .woff2 <span class="muted small">(sólo para «Propia»)</span></label>
+	<label for="font">{{ t('marca.archivo_fuente') }} <span class="muted small">{{ t('marca.archivo_fuente_nota') }}</span></label>
 	<input id="font" name="font" type="file" accept=".woff2,font/woff2">
 
 	{# Closed by default and one line tall, as asked. Everything in it is a way
-	   this goes wrong in practice rather than in theory. #}
+	   this goes wrong in practice rather than in theory.
+
+	   The one block in the members area whose words are NOT in the catalogue.
+	   Four paragraphs of bolded lead-ins, file names in `mono` and seven
+	   links: making it editable means either twenty half-sentence keys or
+	   throwing the markup away, and both are worse than leaving it here. The
+	   summary above IS editable, which is the part somebody might rename. #}
 	<details class="brand-warning">
-		<summary>Antes de subir una tipografía, lee esto</summary>
+		<summary>{{ t('marca.aviso_fuente') }}</summary>
 
 		<p><strong>Lo que hace una fuente mala.</strong> Una tipografía sin
 		<span class="mono">ñ á ü ç ã</span> dibuja esas letras con otra distinta, así
@@ -183,12 +169,8 @@
 		desde la que llegaste a él.</p>
 	</details>
 
-	<h2 class="section-title">Esquinas</h2>
-	<p class="muted small">
-		Lo redondeadas que son las tarjetas, los botones y las fotos. Un solo ajuste
-		para todo: un sitio con tarjetas redondas y botones cuadrados parece dos
-		sitios.
-	</p>
+	<h2 class="section-title">{{ t('marca.esquinas') }}</h2>
+	<p class="muted small">{{ t('marca.esquinas_nota') }}</p>
 	<div class="choices">
 		{% for key, (label, values) in roundness.items() %}
 		<label class="choice">
@@ -200,20 +182,12 @@
 	</div>
 
 	<details class="brand-advanced">
-		<summary>Avanzado</summary>
+		<summary>{{ t('marca.avanzado') }}</summary>
 
-		<p class="muted small">
-			Para quien sepa CSS. Todo lo de aquí se aplica después de lo de arriba,
-			así que gana. Si algo sale mal, «Restaurar lo de fábrica» está al final
-			de esta página y esta página nunca carga este CSS, justamente para que
-			se pueda llegar a ese botón.
-		</p>
+		<p class="muted small">{{ t('marca.avanzado_nota') }}</p>
 
-		<h3 class="section-title">Los demás colores</h3>
-		<p class="muted small">
-			Déjalos en blanco para que se calculen desde el color principal
-			({{ derived|join(', ') }}) o queden como están de fábrica.
-		</p>
+		<h3 class="section-title">{{ t('marca.otros_colores') }}</h3>
+		<p class="muted small">{{ t('marca.otros_colores_nota', lista=derived|join(', ')) }}</p>
 		<div class="swatches">
 			{% for name in advanced %}
 			<div class="swatch">
@@ -226,28 +200,25 @@
 			{% endfor %}
 		</div>
 
-		<h3 class="section-title">CSS propio</h3>
-		<p class="muted small">
-			Se añade al final de la hoja de estilos, en las dos mitades del sitio.
-			No puede contener «&lt;» ni «&gt;».
-		</p>
+		<h3 class="section-title">{{ t('marca.css') }}</h3>
+		{#- The angle brackets are written as characters in the catalogue and
+		    escaped on the way out, rather than as entities in the template:
+		    whoever edits this string types « < » and not «&lt;». -#}
+		<p class="muted small">{{ t('marca.css_nota') }}</p>
 		<textarea id="custom_css" name="custom_css" rows="10" class="mono"
-		          placeholder=".site-bar__logo { max-height: 48px; }">{{ state.custom_css }}</textarea>
+		          placeholder="{{ t('marca.css_ejemplo') }}">{{ state.custom_css }}</textarea>
 	</details>
 
-	<button class="btn" type="submit">Guardar</button>
+	<button class="btn" type="submit">{{ t('comun.guardar') }}</button>
 </form>
 
 {% if state.customised %}
 <form class="card" method="post" action="{{ url_for('brand.restore') }}"
-      data-confirm="Se vuelve a los colores originales y se borran el logotipo y el icono. ¿Seguro?">
+      data-confirm="{{ t('marca.restaurar_confirmar') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<h2 class="section-title">Restaurar lo de fábrica</h2>
-	<p class="muted small">
-		Deja los colores como estaban al principio y quita el logotipo y el icono.
-		Esto funciona siempre, incluso si el CSS propio ha roto el resto del sitio.
-	</p>
-	<button class="btn btn--danger" type="submit">Restaurar lo de fábrica</button>
+	<h2 class="section-title">{{ t('marca.restaurar') }}</h2>
+	<p class="muted small">{{ t('marca.restaurar_nota') }}</p>
+	<button class="btn btn--danger" type="submit">{{ t('marca.restaurar') }}</button>
 </form>
 {% endif %}
 {% endblock %}

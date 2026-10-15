@@ -385,8 +385,14 @@ textarea { resize: vertical; line-height: 1.55; }
 
 /* --- editor ----------------------------------------------------------- */
 
+/* Wrapping, because the number of tabs is not fixed: Textos draws one per
+   catalogue file, and that went from two to twelve as the strings came out of
+   the templates. Twelve pills on one flex line measured 1354px inside a 390px
+   phone, which scrolled the whole page sideways. Each pill stays on one line
+   and the row takes as many lines as it needs. */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
@@ -397,6 +403,7 @@ textarea { resize: vertical; line-height: 1.55; }
   color: var(--muted);
   background: var(--surface-soft);
   font-size: 0.9rem;
+  white-space: nowrap;
 }
 .tab--on { background: var(--brand-soft); color: var(--brand-dark); font-weight: 600; }
 
