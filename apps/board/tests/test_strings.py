@@ -368,7 +368,13 @@ def test_erasing_whoever_chose_the_words_leaves_them_standing(client, db, post, 
 
 def _translate_module():
     """`scripts/translate.py` is a script, not a package — same loader
-    `test_content.py` uses."""
+    `test_content.py` uses.
+
+    It imports the translation stack, which belongs to the pipeline image and
+    not to the members area's. A developer with no `sentencex` installed is the
+    normal case, so the tests below skip rather than fail — the same bargain
+    `test_editor.py` makes about node.
+    """
     import importlib.util
     import sys
     sys.path.insert(0, str(ROOT / "scripts"))
@@ -394,6 +400,9 @@ class _Shouty:
 @pytest.fixture
 def pipeline(tmp_path, monkeypatch):
     """translate.py pointed at a throwaway `data/` directory."""
+    pytest.importorskip(
+        "sentencex",
+        reason="the translation stack lives in the pipeline image, not this one")
     module = _translate_module()
     monkeypatch.setattr(module, "UI_FILE", tmp_path / "ui.yaml")
     monkeypatch.setattr(module, "UI_AUTO_FILE", tmp_path / "ui_auto.yaml")

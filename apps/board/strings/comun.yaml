@@ -1,0 +1,76 @@
+# The words that appear on screen after screen.
+#
+# «Guardar» is on nine forms, «Cancelar» on seven, «(opcional)» on fourteen
+# labels. One key each, so renaming one renames all of them — which is both the
+# point and most of the reason 506 occurrences in the templates are only ~360
+# distinct strings.
+#
+# A word belongs here when changing it in one place and not the others would be
+# a bug. Anything a single screen says stays in that screen's own file.
+
+comun.guardar:
+  es: "Guardar"
+  _note: "El botón de cualquier formulario que edita algo que ya existe."
+
+comun.publicar:
+  es: "Publicar"
+  _note: "El mismo botón cuando lo que se está escribiendo es nuevo."
+
+comun.cancelar:
+  es: "Cancelar"
+  _note: "Junto a Guardar, en todos los formularios."
+
+comun.editar:
+  es: "Editar"
+  _note: "En temas, respuestas, artículos y páginas."
+
+comun.eliminar:
+  es: "Eliminar"
+  _note: "En temas, respuestas, artículos, páginas e imágenes."
+
+comun.opcional:
+  es: "(opcional)"
+  _note: "Detrás del nombre de un campo que se puede dejar vacío. Sale catorce veces."
+
+comun.titulo:
+  es: "Título"
+  _note: "El campo del título, en todos los formularios que tienen uno."
+
+comun.imagenes:
+  es: "Imágenes"
+  _note: "El campo para adjuntar fotos."
+
+comun.markdown:
+  es: "Se puede usar Markdown: **negrita**, listas, enlaces."
+  _note: "La pista dentro de las cajas de escribir, cuando están vacías."
+
+comun.ia:
+  es: "Generado con IA"
+  _note: "La etiqueta de un texto marcado como escrito por una máquina."
+
+# Dos claves y no una: la etiqueta va en lo ya publicado y el interruptor en el
+# formulario, y cambiar una sin la otra no sería un error. El sitio público las
+# distingue igual, con «ai» y «aifull».
+comun.ia_campo:
+  es: "Contenido generado con IA"
+  _note: "El interruptor junto al botón de publicar, donde se marca."
+
+comun.ia_ayuda:
+  es: "Quien lo publicó marcó este texto como generado con inteligencia artificial."
+  _note: "Lo que sale al posar el ratón sobre esa etiqueta."
+
+comun.fijado:
+  es: "Fijado"
+  _note: "La etiqueta de algo puesto arriba a propósito."
+
+comun.editado:
+  es: "(editado)"
+  _note: "Detrás de la fecha, cuando alguien ha cambiado lo que escribió."
+
+comun.anteriores:
+  es: "← Anteriores"
+  _note: "Para ir a la página anterior de una lista larga."
+
+comun.siguientes:
+  es: "Siguientes →"
+  _note: "Para ir a la siguiente."

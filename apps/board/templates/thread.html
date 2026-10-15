@@ -8,11 +8,11 @@
 {% block main %}
 <article class="card">
 	<div class="card__meta">
-		{% if thread.pinned %}<span class="tag">Fijado</span>{% endif %}
-		{% if thread.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
-		{% if thread.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
+		{% if thread.pinned %}<span class="tag">{{ t('comun.fijado') }}</span>{% endif %}
+		{% if thread.locked %}<span class="tag tag--quiet">{{ t('muro.cerrado') }}</span>{% endif %}
+		{% if thread.ai_generated %}<span class="tag tag--ai" title="{{ t('comun.ia_ayuda') }}">{{ t('comun.ia') }}</span>{% endif %}
 		<span>{{ person(author.display_name, author.gitea_login) }}</span> · <time>{{ thread.created_at }}</time>
-		{% if thread.edited_at %}<span class="muted small">(editado)</span>{% endif %}
+		{% if thread.edited_at %}<span class="muted small">{{ t('comun.editado') }}</span>{% endif %}
 	</div>
 	<h1 class="card__title">{{ thread.title }}</h1>
 	<div class="prose">{{ body_html }}</div>
@@ -22,13 +22,13 @@
 		{{ reaction('thread', thread.id, reactions.get(thread.id),
 		            url_for('board.thread', thread_id=thread.id)) }}
 		{% if may_edit(thread) %}
-		<a class="linkish" href="{{ url_for('board.edit_thread', thread_id=thread.id) }}">Editar</a>
+		<a class="linkish" href="{{ url_for('board.edit_thread', thread_id=thread.id) }}">{{ t('comun.editar') }}</a>
 		{% endif %}
 		{% if may_delete(thread) %}
 		<form method="post" action="{{ url_for('board.delete_thread', thread_id=thread.id) }}"
-		      data-confirm="¿Eliminar este tema?">
+		      data-confirm="{{ t('muro.confirmar_eliminar') }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<button class="linkish linkish--danger" type="submit">Eliminar</button>
+			<button class="linkish linkish--danger" type="submit">{{ t('comun.eliminar') }}</button>
 		</form>
 		{% endif %}
 		{# Pinning is curation and a moderator does it; closing a conversation
@@ -41,19 +41,19 @@
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" name="field" value="locked">
 			<input type="hidden" name="value" value="{{ 0 if thread.locked else 1 }}">
-			<button class="linkish" type="submit">{{ 'Reabrir' if thread.locked else 'Cerrar' }}</button>
+			<button class="linkish" type="submit">{{ t('muro.reabrir') if thread.locked else t('muro.cerrar') }}</button>
 		</form>
 		{% endif %}
 	</div>
 </article>
 
-<h2 class="section-head">{{ comments|length }} respuesta{{ '' if comments|length == 1 else 's' }}</h2>
+<h2 class="section-head">{{ t('muro.respuesta', n=comments|length) if comments|length == 1 else t('muro.respuestas', n=comments|length) }}</h2>
 
 {% for c in comments %}
 <article class="card card--comment" id="c{{ c.id }}">
 	<div class="card__meta">
 		<span>{{ person(c.author, c.author_login) }}</span> · <time>{{ c.created_at }}</time>
-		{% if c.edited_at %}<span class="muted small">(editado)</span>{% endif %}
+		{% if c.edited_at %}<span class="muted small">{{ t('comun.editado') }}</span>{% endif %}
 	</div>
 	<div class="prose">{{ to_html(c.body_md) }}</div>
 	{{ attachments(comment_images.get(c.id, [])) }}
@@ -61,12 +61,12 @@
 		{{ reaction('comment', c.id, comment_reactions.get(c.id),
 		            url_for('board.thread', thread_id=thread.id) ~ '#c' ~ c.id) }}
 		{% if may_edit(c) %}
-		<a class="linkish" href="{{ url_for('board.edit_comment', comment_id=c.id) }}">Editar</a>
+		<a class="linkish" href="{{ url_for('board.edit_comment', comment_id=c.id) }}">{{ t('comun.editar') }}</a>
 		{% endif %}
 		{% if may_delete(c) %}
 		<form method="post" action="{{ url_for('board.delete_comment', comment_id=c.id) }}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<button class="linkish linkish--danger" type="submit">Eliminar</button>
+			<button class="linkish linkish--danger" type="submit">{{ t('comun.eliminar') }}</button>
 		</form>
 		{% endif %}
 	</div>
@@ -76,19 +76,19 @@
 <span id="final"></span>
 
 {% if thread.locked and not is_admin %}
-<p class="muted">Este tema está cerrado a nuevas respuestas.</p>
+<p class="muted">{{ t('muro.tema_cerrado') }}</p>
 {% else %}
 <form class="card" method="post" enctype="multipart/form-data"
       action="{{ url_for('board.comment', thread_id=thread.id) }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<label for="body">Responder</label>
+	<label for="body">{{ t('muro.responder') }}</label>
 	<textarea id="body" data-markdown name="body" rows="5" required
-	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces."></textarea>
+	          placeholder="{{ t('comun.markdown') }}"></textarea>
 
-	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
+	<label for="pictures">{{ t('comun.imagenes') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="pictures" name="pictures" type="file" multiple accept="image/*">
 
-	<button class="btn" type="submit">Publicar respuesta</button>
+	<button class="btn" type="submit">{{ t('muro.publicar_respuesta') }}</button>
 </form>
 {% endif %}
 {% endblock %}

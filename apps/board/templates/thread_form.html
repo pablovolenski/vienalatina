@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Editar tema' if thread else 'Escribir' }}{% endblock %}
+{% block title %}{{ t('muro.editar_tema') if thread else t('muro.escribir') }}{% endblock %}
 
 {% block main %}
 <form class="card" method="post" enctype="multipart/form-data"
       action="{{ url_for('board.edit_thread', thread_id=thread.id) if thread else url_for('board.new_thread') }}">
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-	<h1>{{ 'Editar tema' if thread else 'Nuevo tema' }}</h1>
+	<h1>{{ t('muro.editar_tema') if thread else t('muro.nuevo_tema') }}</h1>
 
-	<label for="title">Título</label>
+	<label for="title">{{ t('comun.titulo') }}</label>
 	<input id="title" name="title" maxlength="140"
 	       value="{{ thread.title if thread else '' }}">
 
-	<label for="body">Mensaje</label>
+	<label for="body">{{ t('muro.mensaje') }}</label>
 	<textarea id="body" data-markdown data-rich="full" name="body" rows="14" required
-	          placeholder="Se puede usar Markdown: **negrita**, listas, enlaces.">{{ thread.body_md if thread else '' }}</textarea>
+	          placeholder="{{ t('comun.markdown') }}">{{ thread.body_md if thread else '' }}</textarea>
 	{#- The stored markdown, rendered by the server for the editor to adopt.
 	    There is no markdown parser in the browser: this is how the box can
 	    show the formatting without a second opinion about what somebody's
@@ -24,12 +24,12 @@
 	   and an input that silently does nothing is worse than no input. Photos
 	   already attached survive an edit — they are separate rows. #}
 	{% if not thread %}
-	<label for="pictures">Imágenes <span class="muted small">(opcional)</span></label>
+	<label for="pictures">{{ t('comun.imagenes') }} <span class="muted small">{{ t('comun.opcional') }}</span></label>
 	<input id="pictures" name="pictures" type="file" multiple accept="image/*">
 	{% endif %}
 
 	<div class="actions">
-		<button class="btn" type="submit">{{ 'Guardar' if thread else 'Publicar' }}</button>
+		<button class="btn" type="submit">{{ t('comun.guardar') if thread else t('comun.publicar') }}</button>
 		{#- Beside the button that publishes, because that is the moment it is
 		    answered. One line rather than a fieldset: it has to be seen, not
 		    to take up the form. -#}
@@ -39,10 +39,10 @@
 			    state. No script: a control that needs one is a control that
 			    does nothing under this Content-Security-Policy. -#}
 			<span class="toggle__track" aria-hidden="true"></span>
-			<span class="toggle__text">Contenido generado con IA</span>
+			<span class="toggle__text">{{ t('comun.ia_campo') }}</span>
 		</label>
 
-		<a class="btn btn--quiet" href="{{ url_for('board.thread', thread_id=thread.id) if thread else url_for('board.threads') }}">Cancelar</a>
+		<a class="btn btn--quiet" href="{{ url_for('board.thread', thread_id=thread.id) if thread else url_for('board.threads') }}">{{ t('comun.cancelar') }}</a>
 	</div>
 </form>
 {% endblock %}

@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 {% from "_person.html" import person %}
-{% block title %}Inicio{% endblock %}
+{% block title %}{{ t('nav.inicio') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Hola, {{ g.member.display_name }}</h1>
-	<span class="muted small">{{ people }} miembro{{ '' if people == 1 else 's' }} activo{{ '' if people == 1 else 's' }}</span>
+	<h1>{{ t('inicio.saludo', nombre=g.member.display_name) }}</h1>
+	{#- Which of the two keys is chosen outside the call rather than inside its
+	    argument: the test that hunts orphaned keys reads the first key in a
+	    `t(…)` and nothing else, so a key chosen inside one looks to it like a
+	    key no page shows. #}
+	<span class="muted small">{{ t('inicio.activo', n=people) if people == 1 else t('inicio.activos', n=people) }}</span>
 </div>
 
 {# Panels in the order things get acted on: what is waiting for me, then what
@@ -13,8 +17,8 @@
 {% if queue %}
 <section class="panel panel--attention">
 	<div class="panel__head">
-		<h2>Para revisar</h2>
-		<a class="linkish" href="{{ url_for('submissions.index') }}">Ver la cola</a>
+		<h2>{{ t('inicio.revisar') }}</h2>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">{{ t('inicio.ver_cola') }}</a>
 	</div>
 	{% for item in queue %}
 	<p class="panel__row">
@@ -27,11 +31,11 @@
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Privados</h2>
-		<a class="linkish" href="{{ url_for('members.index') }}">Miembros</a>
+		<h2>{{ t('inicio.privados') }}</h2>
+		<a class="linkish" href="{{ url_for('members.index') }}">{{ t('nav.miembros') }}</a>
 	</div>
 	{% if not conversations %}
-	<p class="muted">Todavía no tienes conversaciones. Abre la ficha de alguien en Miembros y escríbele.</p>
+	<p class="muted">{{ t('inicio.sin_conversaciones') }}</p>
 	{% endif %}
 	{% for c in conversations %}
 	<p class="panel__row">
@@ -44,35 +48,35 @@
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Muro</h2>
-		<a class="linkish" href="{{ url_for('board.threads') }}">Todo el muro</a>
+		<h2>{{ t('nav.muro') }}</h2>
+		<a class="linkish" href="{{ url_for('board.threads') }}">{{ t('inicio.todo_el_muro') }}</a>
 	</div>
 	{% if not threads %}
-	<p class="muted">El muro está vacío. <a href="{{ url_for('board.new_thread') }}">Escribe el primero.</a></p>
+	<p class="muted">{{ t('inicio.muro_vacio') }} <a href="{{ url_for('board.new_thread') }}">{{ t('inicio.escribe_primero') }}</a></p>
 	{% endif %}
-	{% for t in threads %}
+	{% for thread in threads %}
 	<p class="panel__row">
 		{# This panel orders by the pin like the wall does, so it has to say
 		   which one is pinned or the order looks arbitrary from here. #}
-		{% if t.pinned %}<span class="tag">Fijado</span> {% endif %}
-		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>
-		<span class="muted small">{{ person(t.author, t.author_login) }} · {{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
+		{% if thread.pinned %}<span class="tag">{{ t('comun.fijado') }}</span> {% endif %}
+		<a href="{{ url_for('board.thread', thread_id=thread.id) }}">{{ thread.title }}</a>
+		<span class="muted small">{{ person(thread.author, thread.author_login) }} · {{ t('muro.respuesta', n=thread.replies) if thread.replies == 1 else t('muro.respuestas', n=thread.replies) }}</span>
 	</p>
 	{% endfor %}
 </section>
 
 <section class="panel">
 	<div class="panel__head">
-		<h2>Mis publicaciones</h2>
-		<a class="linkish" href="{{ url_for('submissions.index') }}">Publicaciones</a>
+		<h2>{{ t('inicio.mis_publicaciones') }}</h2>
+		<a class="linkish" href="{{ url_for('submissions.index') }}">{{ t('nav.publicaciones') }}</a>
 	</div>
 	{% if not mine %}
 	<p class="muted">
 		{% if may_moderate() %}
-		Puedes publicar directamente en el sitio desde <a href="{{ url_for('content.index') }}">Publicaciones</a>.
+		{{ t('inicio.puedes_publicar') }} <a href="{{ url_for('content.index') }}">{{ t('nav.publicaciones') }}</a>.
 		{% else %}
-		¿Tienes algo que contarle al barrio? <a href="{{ url_for('submissions.propose') }}">Propón una publicación</a>
-		y un moderador la leerá antes de publicarla.
+		{{ t('inicio.propon') }} <a href="{{ url_for('submissions.propose') }}">{{ t('inicio.propon_enlace') }}</a>
+		{{ t('inicio.propon_cola') }}
 		{% endif %}
 	</p>
 	{% endif %}

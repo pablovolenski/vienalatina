@@ -11,6 +11,6 @@
 	<input type="hidden" name="field" value="pinned">
 	<input type="hidden" name="value" value="{{ 0 if thread.pinned else 1 }}">
 	<input type="hidden" name="back" value="{{ back }}">
-	<button class="linkish" type="submit">{{ 'No fijar' if thread.pinned else 'Fijar' }}</button>
+	<button class="linkish" type="submit">{{ t('muro.no_fijar') if thread.pinned else t('muro.fijar') }}</button>
 </form>
 {% endmacro %}

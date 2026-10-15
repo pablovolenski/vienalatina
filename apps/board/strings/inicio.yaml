@@ -1,0 +1,63 @@
+# Inicio: el resumen de lo que ha pasado desde la última visita.
+
+inicio.saludo:
+  es: "Hola, {nombre}"
+  _note: "El encabezado de la pantalla de inicio."
+
+inicio.activo:
+  es: "{n} miembro activo"
+  _note: "Arriba a la derecha, cuando sólo hay una persona."
+
+inicio.activos:
+  es: "{n} miembros activos"
+  _note: "Lo mismo cuando hay más de una."
+
+inicio.revisar:
+  es: "Para revisar"
+  _note: "El panel de propuestas esperando a un moderador. Sólo lo ven ellos."
+
+inicio.ver_cola:
+  es: "Ver la cola"
+  _note: "El enlace de ese panel."
+
+inicio.privados:
+  es: "Privados"
+  _note: "El panel de conversaciones privadas."
+
+inicio.sin_conversaciones:
+  es: "Todavía no tienes conversaciones. Abre la ficha de alguien en Miembros y escríbele."
+  _note: "Cuando nadie te ha escrito todavía."
+
+inicio.todo_el_muro:
+  es: "Todo el muro"
+  _note: "El enlace del panel del muro."
+
+inicio.muro_vacio:
+  es: "El muro está vacío."
+  _note: "Cuando no hay ningún tema. Le sigue el enlace de abajo."
+
+inicio.escribe_primero:
+  es: "Escribe el primero."
+  _note: "El enlace que sigue a esa frase."
+
+inicio.mis_publicaciones:
+  es: "Mis publicaciones"
+  _note: "El panel de lo que has propuesto para el sitio público."
+
+inicio.puedes_publicar:
+  es: "Puedes publicar directamente en el sitio desde"
+  _note: >-
+    Para moderadores y administración, cuando no tienen propuestas. Le sigue el
+    enlace a Publicaciones, así que la frase termina sin punto.
+
+inicio.propon:
+  es: "¿Tienes algo que contarle al barrio?"
+  _note: "Para un miembro sin propuestas. Le sigue el enlace de abajo."
+
+inicio.propon_enlace:
+  es: "Propón una publicación"
+  _note: "El enlace que sigue a esa pregunta."
+
+inicio.propon_cola:
+  es: "y un moderador la leerá antes de publicarla."
+  _note: "El final de esa frase, después del enlace."

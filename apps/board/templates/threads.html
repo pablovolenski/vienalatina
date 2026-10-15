@@ -2,47 +2,47 @@
 {% from "_person.html" import person %}
 {% from "_reaction.html" import reaction %}
 {% from "_pin.html" import pin %}
-{% block title %}Muro{% endblock %}
+{% block title %}{{ t('nav.muro') }}{% endblock %}
 
 {% block main %}
 <div class="feed-head">
-	<h1>Muro</h1>
-	<a class="btn" href="{{ url_for('board.new_thread') }}">Escribir</a>
+	<h1>{{ t('nav.muro') }}</h1>
+	<a class="btn" href="{{ url_for('board.new_thread') }}">{{ t('muro.escribir') }}</a>
 </div>
 
 {% if not threads %}
 <article class="card">
-	<p class="muted">Todavía no hay nada en el muro. Escribe el primero.</p>
+	<p class="muted">{{ t('muro.vacio') }}</p>
 </article>
 {% endif %}
 
-{% for t in threads %}
+{% for thread in threads %}
 <article class="card">
 	<div class="card__meta">
-		{% if t.pinned %}<span class="tag">Fijado</span>{% endif %}
-		{% if t.locked %}<span class="tag tag--quiet">Cerrado</span>{% endif %}
-		{% if t.ai_generated %}<span class="tag tag--ai" title="Quien lo publicó marcó este texto como generado con inteligencia artificial.">Generado con IA</span>{% endif %}
-		<span>{{ person(t.author, t.author_login) }}</span> · <time>{{ t.created_at }}</time>
+		{% if thread.pinned %}<span class="tag">{{ t('comun.fijado') }}</span>{% endif %}
+		{% if thread.locked %}<span class="tag tag--quiet">{{ t('muro.cerrado') }}</span>{% endif %}
+		{% if thread.ai_generated %}<span class="tag tag--ai" title="{{ t('comun.ia_ayuda') }}">{{ t('comun.ia') }}</span>{% endif %}
+		<span>{{ person(thread.author, thread.author_login) }}</span> · <time>{{ thread.created_at }}</time>
 	</div>
 	<h2 class="card__title">
-		<a href="{{ url_for('board.thread', thread_id=t.id) }}">{{ t.title }}</a>
+		<a href="{{ url_for('board.thread', thread_id=thread.id) }}">{{ thread.title }}</a>
 	</h2>
-	<p class="card__excerpt">{{ excerpt(t.body_md) }}</p>
+	<p class="card__excerpt">{{ excerpt(thread.body_md) }}</p>
 	<div class="card__foot">
-		{{ reaction('thread', t.id, reactions.get(t.id), url_for('board.threads', page=page)) }}
-		<span>{{ t.replies }} respuesta{{ '' if t.replies == 1 else 's' }}</span>
+		{{ reaction('thread', thread.id, reactions.get(thread.id), url_for('board.threads', page=page)) }}
+		<span>{{ t('muro.respuesta', n=thread.replies) if thread.replies == 1 else t('muro.respuestas', n=thread.replies) }}</span>
 		{# From here as well as from the thread page: deciding what the wall
 		   leads with means looking at the wall, not opening each thread to
 		   find out what is on it. #}
-		{% if may_pin %}{{ pin(t, url_for('board.threads', page=page)) }}{% endif %}
+		{% if may_pin %}{{ pin(thread, url_for('board.threads', page=page)) }}{% endif %}
 	</div>
 </article>
 {% endfor %}
 
 {% if page > 1 or has_next %}
 <nav class="pager">
-	{% if page > 1 %}<a href="{{ url_for('board.threads', page=page - 1) }}">← Anteriores</a>{% endif %}
-	{% if has_next %}<a href="{{ url_for('board.threads', page=page + 1) }}">Siguientes →</a>{% endif %}
+	{% if page > 1 %}<a href="{{ url_for('board.threads', page=page - 1) }}">{{ t('comun.anteriores') }}</a>{% endif %}
+	{% if has_next %}<a href="{{ url_for('board.threads', page=page + 1) }}">{{ t('comun.siguientes') }}</a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}

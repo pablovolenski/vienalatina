@@ -1,0 +1,69 @@
+# El muro: el tablón interno, los temas y las respuestas.
+#
+# Plurals are two keys rather than one with a rule. Spanish, German and
+# Portuguese all have exactly two forms, and two keys is something an admin can
+# read and fix; a rule is something only a programmer can.
+
+muro.escribir:
+  es: "Escribir"
+  _note: "El botón de arriba del muro, para empezar un tema."
+
+muro.vacio:
+  es: "Todavía no hay nada en el muro. Escribe el primero."
+  _note: "Cuando el muro no tiene ningún tema."
+
+muro.cerrado:
+  es: "Cerrado"
+  _note: "La etiqueta de un tema al que ya no se puede responder."
+
+muro.respuesta:
+  es: "{n} respuesta"
+  _note: "Debajo de un tema que tiene exactamente una."
+
+muro.respuestas:
+  es: "{n} respuestas"
+  _note: "Debajo de un tema que tiene ninguna o más de una."
+
+muro.fijar:
+  es: "Fijar"
+  _note: "Pone el tema arriba del todo. Lo ven moderadores y administración."
+
+muro.no_fijar:
+  es: "No fijar"
+  _note: "El mismo botón cuando el tema ya está fijado."
+
+muro.cerrar:
+  es: "Cerrar"
+  _note: "Cierra el tema a nuevas respuestas. Sólo administración."
+
+muro.reabrir:
+  es: "Reabrir"
+  _note: "El mismo botón cuando el tema ya está cerrado."
+
+muro.confirmar_eliminar:
+  es: "¿Eliminar este tema?"
+  _note: "La pregunta antes de borrar un tema."
+
+muro.tema_cerrado:
+  es: "Este tema está cerrado a nuevas respuestas."
+  _note: "En lugar de la caja de responder, cuando el tema está cerrado."
+
+muro.responder:
+  es: "Responder"
+  _note: "El nombre de la caja de respuesta, al final de un tema."
+
+muro.publicar_respuesta:
+  es: "Publicar respuesta"
+  _note: "El botón debajo de esa caja."
+
+muro.nuevo_tema:
+  es: "Nuevo tema"
+  _note: "El título de la página al escribir algo nuevo en el muro."
+
+muro.editar_tema:
+  es: "Editar tema"
+  _note: "El mismo título al corregir un tema que ya existe."
+
+muro.mensaje:
+  es: "Mensaje"
+  _note: "El nombre del campo grande donde se escribe el tema."
