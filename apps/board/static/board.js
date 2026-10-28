@@ -214,6 +214,8 @@ document.addEventListener("submit", function (event) {
 
   // --- the toolbar ---------------------------------------------------------
 
+  // What each button does. The words are the shipped ones; whatever somebody
+  // has put in Gestión → Textos arrives from the page and replaces them below.
   var TOOLS = {
     h2:     { label: "T1", title: "Título", block: "<h2>" },
     h3:     { label: "T2", title: "Subtítulo", block: "<h3>" },
@@ -227,6 +229,40 @@ document.addEventListener("submit", function (event) {
     link:   { label: "🔗", title: "Enlace", link: true },
     clear:  { label: "✕", title: "Quitar formato", clear: true }
   };
+  var RAW = { label: "Markdown", title: "Escribir en markdown",
+              back: "Con formato" };
+
+  // The words, from the page. `base.html` renders them into one data attribute
+  // because this Content-Security-Policy has no 'unsafe-inline' and an inline
+  // <script> would be dropped without a word.
+  //
+  // Everything here is belt and braces on purpose: the element can be missing
+  // (the node test has no DOM at all), the attribute can be unparseable, and a
+  // key can be absent because the catalogue moved on while a page sat open in
+  // a tab. Any of those leaves the shipped word in place, which is a toolbar
+  // in the wrong language — never a toolbar with blank buttons.
+  function adoptWords() {
+    var holder = typeof document !== "undefined"
+      && document.getElementById("md-words");
+    if (!holder) { return; }
+    var given;
+    try {
+      given = JSON.parse(holder.getAttribute("data-words") || "{}");
+    } catch (error) {
+      return;
+    }
+    Object.keys(TOOLS).forEach(function (name) {
+      var words = given[name];
+      if (!words) { return; }
+      if (words.label) { TOOLS[name].label = words.label; }
+      if (words.title) { TOOLS[name].title = words.title; }
+    });
+    if (given.raw) {
+      if (given.raw.label) { RAW.label = given.raw.label; }
+      if (given.raw.title) { RAW.title = given.raw.title; }
+      if (given.raw.back) { RAW.back = given.raw.back; }
+    }
+  }
   var SETS = {
     full: ["h2", "h3", "h4", "bold", "italic", "strike", "ul", "ol", "quote", "link", "clear"],
     basic: ["bold", "italic", "link", "clear"]
@@ -309,14 +345,14 @@ document.addEventListener("submit", function (event) {
     // something. Going back renders through the server, for the same reason
     // opening does: there is no markdown parser here.
     var raw = false;
-    var swap = button("Markdown", "Escribir en markdown", function () {
+    var swap = button(RAW.label, RAW.title, function () {
       if (!raw) {
         sync();
         surface.hidden = true;
         box.hidden = false;
         box.focus();
         raw = true;
-        swap.textContent = "Con formato";
+        swap.textContent = RAW.back;
         return;
       }
       var token = form && form.querySelector("input[name=csrf_token]");
@@ -334,7 +370,7 @@ document.addEventListener("submit", function (event) {
         surface.hidden = false;
         box.hidden = true;
         raw = false;
-        swap.textContent = "Markdown";
+        swap.textContent = RAW.label;
       }).catch(function () {
         // Stay in markdown rather than lose what is in the box.
       });
@@ -433,6 +469,9 @@ document.addEventListener("submit", function (event) {
     // which the serializer would have to guess at. Harmless where the whole
     // command set is unsupported, since nothing below runs then either.
     try { document.execCommand("styleWithCSS", false, false); } catch (error) { /* older engines */ }
+    // Before the first button is drawn, and once: the words do not change
+    // while a page is open.
+    adoptWords();
     Array.prototype.forEach.call(
       document.querySelectorAll("textarea[data-markdown]"), enrich);
     brandPreview();

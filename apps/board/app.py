@@ -27,6 +27,38 @@ def _env_flag(name: str, default: bool) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "on")
 
 
+def editor_words() -> dict[str, dict[str, str]]:
+    """What `board.js` draws on its buttons, by tool.
+
+    Spelled out rather than built from the tool names: the test that hunts
+    orphaned keys reads literal keys, and a key assembled from a loop variable
+    is one it cannot see. `board.js` carries the same table as its fallback, so
+    a page that never calls this still gets a working toolbar — which is how
+    the node test runs it, with no Flask anywhere.
+    """
+    # Imported here rather than at the top, like the blueprints below: this
+    # module is the one everything else imports from.
+    from . import strings
+
+    t = strings.t
+    return {
+        "h2": {"label": t("editor.titulo_boton"), "title": t("editor.titulo")},
+        "h3": {"label": t("editor.subtitulo_boton"), "title": t("editor.subtitulo")},
+        "h4": {"label": t("editor.apartado_boton"), "title": t("editor.apartado")},
+        "bold": {"label": t("editor.negrita_boton"), "title": t("editor.negrita")},
+        "italic": {"label": t("editor.cursiva_boton"), "title": t("editor.cursiva")},
+        "strike": {"label": t("editor.tachado_boton"), "title": t("editor.tachado")},
+        "ul": {"label": t("editor.lista_boton"), "title": t("editor.lista")},
+        "ol": {"label": t("editor.lista_numerada_boton"),
+               "title": t("editor.lista_numerada")},
+        "quote": {"label": t("editor.cita_boton"), "title": t("editor.cita")},
+        "link": {"label": t("editor.enlace_boton"), "title": t("editor.enlace")},
+        "clear": {"label": t("editor.limpiar_boton"), "title": t("editor.limpiar")},
+        "raw": {"label": t("editor.markdown_boton"), "title": t("editor.markdown"),
+                "back": t("editor.con_formato_boton")},
+    }
+
+
 def create_app(overrides: dict | None = None) -> Flask:
     # Static files have to live under the prefix too: Caddy only forwards
     # /comunidad/*, so a default /static/… would fall through to the Hugo
@@ -144,6 +176,9 @@ def create_app(overrides: dict | None = None) -> Flask:
     # the read behind it is one row, memoised on `g`, and falls back to the
     # shipped wording rather than raising. See strings.overrides().
     app.jinja_env.globals["t"] = strings.t
+    # The writing toolbar is drawn by the browser, so its words have to travel
+    # to it. Lazily, as a function: only the pages with a writing box ask.
+    app.jinja_env.globals["editor_words"] = editor_words
 
     @app.context_processor
     def _year():

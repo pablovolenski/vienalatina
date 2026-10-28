@@ -25,6 +25,14 @@
 </head>
 <body>
 
+{#- The writing toolbar's words, handed to the browser as data. A label like
+    «N» is for *negrita* and has to change when the words do, and board.js
+    cannot read the catalogue. One attribute rather than an inline
+    <script>: this Content-Security-Policy has no 'unsafe-inline', and a data
+    attribute raises no question about it at all. board.js keeps the same
+    table as its fallback, so a missing or unreadable element costs nothing. -#}
+<span id="md-words" hidden data-words='{{ editor_words()|tojson }}'></span>
+
 <header class="site-bar">
 	<div class="site-bar__inner">
 		<a class="site-bar__brand" href="/">

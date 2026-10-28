@@ -1,0 +1,112 @@
+# Los botones de la barra de escribir.
+#
+# Cada botón tiene dos palabras: lo que se ve encima («N») y lo que sale al
+# posar el ratón («Negrita»). Las dos dependen del idioma —la N es de negrita—
+# así que las dos se cambian aquí.
+#
+# Esta barra la dibuja el navegador, así que las palabras se las pasa el
+# servidor en la propia página. Si algo falla al pasarlas, la barra sale con
+# las de fábrica: nunca sin botones.
+
+editor.titulo_boton:
+  es: "T1"
+  _note: "El botón del título grande. Encima del botón, en la barra."
+
+editor.titulo:
+  es: "Título"
+  _note: "Lo que sale al posar el ratón sobre ese botón."
+
+editor.subtitulo_boton:
+  es: "T2"
+  _note: "El botón del título mediano."
+
+editor.subtitulo:
+  es: "Subtítulo"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.apartado_boton:
+  es: "T3"
+  _note: "El botón del título pequeño."
+
+editor.apartado:
+  es: "Apartado"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.negrita_boton:
+  es: "N"
+  _note: "El botón de la negrita. La N es de «negrita»."
+
+editor.negrita:
+  es: "Negrita"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.cursiva_boton:
+  es: "I"
+  _note: "El botón de la cursiva."
+
+editor.cursiva:
+  es: "Cursiva"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.tachado_boton:
+  es: "S"
+  _note: "El botón del texto tachado."
+
+editor.tachado:
+  es: "Tachado"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.lista_boton:
+  es: "•"
+  _note: "El botón de la lista de puntos."
+
+editor.lista:
+  es: "Lista"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.lista_numerada_boton:
+  es: "1."
+  _note: "El botón de la lista numerada."
+
+editor.lista_numerada:
+  es: "Lista numerada"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.cita_boton:
+  es: "“”"
+  _note: "El botón de la cita."
+
+editor.cita:
+  es: "Cita"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.enlace_boton:
+  es: "🔗"
+  _note: "El botón del enlace."
+
+editor.enlace:
+  es: "Enlace"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.limpiar_boton:
+  es: "✕"
+  _note: "El botón que quita el formato de lo seleccionado."
+
+editor.limpiar:
+  es: "Quitar formato"
+  _note: "Lo que sale al posar el ratón sobre él."
+
+editor.markdown_boton:
+  es: "Markdown"
+  _note: >-
+    El botón ancho del final, que enseña el texto en crudo. Es la salida de
+    emergencia: con él se escribe una tabla, o se arregla lo que el editor haya
+    estropeado.
+
+editor.markdown:
+  es: "Escribir en markdown"
+  _note: "Lo que sale al posar el ratón sobre ese botón."
+
+editor.con_formato_boton:
+  es: "Con formato"
+  _note: "El mismo botón mientras se está en markdown, para volver."
