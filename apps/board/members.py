@@ -30,7 +30,7 @@ import sqlite3
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import activity, auth, invites, mail, messages, profiles, uploads
+from . import activity, auth, invites, mail, messages, profiles, strings, uploads
 from .db import TOMBSTONE_LOGIN, get_db
 from .render import to_html
 from .security import (admin_required, login_required, owner_required,
@@ -45,9 +45,18 @@ LOGIN_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]{0,38}[A-Za-z0-9])?$")
 # "Miembro" rather than "Usuario" on the screens, while the stored value stays
 # `user`: renaming the value would mean a migration and rewriting every role
 # check for a word nobody types.
-ROLE_LABELS = {"superadmin": "Superadministrador", "owner": "Responsable",
-               "admin": "Administrador", "moderator": "Moderador",
-               "user": "Miembro"}
+#
+# A function and not the dict it used to be: `t()` reads what somebody typed in
+# Gestión off the request, so a dict built at import time would freeze the
+# shipped words into the process. The keys are spelled out rather than built
+# from the role name, because the test that hunts orphaned keys reads literal
+# keys and a key assembled from a column value is one it cannot see.
+def role_labels() -> dict[str, str]:
+    return {"superadmin": strings.t("miembros.rol_superadmin"),
+            "owner": strings.t("miembros.rol_responsable"),
+            "admin": strings.t("miembros.rol_admin"),
+            "moderator": strings.t("miembros.rol_moderador"),
+            "user": strings.t("miembros.rol_usuario")}
 
 # Who may be given which role, by whom. A function rather than the constant it
 # used to be, because the answer now depends on who is asking: the role picker
@@ -315,7 +324,7 @@ def index():
                      m.display_name COLLATE NOCASE""",
         {"me": g.member["id"]},
     ).fetchall()
-    return render_template("members.html", members=rows, labels=ROLE_LABELS)
+    return render_template("members.html", members=rows, labels=role_labels())
 
 
 @bp.route("/miembro/<login>")
@@ -354,7 +363,7 @@ def show(login: str):
         links = []
 
     return render_template(
-        "member.html", member=member, labels=ROLE_LABELS, is_me=mine,
+        "member.html", member=member, labels=role_labels(), is_me=mine,
         messages=talk["messages"], images=talk["images"], blocked=talk["blocked"],
         links=links, bio_html=to_html(member["bio"] or ""), to_html=to_html,
     )
@@ -381,20 +390,20 @@ def new():
     if not may_create(g.member["role"], role):
         abort(403)
     if not LOGIN_RE.match(login):
-        flash("El usuario solo puede tener letras, números, punto, guion y guion bajo.", "error")
+        flash(strings.t("miembros.aviso_usuario_invalido"), "error")
         return redirect(url_for("members.new"))
     if not profiles.name_is_available(login):
         # The name would collide with a path the site already serves. The
         # routing gives the static site every collision, so nothing breaks —
         # their public page would simply never load. Refused here so nobody
         # finds that out months later.
-        flash(f"«{login}» coincide con una dirección del sitio. Elige otro.", "error")
+        flash(strings.t("miembros.aviso_usuario_ocupado_sitio", usuario=login), "error")
         return redirect(url_for("members.new"))
     if "@" not in email:
         # Required now, not optional: the address is how the invitation gets
         # there, and a member with no way to set a password is a row that can
         # never be used.
-        flash("Hace falta un correo válido: ahí llega la invitación.", "error")
+        flash(strings.t("miembros.aviso_correo_invalido"), "error")
         return redirect(url_for("members.new"))
 
     db = get_db()
@@ -405,7 +414,7 @@ def new():
         # One message for either collision. Which of the two it was is not
         # something an admin needs and not something worth leaking if this
         # screen is ever opened by somebody it should not be.
-        flash("Ese usuario o ese correo ya están en uso.", "error")
+        flash(strings.t("miembros.aviso_usuario_duplicado"), "error")
         return redirect(url_for("members.new"))
 
     try:
@@ -415,7 +424,7 @@ def new():
             (login, display_name or login, email, role, g.member["id"]),
         )
     except sqlite3.IntegrityError:
-        flash("No se pudo dar de alta a ese miembro.", "error")
+        flash(strings.t("miembros.aviso_alta_fallida"), "error")
         return redirect(url_for("members.new"))
 
     # No password is set here and none is generated. The member chooses their
@@ -431,12 +440,12 @@ def new():
     except mail.MailFailed:
         invite_link, mail_problem = link, "failed"
 
-    activity.log("member.created", display_name or login,
-                 f"rol: {ROLE_LABELS[role]}")
+    label = role_labels()[role]
+    activity.log("member.created", display_name or login, f"rol: {label}")
     return render_template("member_created.html", login=login,
                            email=email, created=True,
                            invite_link=invite_link, mail_problem=mail_problem,
-                           role_label=ROLE_LABELS[role])
+                           role_label=label)
 
 
 @bp.route("/miembros/<int:member_id>/invitar", methods=["POST"])
@@ -458,7 +467,8 @@ def invite(member_id: int):
     """
     target = _load(member_id)
     if not target["email"]:
-        flash(f"{target['display_name']} no tiene correo. Añádelo primero.", "error")
+        flash(strings.t("miembros.aviso_sin_correo",
+                        nombre=target["display_name"]), "error")
         return redirect(_page(target))
     if not target["active"] or target["role"] == "tombstone":
         abort(403)
@@ -471,11 +481,12 @@ def invite(member_id: int):
         # valid, and the alternative is an admin who knows only that something
         # did not work.
         current_app.logger.warning("Invite mail to %s failed: %s", target["email"], exc)
-        flash(f"No se pudo enviar el correo. Pásale este enlace: {link}", "error")
+        flash(strings.t("miembros.aviso_correo_fallido", enlace=link), "error")
         return redirect(_page(target))
 
     activity.log("member.invited", target["display_name"], target["email"])
-    flash(f"Invitación enviada a {target['email']}.", "ok")
+    flash(strings.t("miembros.aviso_invitacion_enviada",
+                    correo=target["email"]), "ok")
     return redirect(_page(target))
 
 
@@ -489,7 +500,12 @@ def set_active(member_id: int):
     get_db().execute("UPDATE members SET active = ? WHERE id = ?", (active, member_id))
     activity.log("member.restored" if active else "member.suspended",
                  target["display_name"])
-    flash(f"{target['display_name']}: acceso {'restaurado' if active else 'suspendido'}.", "ok")
+    # The key is picked outside the call, never inside its argument: the test
+    # that hunts orphaned keys reads the first key in a `t(...)` and stops.
+    flash(strings.t("miembros.aviso_acceso_restaurado",
+                    nombre=target["display_name"]) if active
+          else strings.t("miembros.aviso_acceso_suspendido",
+                         nombre=target["display_name"]), "ok")
     return redirect(_page(target))
 
 
@@ -513,9 +529,11 @@ def set_role(member_id: int):
     if not may_create(g.member["role"], role):
         abort(403)
     get_db().execute("UPDATE members SET role = ? WHERE id = ?", (role, member_id))
+    labels = role_labels()
     activity.log("role.changed", target["display_name"],
-                 f"{ROLE_LABELS[target['role']]} → {ROLE_LABELS[role]}")
-    flash(f"{target['display_name']} ahora es {ROLE_LABELS[role].lower()}.", "ok")
+                 f"{labels[target['role']]} → {labels[role]}")
+    flash(strings.t("miembros.aviso_rol_cambiado", nombre=target["display_name"],
+                    rol=labels[role].lower()), "ok")
     return redirect(_page(target))
 
 
@@ -526,11 +544,12 @@ def transfer(member_id: int):
     superadministrator filling an empty chair."""
     target = _load(member_id)
     if target["role"] not in ("admin", "moderator", "user") or not target["active"]:
-        flash("Solo puedes nombrar responsable a un miembro activo.", "error")
+        flash(strings.t("miembros.aviso_responsable_activo"), "error")
         return redirect(_page(target))
     transfer_ownership(get_db(), g.member["id"], target["id"], "owner")
     activity.log("chair.owner", target["display_name"])
-    flash(f"{target['display_name']} es ahora el responsable.", "ok")
+    flash(strings.t("miembros.aviso_responsable_hecho",
+                    nombre=target["display_name"]), "ok")
     return redirect(_page(target))
 
 
@@ -546,12 +565,12 @@ def transfer_platform(member_id: int):
     """
     target = _load(member_id)
     if target["role"] != "admin" or not target["active"]:
-        flash("Solo puedes entregar la plataforma a un administrador activo.", "error")
+        flash(strings.t("miembros.aviso_plataforma_admin"), "error")
         return redirect(_page(target))
     transfer_ownership(get_db(), g.member["id"], target["id"], "superadmin")
     activity.log("chair.superadmin", target["display_name"])
-    flash(f"{target['display_name']} es ahora el superadministrador. "
-          "Tú eres administrador.", "ok")
+    flash(strings.t("miembros.aviso_plataforma_hecha",
+                    nombre=target["display_name"]), "ok")
     return redirect(_page(target))
 
 
@@ -571,7 +590,8 @@ def erase(member_id: int):
     # After the transaction: a row recording an erasure that rolled back is a
     # worse record than no row.
     activity.log("member.erased", target["display_name"])
-    flash(f"{target['display_name']} eliminado. Sus mensajes quedan como «Miembro eliminado».", "ok")
+    flash(strings.t("miembros.aviso_eliminado",
+                    nombre=target["display_name"]), "ok")
     return redirect(url_for("members.index"))
 
 

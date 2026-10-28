@@ -277,3 +277,113 @@ miembros.invitacion_nota:
 miembros.volver:
   es: "Volver a miembros"
   _note: "El botón del final de la pantalla de después del alta."
+
+# --- los avisos ------------------------------------------------------------
+#
+# Lo que sale en la franja de arriba después de hacer algo. Son la mitad que
+# un miembro lee en el peor momento —cuando algo no ha salido—, así que
+# merecen el mismo cuidado que los botones.
+
+miembros.rol_superadmin:
+  es: "Superadministrador"
+  _note: "El nombre del rol en el directorio, en la ficha y en el desplegable de roles."
+
+miembros.rol_responsable:
+  es: "Responsable"
+  _note: "El de quien lleva la asociación. Sólo hay uno."
+
+miembros.rol_admin:
+  es: "Administrador"
+  _note: "El nombre de ese rol allí donde se muestra."
+
+miembros.rol_moderador:
+  es: "Moderador"
+  _note: "Lo mismo para quien aprueba lo que proponen los demás."
+
+miembros.rol_usuario:
+  es: "Miembro"
+  _note: >-
+    El nombre del rol más común. Por dentro se guarda «user»: cambiar esta
+    palabra no cambia nada de lo que el programa comprueba.
+
+miembros.aviso_usuario_invalido:
+  es: "El usuario solo puede tener letras, números, punto, guion y guion bajo."
+  _note: "Al dar de alta a alguien con un usuario que lleva algo más."
+
+miembros.aviso_usuario_ocupado_sitio:
+  es: "«{usuario}» coincide con una dirección del sitio. Elige otro."
+  _note: >-
+    Cuando el usuario chocaría con una dirección que el sitio público ya usa, y
+    su página no podría abrirse.
+
+miembros.aviso_correo_invalido:
+  es: "Hace falta un correo válido: ahí llega la invitación."
+  _note: "Al dar de alta sin dirección de correo."
+
+miembros.aviso_usuario_duplicado:
+  es: "Ese usuario o ese correo ya están en uso."
+  _note: >-
+    Un solo aviso para los dos casos, a propósito: cuál de los dos era no le
+    hace falta a nadie y no conviene contarlo.
+
+miembros.aviso_alta_fallida:
+  es: "No se pudo dar de alta a ese miembro."
+  _note: "Cuando la base de datos rechaza el alta por algo que no se esperaba."
+
+miembros.aviso_sin_correo:
+  es: "{nombre} no tiene correo. Añádelo primero."
+  _note: "Al intentar enviar una invitación a alguien sin dirección."
+
+miembros.aviso_correo_fallido:
+  es: "No se pudo enviar el correo. Pásale este enlace: {enlace}"
+  _note: >-
+    Cuando la invitación no pudo salir. El enlace se enseña en lugar de
+    esconderlo: ya está emitido y es válido.
+
+miembros.aviso_invitacion_enviada:
+  es: "Invitación enviada a {correo}."
+  _note: "Cuando sí salió."
+
+miembros.aviso_acceso_restaurado:
+  es: "{nombre}: acceso restaurado."
+  _note: "Al reactivar una cuenta suspendida."
+
+miembros.aviso_acceso_suspendido:
+  es: "{nombre}: acceso suspendido."
+  _note: "Al suspenderla."
+
+miembros.aviso_rol_cambiado:
+  es: "{nombre} ahora es {rol}."
+  _note: "Al cambiar el rol de alguien. El nombre del rol llega en minúscula."
+
+miembros.aviso_responsable_activo:
+  es: "Solo puedes nombrar responsable a un miembro activo."
+  _note: "Al intentar nombrar responsable a alguien suspendido."
+
+miembros.aviso_responsable_hecho:
+  es: "{nombre} es ahora el responsable."
+  _note: "Cuando el mando de la asociación cambia de manos."
+
+miembros.aviso_plataforma_admin:
+  es: "Solo puedes entregar la plataforma a un administrador activo."
+  _note: "Al intentar entregarla a alguien que no es administrador."
+
+miembros.aviso_plataforma_hecha:
+  es: "{nombre} es ahora el superadministrador. Tú eres administrador."
+  _note: "Cuando el mando de la plataforma cambia de manos. No hay vuelta desde este lado."
+
+miembros.aviso_eliminado:
+  es: "{nombre} eliminado. Sus mensajes quedan como «Miembro eliminado»."
+  _note: "Al eliminar a alguien: la línea se queda y el nombre no."
+
+miembros.aviso_mensaje_vacio:
+  es: "Escribe algo o adjunta una imagen."
+  _note: "Al enviar un mensaje privado sin texto y sin foto."
+
+miembros.aviso_bloqueado:
+  es: "Bloqueado. Ninguno de los dos puede escribir al otro."
+  _note: "Al bloquear a alguien."
+
+miembros.aviso_desbloqueado:
+  es: "Desbloqueado."
+  _note: "Al quitar tu propio bloqueo."

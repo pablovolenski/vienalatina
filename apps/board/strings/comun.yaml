@@ -173,3 +173,23 @@ comun.pendiente_publicar:
 comun.reintentar_publicar:
   es: "Reintentar publicar"
   _note: "El botón de ese aviso, que lo vuelve a intentar."
+
+# --- las imágenes que no entran --------------------------------------------
+#
+# Estos tres salen al adjuntar fotos y valen para el muro, los privados, el
+# perfil y las propuestas: una sola redacción para todos los sitios donde se
+# sube una imagen.
+
+comun.subida_demasiadas:
+  es: "Como máximo {maximo} imágenes por mensaje."
+  _note: "Al adjuntar más fotos de las que se admiten de una vez."
+
+comun.subida_pesa:
+  es: "«{archivo}» pesa {peso}KB y el máximo es {maximo}KB."
+  _note: "Al adjuntar una foto demasiado grande."
+
+comun.subida_no_imagen:
+  es: "«{archivo}» no parece una imagen. Se aceptan {tipos}."
+  _note: >-
+    Al adjuntar algo que no es una foto. Se mira lo que el archivo es por
+    dentro, no cómo se llama.

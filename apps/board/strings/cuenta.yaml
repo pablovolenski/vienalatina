@@ -207,3 +207,11 @@ cuenta.editar_perfil:
 # veces, y el nombre del sitio es cosa de Identidad y no de Textos. Ponerlo
 # aquí sería escribirlo dos veces en dos pantallas distintas, que es
 # exactamente lo que Identidad existe para evitar.
+
+cuenta.aviso_perfil_guardado:
+  es: "Perfil guardado."
+  _note: "Al guardar tu perfil con la página publicada."
+
+cuenta.aviso_perfil_sin_publicar:
+  es: "Perfil guardado y sin publicar."
+  _note: "Lo mismo cuando la página no está publicada, para que no haya duda."

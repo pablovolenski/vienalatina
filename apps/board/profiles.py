@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 from flask import (Blueprint, abort, flash, g, redirect, render_template,
                    request, send_from_directory, url_for)
 
-from . import uploads
+from . import strings, uploads
 from .db import get_db
 from .render import to_html
 from .security import login_required
@@ -226,6 +226,7 @@ def edit():
         (bio, json.dumps(links, ensure_ascii=False), published, photo_name,
          g.member["id"]),
     )
-    flash("Perfil guardado." if published else "Perfil guardado y sin publicar.",
+    flash(strings.t("cuenta.aviso_perfil_guardado") if published
+          else strings.t("cuenta.aviso_perfil_sin_publicar"),
           "ok")
     return redirect(url_for("profiles.edit"))

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from flask import Blueprint, abort, flash, g, redirect, request, url_for
 
-from . import uploads
+from . import strings, uploads
 from .db import get_db
 from .security import login_required
 
@@ -226,7 +226,7 @@ def talk(member_id: int):
         flash(str(exc), "error")
         return redirect(_back_to(other))
     if not body and not staged:
-        flash("Escribe algo o adjunta una imagen.", "error")
+        flash(strings.t("miembros.aviso_mensaje_vacio"), "error")
         return redirect(_back_to(other))
 
     # Only now does the conversation come into being.
@@ -254,7 +254,7 @@ def block(member_id: int):
            ON CONFLICT DO NOTHING""",
         (g.member["id"], member_id),
     )
-    flash("Bloqueado. Ninguno de los dos puede escribir al otro.", "ok")
+    flash(strings.t("miembros.aviso_bloqueado"), "ok")
     return redirect(_back_to(other))
 
 
@@ -270,5 +270,5 @@ def unblock(member_id: int):
         abort(404)
     get_db().execute("DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?",
                      (g.member["id"], member_id))
-    flash("Desbloqueado.", "ok")
+    flash(strings.t("miembros.aviso_desbloqueado"), "ok")
     return redirect(_back_to(other))

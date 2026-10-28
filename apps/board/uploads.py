@@ -30,6 +30,7 @@ from pathlib import Path
 
 from flask import Blueprint, abort, current_app, g, send_from_directory
 
+from . import strings
 from .db import get_db
 from .security import login_required
 
@@ -112,7 +113,8 @@ def stage(files) -> list[dict]:
     staged = []
     real = [f for f in files if f and f.filename]
     if len(real) > MAX_FILES:
-        raise RejectedUpload(f"Como máximo {MAX_FILES} imágenes por mensaje.")
+        raise RejectedUpload(
+            strings.t("comun.subida_demasiadas", maximo=MAX_FILES))
 
     for upload in real:
         data = upload.read()
@@ -120,16 +122,14 @@ def stage(files) -> list[dict]:
             continue
         maximum = current_app.config["UPLOAD_MAX_BYTES"]
         if len(data) > maximum:
-            raise RejectedUpload(
-                f"«{upload.filename}» pesa {len(data) // 1024}KB y el máximo "
-                f"es {maximum // 1024}KB."
-            )
+            raise RejectedUpload(strings.t(
+                "comun.subida_pesa", archivo=upload.filename,
+                peso=len(data) // 1024, maximo=maximum // 1024))
         extension = _detect(data)
         if extension is None:
-            raise RejectedUpload(
-                f"«{upload.filename}» no parece una imagen. Se aceptan "
-                f"{', '.join(sorted(CONTENT_TYPES))}."
-            )
+            raise RejectedUpload(strings.t(
+                "comun.subida_no_imagen", archivo=upload.filename,
+                tipos=", ".join(sorted(CONTENT_TYPES))))
         stem = slugify(upload.filename.rsplit(".", 1)[0])
         staged.append({
             "data": data,

@@ -10,6 +10,7 @@ in Gestión that changes nothing — and both are a red test here instead.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -56,6 +57,46 @@ def test_every_key_in_the_catalogue_is_used():
             used.add(strings.PUBLIC + key)
     orphans = sorted(set(strings.catalogue()) - used)
     assert not orphans, f"defined but never shown: {orphans}"
+
+
+def test_no_word_is_looked_up_while_the_module_is_being_imported():
+    """`t()` reads what somebody typed in Gestión off the request, so a call at
+    module level is wrong twice over: it runs before there is a request, and
+    whatever it returns is frozen into the process for its whole life.
+
+    `ROLE_LABELS` was exactly that dict and had to become `role_labels()`. This
+    is what keeps the next one from being written — the failure it causes is an
+    import error at boot, which no page-level test would reach.
+    """
+    def calls_t(node) -> bool:
+        for inner in ast.walk(node):
+            if not isinstance(inner, ast.Call):
+                continue
+            func = inner.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+            if name == "t":
+                return True
+        return False
+
+    def toplevel(body):
+        """Statements evaluated at import: everything but function bodies."""
+        for statement in body:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if isinstance(statement, ast.ClassDef):
+                yield from toplevel(statement.body)
+                continue
+            yield statement
+
+    offenders = []
+    for path in BOARD.glob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for statement in toplevel(tree.body):
+            if calls_t(statement):
+                offenders.append(f"{path.name}:{statement.lineno}")
+    assert not offenders, (
+        f"a word is looked up at import time, before any request exists, "
+        f"and frozen for the life of the process: {offenders}")
 
 
 def test_every_theme_call_site_passes_the_page_explicitly():
