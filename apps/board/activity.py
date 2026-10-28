@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from flask import Blueprint, current_app, g, render_template, request
 
+from . import strings
 from .db import get_db
 from .security import superadmin_required
 
@@ -25,29 +26,33 @@ bp = Blueprint("activity", __name__)
 
 PER_PAGE = 60
 
-# action key -> the sentence a person reads. Built here rather than stored,
-# because the stored key is what a later reader greps for and the wording is
-# what changes. `{object}` is whatever the act was done to.
-SENTENCES = {
-    "member.created": "dio de alta a {object}",
-    "member.invited": "envió una invitación a {object}",
-    "member.suspended": "suspendió a {object}",
-    "member.restored": "reactivó a {object}",
-    "member.erased": "eliminó a {object}",
-    "role.changed": "cambió el rol de {object}",
-    "chair.owner": "nombró responsable a {object}",
-    "chair.superadmin": "entregó la plataforma a {object}",
-    "submission.approved": "publicó la propuesta «{object}»",
-    "submission.rejected": "devolvió la propuesta «{object}»",
-    "content.published": "publicó «{object}»",
-    "content.deleted": "retiró «{object}»",
-    "brand.saved": "cambió el aspecto del sitio",
-    "brand.restored": "restauró el aspecto de fábrica",
-    "identity.saved": "cambió la identidad del sitio",
-    "ui.saved": "cambió los textos del sitio",
-    "ui.restored": "restauró los textos originales",
-    "media.deleted": "borró la imagen {object}",
-}
+# A function rather than the dict it used to be, for the reason test_strings.py
+# states: `t()` reads what somebody typed in Gestión off the request, so a dict
+# built at import time would freeze the shipped wording into the process.
+#
+# The stored action keys on the left never change — they are what somebody
+# greps for a year from now. Only the reading does.
+def sentences() -> dict[str, str]:
+    return {
+        "member.created": strings.t("gestion.accion_alta"),
+        "member.invited": strings.t("gestion.accion_invitacion"),
+        "member.suspended": strings.t("gestion.accion_suspension"),
+        "member.restored": strings.t("gestion.accion_reactivacion"),
+        "member.erased": strings.t("gestion.accion_eliminacion"),
+        "role.changed": strings.t("gestion.accion_rol"),
+        "chair.owner": strings.t("gestion.accion_responsable"),
+        "chair.superadmin": strings.t("gestion.accion_plataforma"),
+        "submission.approved": strings.t("gestion.accion_propuesta_aprobada"),
+        "submission.rejected": strings.t("gestion.accion_propuesta_devuelta"),
+        "content.published": strings.t("gestion.accion_publicado"),
+        "content.deleted": strings.t("gestion.accion_retirado"),
+        "brand.saved": strings.t("gestion.accion_marca"),
+        "brand.restored": strings.t("gestion.accion_marca_restaurada"),
+        "identity.saved": strings.t("gestion.accion_identidad"),
+        "ui.saved": strings.t("gestion.accion_textos"),
+        "ui.restored": strings.t("gestion.accion_textos_restaurados"),
+        "media.deleted": strings.t("gestion.accion_imagen_borrada"),
+    }
 
 
 def log(action: str, object_name: str = "", detail: str = "") -> None:
@@ -64,6 +69,21 @@ def log(action: str, object_name: str = "", detail: str = "") -> None:
         )
     except Exception:                      # pragma: no cover - defensive
         current_app.logger.warning("could not write activity %r", action, exc_info=True)
+
+
+def _fill(sentence: str, objeto: str) -> str:
+    """`{objeto}` replaced, and the sentence left whole if it cannot be.
+
+    The same bargain `strings.t()` makes, and needed for the same reason: these
+    sentences are editable now, and somebody who types `{objecto}` into Gestión
+    must not take this page down with a KeyError. Loudly in the log, whole on
+    the screen.
+    """
+    try:
+        return sentence.format(objeto=objeto)
+    except (KeyError, IndexError) as exc:
+        current_app.logger.warning("activity sentence wants %s: %s", exc, sentence)
+        return sentence
 
 
 @bp.route("/gestion/registro")
@@ -83,14 +103,15 @@ def index():
     more = len(rows) > PER_PAGE
 
     # The sentence is built here rather than in the template: Jinja's `format`
-    # filter is printf-style, so a `{object}` placeholder would have rendered
+    # filter is printf-style, so a `{objeto}` placeholder would have rendered
     # literally — and an unknown action falling back to its own key is what
     # makes a log written by an older version still readable.
+    read = sentences()
     entries = [{
         "at": row["created_at"],
         "actor": row["actor"],
-        "sentence": SENTENCES.get(row["action"], row["action"]).format(
-            object=row["object"] or "—"),
+        "sentence": _fill(read.get(row["action"], row["action"]),
+                          row["object"] or "—"),
         "detail": row["detail"],
     } for row in rows[:PER_PAGE]]
 

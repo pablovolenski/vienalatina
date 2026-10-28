@@ -287,3 +287,81 @@ gestion.aviso_borrado_fallido:
 gestion.aviso_imagen_borrada:
   es: "{archivo} borrada. El sitio se reconstruye en un par de minutos."
   _note: "Cuando sale bien."
+
+# --- lo que cuenta el registro ---------------------------------------------
+#
+# Una frase por acto, con «{objeto}» en el sitio de a quién o a qué se le hizo.
+# La clave guardada en la base de datos no cambia nunca —es lo que se busca
+# dentro de un año—; esto es sólo cómo se lee.
+
+gestion.accion_alta:
+  es: "dio de alta a {objeto}"
+  _note: "Cuando la administración crea una cuenta."
+
+gestion.accion_invitacion:
+  es: "envió una invitación a {objeto}"
+  _note: "Cuando se manda o se reenvía una invitación."
+
+gestion.accion_suspension:
+  es: "suspendió a {objeto}"
+  _note: "Cuando una cuenta se queda sin acceso."
+
+gestion.accion_reactivacion:
+  es: "reactivó a {objeto}"
+  _note: "Cuando lo recupera."
+
+gestion.accion_eliminacion:
+  es: "eliminó a {objeto}"
+  _note: "Cuando se borran los datos de alguien."
+
+gestion.accion_rol:
+  es: "cambió el rol de {objeto}"
+  _note: "El detalle de la derecha dice de qué rol a cuál."
+
+gestion.accion_responsable:
+  es: "nombró responsable a {objeto}"
+  _note: "Cuando el mando de la asociación cambia de manos."
+
+gestion.accion_plataforma:
+  es: "entregó la plataforma a {objeto}"
+  _note: "Cuando el mando de la plataforma cambia de manos."
+
+gestion.accion_propuesta_aprobada:
+  es: "publicó la propuesta «{objeto}»"
+  _note: "Cuando un moderador aprueba lo que alguien propuso."
+
+gestion.accion_propuesta_devuelta:
+  es: "devolvió la propuesta «{objeto}»"
+  _note: "Cuando se la devuelve con un motivo."
+
+gestion.accion_publicado:
+  es: "publicó «{objeto}»"
+  _note: "Cuando la administración publica algo directamente."
+
+gestion.accion_retirado:
+  es: "retiró «{objeto}»"
+  _note: "Cuando algo se quita del sitio público."
+
+gestion.accion_marca:
+  es: "cambió el aspecto del sitio"
+  _note: "Colores, logotipo, tipografía o esquinas."
+
+gestion.accion_marca_restaurada:
+  es: "restauró el aspecto de fábrica"
+  _note: "Cuando se vuelve a los colores originales."
+
+gestion.accion_identidad:
+  es: "cambió la identidad del sitio"
+  _note: "El nombre, el lema, el contacto o los perfiles."
+
+gestion.accion_textos:
+  es: "cambió los textos del sitio"
+  _note: "Cuando alguien cambia las palabras desde esta misma pantalla."
+
+gestion.accion_textos_restaurados:
+  es: "restauró los textos originales"
+  _note: "Cuando se devuelven todas a como venían."
+
+gestion.accion_imagen_borrada:
+  es: "borró la imagen {objeto}"
+  _note: "Desde la biblioteca de medios."

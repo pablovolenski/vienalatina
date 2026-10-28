@@ -200,6 +200,23 @@ def test_an_override_wins_and_a_blank_one_falls_back(app, db, superadmin_id):
         assert strings.t("nav.muro") == "Muro"
 
 
+def test_a_mistyped_placeholder_in_the_registro_does_not_take_it_down(
+        client, db, post, boss, make_member):
+    """The audit log fills `{objeto}` itself, outside `t()`, so it needs `t()`'s
+    bargain too: somebody editing «cambió el rol de {objeto}» into `{objecto}`
+    in Gestión must get a whole sentence with a placeholder in it, not a 500 on
+    the one screen that says who changed what."""
+    maria = make_member("maria")
+    post(f"/comunidad/miembros/{maria}/rol", {"role": "moderator"})
+    db.execute("INSERT INTO strings (id, strings_json) VALUES (1, ?)",
+               (json.dumps({"gestion.accion_rol": {"es": "tocó a {objecto}"}}),))
+
+    page = client.get("/comunidad/gestion/registro")
+
+    assert page.status_code == 200
+    assert "tocó a {objecto}" in page.get_data(as_text=True)
+
+
 def test_rewording_spanish_says_nothing_about_german(app, db):
     """The fallback order, and it is a judgement rather than an accident: an
     override for the asked-for language wins, then the *shipped* word in that
