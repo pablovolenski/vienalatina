@@ -164,9 +164,6 @@ contenido.aviso_traduccion_automatica:
     Al abrir una traducción en lugar del original. Se corrigen marcando
     «traducción manual» en el archivo en español.
 
-contenido.error_fecha:
-  es: "La fecha debe tener el formato AAAA-MM-DD."
-  _note: "Cuando la fecha de publicación no se entiende."
 
 contenido.error_imagen:
   es: "La imagen no es válida."

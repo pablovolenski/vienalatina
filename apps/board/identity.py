@@ -28,7 +28,7 @@ import re
 from flask import (Blueprint, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import activity, gitea
+from . import activity, gitea, strings
 from .db import get_db
 from .security import superadmin_required
 
@@ -147,18 +147,18 @@ def _read(form, errors: list[str]) -> dict:
         if not url:
             continue
         if not URL_RE.match(url):
-            errors.append(f"La dirección de {label} tiene que empezar por https://.")
+            errors.append(strings.t("identidad.error_red", red=label))
             continue
         social[key] = url
 
     email = (form.get("email") or "").strip()[:120]
     if email and not EMAIL_RE.match(email):
-        errors.append("Ese correo de contacto no parece una dirección.")
+        errors.append(strings.t("identidad.error_correo"))
         email = ""
 
     share = (form.get("share_image") or "").strip()
     if share and not re.match(r"^/uploads/[A-Za-z0-9._-]+$", share):
-        errors.append("La imagen al compartir tiene que ser una de /uploads/.")
+        errors.append(strings.t("identidad.error_imagen"))
         share = ""
 
     return {
@@ -209,7 +209,7 @@ def edit():
     )
     activity.log("identity.saved")
     if _publish():
-        flash("Guardado. El sitio público se reconstruye en un par de minutos.", "ok")
+        flash(strings.t("comun.aviso_guardado_publicado"), "ok")
     return redirect(url_for("identity.edit"))
 
 
@@ -217,7 +217,7 @@ def edit():
 @superadmin_required
 def publish():
     if _publish():
-        flash("Publicado. El sitio público se reconstruye en un par de minutos.", "ok")
+        flash(strings.t("comun.aviso_publicado"), "ok")
     return redirect(url_for("identity.edit"))
 
 
@@ -282,7 +282,7 @@ def _publish() -> bool:
     try:
         token = gitea.content_token()
     except gitea.GiteaError as exc:
-        flash(f"Guardado aquí. El sitio público no se ha actualizado: {exc}", "error")
+        flash(strings.t("comun.aviso_guardado_sin_publicar", error=exc), "error")
         return False
 
     # The contents API wants the current sha to replace a file and refuses one
@@ -298,7 +298,7 @@ def _publish() -> bool:
                          "identidad: datos del sitio", token, sha=sha)
     except (gitea.GiteaError, OSError) as exc:
         current_app.logger.warning("identity publish failed: %s", exc)
-        flash(f"Guardado aquí. El sitio público no se ha actualizado: {exc}", "error")
+        flash(strings.t("comun.aviso_guardado_sin_publicar", error=exc), "error")
         return False
 
     get_db().execute("UPDATE site SET published_at = datetime('now') WHERE id = 1")

@@ -54,7 +54,7 @@ import secrets
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, send_from_directory, url_for)
 
-from . import activity, gitea, uploads
+from . import activity, gitea, strings, uploads
 from .db import get_db
 from .security import superadmin_required
 
@@ -436,7 +436,7 @@ def _read_tokens(form, errors: list[str]) -> dict:
         if not raw:
             continue
         if not HEX.match(raw):
-            errors.append(f"«{raw}» no es un color. Usa la forma #rrggbb.")
+            errors.append(strings.t("marca.error_color", valor=raw))
             continue
         if raw != FACTORY[name].lower():
             stored[name] = raw
@@ -446,14 +446,12 @@ def _read_tokens(form, errors: list[str]) -> dict:
 def _read_css(form, errors: list[str]) -> str:
     css = (form.get("custom_css") or "").strip()
     if len(css) > CSS_MAX:
-        errors.append(f"El CSS propio no puede pasar de {CSS_MAX // 1000}.000 caracteres.")
+        errors.append(strings.t("marca.error_css_largo", miles=CSS_MAX // 1000))
         return ""
     for character in CSS_FORBIDDEN:
         if character in css:
-            errors.append(
-                f"El CSS propio no puede contener «{character}». "
-                "Eso no aparece en CSS válido y sí en una etiqueta HTML."
-            )
+            errors.append(strings.t("marca.error_css_caracter",
+                                    caracter=character))
             return ""
     return css
 
@@ -478,10 +476,10 @@ def _read_picture(field: str, allowed: tuple[str, ...], errors: list[str]):
     item = staged[0]
     extension = item["stored_name"].rsplit(".", 1)[-1]
     if extension not in allowed:
-        errors.append(
-            f"«{item['original_name']}» es un {extension}. "
-            f"Aquí hace falta {' o '.join(allowed)}."
-        )
+        errors.append(strings.t("marca.error_formato_imagen",
+                                archivo=item["original_name"],
+                                formato=extension,
+                                esperado=" o ".join(allowed)))
         return None
     return item
 
@@ -505,18 +503,13 @@ def _read_font(errors: list[str]):
     if not data:
         return None
     if len(data) > FONT_MAX_BYTES:
-        errors.append(
-            f"La tipografía pesa {len(data) // 1024}KB y el máximo son "
-            f"{FONT_MAX_BYTES // 1024}KB. Subconjunta la fuente a latín y "
-            "latín extendido antes de subirla."
-        )
+        errors.append(strings.t("marca.error_fuente_pesa",
+                                peso=len(data) // 1024,
+                                maximo=FONT_MAX_BYTES // 1024))
         return None
     if not data.startswith(FONT_SIGNATURE):
-        errors.append(
-            f"«{upload.filename[:60]}» no es un .woff2. Es el único formato que "
-            "se acepta: es el de la web, lo entienden todos los navegadores y "
-            "es el más pequeño."
-        )
+        errors.append(strings.t("marca.error_fuente_formato",
+                                archivo=upload.filename[:60]))
         return None
     return {
         "data": data,
@@ -564,8 +557,7 @@ def edit():
         # Chosen without ever uploading one. Refused rather than silently
         # falling back, because the site would look unchanged and the setting
         # would say otherwise.
-        flash("Para usar una tipografía propia hay que subir un archivo .woff2.",
-              "error")
+        flash(strings.t("marca.aviso_fuente_sin_archivo"), "error")
         return redirect(url_for("brand.edit"))
 
     # Written before the commits: the members area must not depend on the git
@@ -576,7 +568,7 @@ def edit():
 
     activity.log("brand.saved")
     if _publish():
-        flash("Guardado. El sitio público se reconstruye en un par de minutos.", "ok")
+        flash(strings.t("comun.aviso_guardado_publicado"), "ok")
     return redirect(url_for("brand.edit"))
 
 
@@ -637,7 +629,7 @@ def _store(stored: dict, css: str, logo, favicon, font, typeface: str,
 def publish():
     """Try the commits again after the git server was unreachable."""
     if _publish():
-        flash("Publicado. El sitio público se reconstruye en un par de minutos.", "ok")
+        flash(strings.t("comun.aviso_publicado"), "ok")
     return redirect(url_for("brand.edit"))
 
 
@@ -655,7 +647,7 @@ def restore():
         if name:
             uploads.remove(name)
     activity.log("brand.restored")
-    flash("Restaurado lo de fábrica.", "ok")
+    flash(strings.t("marca.aviso_restaurado"), "ok")
     _publish()
     return redirect(url_for("brand.edit"))
 
@@ -765,7 +757,7 @@ def _publish() -> bool:
     try:
         token = gitea.content_token()
     except gitea.GiteaError as exc:
-        flash(f"Guardado aquí. El sitio público no se ha actualizado: {exc}", "error")
+        flash(strings.t("comun.aviso_guardado_sin_publicar", error=exc), "error")
         return False
 
     try:
@@ -787,7 +779,7 @@ def _publish() -> bool:
                "marca: colores", token)
     except (gitea.GiteaError, OSError) as exc:
         current_app.logger.warning("brand publish failed: %s", exc)
-        flash(f"Guardado aquí. El sitio público no se ha actualizado: {exc}", "error")
+        flash(strings.t("comun.aviso_guardado_sin_publicar", error=exc), "error")
         return False
 
     get_db().execute(

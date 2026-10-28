@@ -80,3 +80,7 @@ textos.restaurar_nota:
 textos.restaurar_confirmar:
   es: "Se vuelve a los textos originales en todos los apartados. ¿Seguro?"
   _note: "La pregunta antes de restaurarlos."
+
+textos.aviso_restaurado:
+  es: "Restaurados los textos originales."
+  _note: "Al devolver todas las palabras a como venían."

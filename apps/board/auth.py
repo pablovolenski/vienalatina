@@ -18,7 +18,7 @@ from __future__ import annotations
 from flask import (Blueprint, current_app, flash, g, redirect, render_template,
                    request, session, url_for)
 
-from . import invites, mail, passwords
+from . import invites, mail, passwords, strings
 from .db import get_db
 
 bp = Blueprint("auth", __name__)
@@ -88,7 +88,7 @@ def login():
     def refuse(reason: str):
         current_app.logger.info("Sign-in refused for %r: %s", identifier, reason)
         passwords.record_attempt(identifier)
-        flash("Usuario o contraseña incorrectos.", "error")
+        flash(strings.t("cuenta.aviso_credenciales"), "error")
         return render_template("login.html", next=target), 401
 
     if not identifier or not password:
@@ -96,7 +96,7 @@ def login():
     if passwords.too_many_attempts(identifier):
         # Said plainly rather than hidden behind the same message: somebody
         # locked out by their own typing needs to know waiting will fix it.
-        flash("Demasiados intentos. Espera unos minutos y vuelve a probar.", "error")
+        flash(strings.t("cuenta.aviso_demasiados_intentos"), "error")
         return render_template("login.html", next=target), 429
 
     member = get_db().execute(
@@ -186,9 +186,9 @@ def set_password(token: str):
     password = request.form.get("password", "")
     confirm = request.form.get("confirm", "")
     if password != confirm:
-        flash("Las dos contraseñas no coinciden.", "error")
+        flash(strings.t("cuenta.aviso_contrasenas_distintas"), "error")
     elif len(password) < PASSWORD_MIN:
-        flash(f"La contraseña necesita al menos {PASSWORD_MIN} caracteres.", "error")
+        flash(strings.t("cuenta.aviso_contrasena_corta", n=PASSWORD_MIN), "error")
     else:
         get_db().execute("UPDATE members SET password_hash = ? WHERE id = ?",
                          (passwords.hash_password(password), member["id"]))
@@ -196,7 +196,7 @@ def set_password(token: str):
         # being too short has to keep working or a typo locks the member out of
         # an account they have never reached.
         invites.consume(member["invite_id"])
-        flash("Contraseña guardada. Ya puedes entrar.", "ok")
+        flash(strings.t("cuenta.aviso_contrasena_guardada"), "ok")
         return redirect(url_for("auth.login"))
 
     return render_template("set_password.html", member=member, token=token,
@@ -239,5 +239,5 @@ def logout():
     server we could not reach. There is only one session now.
     """
     session.clear()
-    flash("Has cerrado sesión.", "ok")
+    flash(strings.t("cuenta.aviso_sesion_cerrada"), "ok")
     return forget_session(redirect(url_for("auth.login")))

@@ -125,3 +125,21 @@ calendario.detalles_pista:
 calendario.imagen_ya:
   es: "Ya tiene una. Subir otra la reemplaza."
   _note: "Debajo del campo de la imagen, al editar un evento que ya tiene una."
+
+# --- los avisos ------------------------------------------------------------
+
+calendario.aviso_anadido:
+  es: "Evento añadido al calendario."
+  _note: "Al crear un evento."
+
+calendario.aviso_actualizado:
+  es: "Evento actualizado."
+  _note: "Al corregir uno que ya existe."
+
+calendario.aviso_eliminado:
+  es: "«{titulo}» ya no está en el calendario."
+  _note: "Al borrar un evento."
+
+calendario.error_sin_titulo:
+  es: "El evento necesita un título."
+  _note: "Al guardar un evento sin nombre."

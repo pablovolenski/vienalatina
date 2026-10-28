@@ -120,7 +120,7 @@ def edit():
     activity.log("ui.saved", detail=f"{touched} en {area}")
 
     if _publish():
-        flash("Guardado. El sitio público se reconstruye en un par de minutos.", "ok")
+        flash(strings.t("comun.aviso_guardado_publicado"), "ok")
     return redirect(url_for("ui.edit", area=area, q=needle or None))
 
 
@@ -129,7 +129,7 @@ def edit():
 def publish():
     """Try the commit again after the git server was unreachable."""
     if _publish():
-        flash("Publicado. El sitio público se reconstruye en un par de minutos.", "ok")
+        flash(strings.t("comun.aviso_publicado"), "ok")
     return redirect(url_for("ui.edit"))
 
 
@@ -140,7 +140,7 @@ def restore():
     get_db().execute("DELETE FROM strings WHERE id = 1")
     g.pop("string_overrides", None)
     activity.log("ui.restored")
-    flash("Restaurados los textos originales.", "ok")
+    flash(strings.t("textos.aviso_restaurado"), "ok")
     _publish()
     return redirect(url_for("ui.edit"))
 
@@ -191,7 +191,7 @@ def _publish() -> bool:
     try:
         token = gitea.content_token()
     except gitea.GiteaError as exc:
-        flash(f"Guardado aquí. El sitio público no se ha actualizado: {exc}", "error")
+        flash(strings.t("comun.aviso_guardado_sin_publicar", error=exc), "error")
         return False
 
     try:
@@ -204,7 +204,7 @@ def _publish() -> bool:
                          "textos: palabras del sitio", token, sha=sha)
     except (gitea.GiteaError, OSError) as exc:
         current_app.logger.warning("ui publish failed: %s", exc)
-        flash(f"Guardado aquí. El sitio público no se ha actualizado: {exc}", "error")
+        flash(strings.t("comun.aviso_guardado_sin_publicar", error=exc), "error")
         return False
 
     get_db().execute("UPDATE strings SET published_at = datetime('now') WHERE id = 1")

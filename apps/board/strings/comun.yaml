@@ -203,3 +203,29 @@ comun.error_evento_fecha:
 comun.error_evento_hora:
   es: "La hora debe ser HH:MM, de 00:00 a 23:59."
   _note: "Lo mismo para la hora del evento."
+
+# --- las dos mitades del sitio ---------------------------------------------
+#
+# Marca, Identidad y Textos guardan en dos sitios: aquí primero, que vale ya, y
+# el sitio público después, que tarda un par de minutos. Los tres dicen lo
+# mismo al terminar, así que lo dicen con las mismas tres claves.
+
+comun.aviso_guardado_publicado:
+  es: "Guardado. El sitio público se reconstruye en un par de minutos."
+  _note: "Al guardar en Marca, Identidad o Textos y llegar también al sitio público."
+
+comun.aviso_publicado:
+  es: "Publicado. El sitio público se reconstruye en un par de minutos."
+  _note: "Al reintentar la publicación desde el aviso de «Pendiente de publicar»."
+
+comun.aviso_guardado_sin_publicar:
+  es: "Guardado aquí. El sitio público no se ha actualizado: {error}"
+  _note: >-
+    Cuando lo de aquí se guardó pero no se pudo contactar con el servidor de
+    git. Lo guardado no se pierde: queda pendiente de publicar.
+
+comun.error_fecha:
+  es: "La fecha debe tener el formato AAAA-MM-DD."
+  _note: >-
+    Una fecha que no se entiende, en el editor del sitio y en el calendario
+    interno: los dos campos se llaman «Fecha» y dicen lo mismo.

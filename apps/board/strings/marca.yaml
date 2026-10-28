@@ -176,3 +176,48 @@ marca.restaurar_nota:
 marca.restaurar_confirmar:
   es: "Se vuelve a los colores originales y se borran el logotipo y el icono. ¿Seguro?"
   _note: "La pregunta antes de restaurarlos."
+
+# --- los avisos ------------------------------------------------------------
+
+marca.error_color:
+  es: "«{valor}» no es un color. Usa la forma #rrggbb."
+  _note: "Al escribir a mano un color que no se entiende, en «Avanzado»."
+
+marca.error_css_largo:
+  es: "El CSS propio no puede pasar de {miles}.000 caracteres."
+  _note: "Cuando el CSS escrito a mano es demasiado largo."
+
+marca.error_css_caracter:
+  es: >-
+    El CSS propio no puede contener «{caracter}». Eso no aparece en CSS válido y
+    sí en una etiqueta HTML.
+  _note: "Cuando el CSS lleva «<» o «>», que es como se colaría una etiqueta."
+
+marca.error_formato_imagen:
+  es: "«{archivo}» es un {formato}. Aquí hace falta {esperado}."
+  _note: "Al subir un logotipo o un icono en un formato que no se acepta."
+
+marca.error_fuente_pesa:
+  es: >-
+    La tipografía pesa {peso}KB y el máximo son {maximo}KB. Subconjunta la
+    fuente a latín y latín extendido antes de subirla.
+  _note: "Al subir un archivo de tipografía demasiado grande."
+
+marca.error_fuente_formato:
+  es: >-
+    «{archivo}» no es un .woff2. Es el único formato que se acepta: es el de la
+    web, lo entienden todos los navegadores y es el más pequeño.
+  _note: >-
+    Al subir algo que no es una tipografía .woff2. Se mira lo que el archivo es
+    por dentro, no cómo se llama.
+
+marca.aviso_fuente_sin_archivo:
+  es: "Para usar una tipografía propia hay que subir un archivo .woff2."
+  _note: >-
+    Al elegir «Propia» sin haber subido ninguna. Se rechaza en lugar de volver
+    en silencio a la de antes, que dejaría el ajuste diciendo una cosa y el
+    sitio enseñando otra.
+
+marca.aviso_restaurado:
+  es: "Restaurado lo de fábrica."
+  _note: "Al devolver los colores originales y quitar el logotipo y el icono."

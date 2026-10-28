@@ -215,3 +215,29 @@ cuenta.aviso_perfil_guardado:
 cuenta.aviso_perfil_sin_publicar:
   es: "Perfil guardado y sin publicar."
   _note: "Lo mismo cuando la página no está publicada, para que no haya duda."
+
+cuenta.aviso_credenciales:
+  es: "Usuario o contraseña incorrectos."
+  _note: >-
+    Al fallar la entrada. Dice lo mismo exista o no esa cuenta, a propósito:
+    distinguirlo sería una manera de averiguar quién es miembro.
+
+cuenta.aviso_demasiados_intentos:
+  es: "Demasiados intentos. Espera unos minutos y vuelve a probar."
+  _note: "Tras varios intentos fallidos seguidos."
+
+cuenta.aviso_contrasenas_distintas:
+  es: "Las dos contraseñas no coinciden."
+  _note: "Al elegir contraseña, cuando las dos casillas no son iguales."
+
+cuenta.aviso_contrasena_corta:
+  es: "La contraseña necesita al menos {n} caracteres."
+  _note: "Cuando la contraseña elegida es demasiado corta."
+
+cuenta.aviso_contrasena_guardada:
+  es: "Contraseña guardada. Ya puedes entrar."
+  _note: "Cuando queda guardada."
+
+cuenta.aviso_sesion_cerrada:
+  es: "Has cerrado sesión."
+  _note: "Al salir."

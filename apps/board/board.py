@@ -18,7 +18,7 @@ from __future__ import annotations
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import auth, uploads
+from . import auth, strings, uploads
 from .db import get_db
 from . import titles
 from .render import excerpt, to_html
@@ -79,7 +79,7 @@ def _clean(title: str, body: str) -> tuple[str, str] | None:
     title = title.strip()[:TITLE_MAX]
     body = body.strip()[:BODY_MAX]
     if not body:
-        flash("El mensaje no puede estar vacío.", "error")
+        flash(strings.t("muro.aviso_mensaje_vacio"), "error")
         return None
     if not title:
         # Counting the deleted ones too: a number that comes back is a thread
@@ -214,7 +214,7 @@ def new_thread():
         return redirect(url_for("board.new_thread"))
     wait = cooldown_remaining()
     if wait:
-        flash(f"Espera {wait} segundos antes de publicar otra vez.", "error")
+        flash(strings.t("muro.aviso_espera_tema", n=wait), "error")
         return redirect(url_for("board.new_thread"))
 
     # Checked before the thread exists, so a refused picture does not leave a
@@ -266,7 +266,7 @@ def delete_thread(thread_id: int):
     if not may_delete(row):
         abort(403)
     get_db().execute("UPDATE threads SET deleted_at = datetime('now') WHERE id = ?", (thread_id,))
-    flash("Tema eliminado.", "ok")
+    flash(strings.t("muro.aviso_tema_eliminado"), "ok")
     return redirect(url_for("board.threads"))
 
 
@@ -275,16 +275,16 @@ def delete_thread(thread_id: int):
 def comment(thread_id: int):
     row = _thread_or_404(thread_id)
     if row["locked"] and not is_admin():
-        flash("Este tema está cerrado.", "error")
+        flash(strings.t("muro.aviso_tema_cerrado"), "error")
         return redirect(url_for("board.thread", thread_id=thread_id))
 
     body = request.form.get("body", "").strip()[:BODY_MAX]
     if not body:
-        flash("El comentario no puede estar vacío.", "error")
+        flash(strings.t("muro.aviso_comentario_vacio"), "error")
         return redirect(url_for("board.thread", thread_id=thread_id))
     wait = cooldown_remaining()
     if wait:
-        flash(f"Espera {wait} segundos antes de comentar otra vez.", "error")
+        flash(strings.t("muro.aviso_espera_comentario", n=wait), "error")
         return redirect(url_for("board.thread", thread_id=thread_id))
 
     try:
@@ -312,7 +312,7 @@ def edit_comment(comment_id: int):
 
     body = request.form.get("body", "").strip()[:BODY_MAX]
     if not body:
-        flash("El comentario no puede estar vacío.", "error")
+        flash(strings.t("muro.aviso_comentario_vacio"), "error")
         return redirect(url_for("board.edit_comment", comment_id=comment_id))
     get_db().execute(
         "UPDATE comments SET body_md = ?, edited_at = datetime('now') WHERE id = ?",
@@ -328,7 +328,7 @@ def delete_comment(comment_id: int):
     if not may_delete(row):
         abort(403)
     get_db().execute("UPDATE comments SET deleted_at = datetime('now') WHERE id = ?", (comment_id,))
-    flash("Comentario eliminado.", "ok")
+    flash(strings.t("muro.aviso_comentario_eliminado"), "ok")
     return redirect(url_for("board.thread", thread_id=row["thread_id"]))
 
 

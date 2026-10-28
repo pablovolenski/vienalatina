@@ -66,3 +66,33 @@ muro.editar_respuesta:
 muro.mensaje:
   es: "Mensaje"
   _note: "El nombre del campo grande donde se escribe el tema."
+
+muro.aviso_mensaje_vacio:
+  es: "El mensaje no puede estar vacío."
+  _note: "Al publicar un tema sin texto."
+
+muro.aviso_comentario_vacio:
+  es: "El comentario no puede estar vacío."
+  _note: "Al responder sin escribir nada."
+
+muro.aviso_espera_tema:
+  es: "Espera {n} segundos antes de publicar otra vez."
+  _note: >-
+    Al publicar dos temas seguidos muy rápido. No es un castigo: evita que un
+    descuido —o un botón pulsado dos veces— llene el muro.
+
+muro.aviso_espera_comentario:
+  es: "Espera {n} segundos antes de comentar otra vez."
+  _note: "Lo mismo al responder."
+
+muro.aviso_tema_eliminado:
+  es: "Tema eliminado."
+  _note: "Al borrar un tema."
+
+muro.aviso_comentario_eliminado:
+  es: "Comentario eliminado."
+  _note: "Al borrar una respuesta."
+
+muro.aviso_tema_cerrado:
+  es: "Este tema está cerrado."
+  _note: "Al intentar responder a un tema que la administración ha cerrado."

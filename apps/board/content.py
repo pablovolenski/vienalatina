@@ -379,7 +379,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         try:
             when = datetime.strptime(raw_date, "%Y-%m-%d").date()
         except ValueError:
-            errors.append(strings.t("contenido.error_fecha"))
+            errors.append(strings.t("comun.error_fecha"))
     # What the file already said, carried through the form untouched so that
     # `stamp()` can keep the publication time when only the text changed. A
     # date field is a day and nothing else; this is the rest of it.

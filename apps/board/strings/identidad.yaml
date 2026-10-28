@@ -115,3 +115,17 @@ identidad.pie:
 identidad.pie_nota:
   es: "Si lo dejas vacío, el pie pone el nombre y el año."
   _note: "Debajo de ese campo."
+
+# --- los avisos ------------------------------------------------------------
+
+identidad.error_red:
+  es: "La dirección de {red} tiene que empezar por https://."
+  _note: "Al escribir mal la dirección de uno de los perfiles."
+
+identidad.error_correo:
+  es: "Ese correo de contacto no parece una dirección."
+  _note: "Cuando el correo público no tiene forma de correo."
+
+identidad.error_imagen:
+  es: "La imagen al compartir tiene que ser una de /uploads/."
+  _note: "Cuando la imagen por defecto no es un archivo del propio sitio."

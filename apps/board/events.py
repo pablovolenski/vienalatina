@@ -29,7 +29,7 @@ from datetime import date, datetime
 from flask import (Blueprint, Response, abort, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import content, gitea, uploads
+from . import content, gitea, strings, uploads
 from .db import get_db
 from .render import to_html
 from .security import admin_required, is_at_least, login_required
@@ -208,7 +208,7 @@ def new():
         (fields["title"], fields["body"], fields["starts_on"], fields["starts_at"],
          fields["location"], photo_name, g.member["id"]),
     )
-    flash("Evento añadido al calendario.", "ok")
+    flash(strings.t("calendario.aviso_anadido"), "ok")
     return redirect(url_for("events.show", event_id=cursor.lastrowid))
 
 
@@ -237,7 +237,7 @@ def edit(event_id: int):
         (fields["title"], fields["body"], fields["starts_on"], fields["starts_at"],
          fields["location"], photo_name, event_id),
     )
-    flash("Evento actualizado.", "ok")
+    flash(strings.t("calendario.aviso_actualizado"), "ok")
     return redirect(url_for("events.show", event_id=event_id))
 
 
@@ -248,7 +248,7 @@ def delete(event_id: int):
     get_db().execute("DELETE FROM events WHERE id = ?", (event_id,))
     if row["photo_name"]:
         uploads.remove(row["photo_name"])
-    flash(f"«{row['title']}» ya no está en el calendario.", "ok")
+    flash(strings.t("calendario.aviso_eliminado", titulo=row["title"]), "ok")
     return redirect(url_for("events.month", mes=row["starts_on"][:7]))
 
 
@@ -290,17 +290,17 @@ def _read_form() -> tuple[dict, list[str]]:
         "starts_at": "",
     }
     if not fields["title"]:
-        errors.append("El evento necesita un título.")
+        errors.append(strings.t("calendario.error_sin_titulo"))
 
     try:
         fields["starts_on"] = datetime.strptime(
             request.form.get("starts_on", "").strip(), "%Y-%m-%d").date().isoformat()
     except ValueError:
-        errors.append("La fecha debe tener el formato AAAA-MM-DD.")
+        errors.append(strings.t("comun.error_fecha"))
 
     at = request.form.get("starts_at", "").strip()
     if at and not TIME.match(at):
-        errors.append("La hora debe ser HH:MM, de 00:00 a 23:59.")
+        errors.append(strings.t("comun.error_evento_hora"))
     else:
         fields["starts_at"] = at or None
 
