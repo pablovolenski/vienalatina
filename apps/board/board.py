@@ -347,10 +347,10 @@ def react():
     """
     kind = request.form.get("kind")
     if kind not in ("thread", "comment"):
-        abort(400, "Campo desconocido.")
+        abort(400, strings.t("muro.error_campo_desconocido"))
     target_id = request.form.get("id", type=int)
     if not target_id:
-        abort(400, "Falta el identificador.")
+        abort(400, strings.t("muro.error_sin_identificador"))
 
     if kind == "thread":
         row = _thread_or_404(target_id)
@@ -393,7 +393,7 @@ def set_state(thread_id: int):
     _thread_or_404(thread_id)
     field = request.form.get("field")
     if field not in ("pinned", "locked"):
-        abort(400, "Campo desconocido.")
+        abort(400, strings.t("muro.error_campo_desconocido"))
     if field == "locked" and not is_admin():
         abort(403)
     value = 1 if request.form.get("value") == "1" else 0

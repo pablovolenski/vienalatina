@@ -89,11 +89,16 @@ def test_contrast_matches_the_known_extremes():
     assert round(brand.contrast("#777777", "#777777"), 1) == 1.0
 
 
-def test_an_unreadable_pair_warns_and_a_readable_one_does_not():
-    assert brand.warnings(brand.FACTORY) == []
+def test_an_unreadable_pair_warns_and_a_readable_one_does_not(app):
+    """Inside a request context because the warnings are words now, and words
+    come from the catalogue — which is read off the request, so that an
+    association that reworded them sees its own wording here too."""
+    with app.test_request_context():
+        assert brand.warnings(brand.FACTORY) == []
 
-    notes = brand.warnings(brand.resolve({"text": "#f2f2f2"}))
+        notes = brand.warnings(brand.resolve({"text": "#f2f2f2"}))
     assert notes and "contraste" in notes[0]
+    assert "el texto sobre el fondo" in notes[0]
 
 
 # --- the form -------------------------------------------------------------

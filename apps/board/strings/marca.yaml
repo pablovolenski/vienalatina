@@ -221,3 +221,107 @@ marca.aviso_fuente_sin_archivo:
 marca.aviso_restaurado:
   es: "Restaurado lo de fábrica."
   _note: "Al devolver los colores originales y quitar el logotipo y el icono."
+
+# --- los nombres de los ajustes --------------------------------------------
+
+marca.color_principal:
+  es: "Color principal"
+  _note: "El primero de los seis colores."
+
+marca.color_principal_donde:
+  es: "Botones, enlaces y la barra de arriba."
+  _note: "Dónde se ve ese color. Debajo de su cuadro."
+
+marca.color_fondo:
+  es: "Fondo"
+  _note: "El color de la página."
+
+marca.color_fondo_donde:
+  es: "El color de la página detrás de todo."
+  _note: "Debajo de ese cuadro."
+
+marca.color_tarjetas:
+  es: "Tarjetas"
+  _note: "El fondo de las tarjetas."
+
+marca.color_tarjetas_donde:
+  es: "El fondo de las tarjetas y los formularios."
+  _note: "Debajo de ese cuadro."
+
+marca.color_texto:
+  es: "Texto"
+  _note: "El color de las letras."
+
+marca.color_texto_donde:
+  es: "El color de las letras."
+  _note: "Debajo de ese cuadro."
+
+marca.color_secundario:
+  es: "Texto secundario"
+  _note: "El color de lo que se lee en gris."
+
+marca.color_secundario_donde:
+  es: "Fechas, autores y notas al pie."
+  _note: "Debajo de ese cuadro."
+
+marca.color_lineas:
+  es: "Líneas"
+  _note: "El color de los bordes."
+
+marca.color_lineas_donde:
+  es: "Bordes y separadores."
+  _note: "Debajo de ese cuadro."
+
+marca.letra_sans:
+  es: "Sans (la de ahora)"
+  _note: "La primera opción de tipografía, la que trae el programa."
+
+marca.letra_serif:
+  es: "Serif"
+  _note: "La segunda: letra con remates."
+
+marca.letra_redonda:
+  es: "Redondeada"
+  _note: "La tercera."
+
+marca.letra_sistema:
+  es: "La del sistema"
+  _note: "La cuarta: la que use el aparato de cada uno."
+
+marca.esquinas_suave:
+  es: "Suave (la de ahora)"
+  _note: "La primera opción de esquinas, la que trae el programa."
+
+marca.esquinas_recta:
+  es: "Recta"
+  _note: "Esquinas sin redondear."
+
+marca.esquinas_redonda:
+  es: "Redonda"
+  _note: "Esquinas muy redondeadas."
+
+marca.contraste_fondo:
+  es: "el texto sobre el fondo"
+  _note: "Una de las tres parejas que se comprueban. Va dentro del aviso de abajo."
+
+marca.contraste_tarjetas:
+  es: "el texto sobre las tarjetas"
+  _note: "Otra de las tres."
+
+marca.contraste_secundario:
+  es: "el texto secundario sobre las tarjetas"
+  _note: "La tercera."
+
+marca.aviso_contraste:
+  es: >-
+    Poco contraste en {donde}: {tiene}:1, y hacen falta {necesita}:1. Se guarda
+    igual, pero costará leerlo.
+  _note: >-
+    Un aviso, no una negativa: puede haber motivos, y un formulario que discute
+    es un formulario que la gente rodea.
+
+marca.aviso_contraste_boton:
+  es: >-
+    El texto blanco sobre el color principal queda en {tiene}:1 (hacen falta
+    3:1). Los botones costarán de leer.
+  _note: "Lo mismo para el texto de los botones."

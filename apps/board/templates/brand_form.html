@@ -97,7 +97,7 @@
 	<p class="muted small">{{ t('marca.tipografia_nota') }}</p>
 
 	<div class="choices">
-		{% for key, (label, stack) in typefaces.items() %}
+		{% for key, label in typefaces.items() %}
 		<label class="choice">
 			<input type="radio" name="typeface" value="{{ key }}"
 			       {{ 'checked' if state.typeface == key }}>
@@ -172,7 +172,7 @@
 	<h2 class="section-title">{{ t('marca.esquinas') }}</h2>
 	<p class="muted small">{{ t('marca.esquinas_nota') }}</p>
 	<div class="choices">
-		{% for key, (label, values) in roundness.items() %}
+		{% for key, label in roundness.items() %}
 		<label class="choice">
 			<input type="radio" name="roundness" value="{{ key }}"
 			       {{ 'checked' if state.roundness == key }}>

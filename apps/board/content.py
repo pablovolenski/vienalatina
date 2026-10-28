@@ -49,16 +49,30 @@ bp = Blueprint("content", __name__)
 # structure, and changing "Acerca de" is an administrator's job.
 COLLECTIONS = {
     "post": {
-        "label": "Artículos", "singular": "Artículo", "new_label": "Nuevo artículo",
         "folder": "content/post", "dated": True, "role": "moderator",
     },
     "page": {
-        # `new_label` spelled out rather than "Nuevo " + the singular: Spanish
-        # gives the article a gender, and the button read "Nuevo página".
-        "label": "Páginas", "singular": "Página", "new_label": "Nueva página",
         "folder": "content/page", "dated": False, "role": "admin",
     },
 }
+
+
+def collection_words(collection: str) -> dict[str, str]:
+    """What a collection is called, read per request.
+
+    The three names used to sit in the table above, which is built at import
+    time — so they were frozen into the process and invisible to the test that
+    hunts orphaned keys. `new_label` is a whole phrase rather than "Nuevo " and
+    the singular, because Spanish gives the article a gender and the button
+    read «Nuevo página».
+    """
+    if collection == "post":
+        return {"label": strings.t("contenido.articulos"),
+                "singular": strings.t("contenido.articulo"),
+                "new_label": strings.t("contenido.articulo_nuevo")}
+    return {"label": strings.t("contenido.paginas"),
+            "singular": strings.t("contenido.pagina"),
+            "new_label": strings.t("contenido.pagina_nueva")}
 
 UPLOAD_FOLDER = "static/uploads"
 
@@ -350,13 +364,14 @@ def _collection_or_404(collection: str) -> dict:
     meta = COLLECTIONS[collection]
     if meta["role"] == "admin" and not is_at_least(g.member["role"], "admin"):
         abort(403)
-    return meta
+    return {**meta, **collection_words(collection)}
 
 
 def visible_collections() -> dict:
     """The collections this member may write to, for the tabs. A tab that only
     ever produces a 403 is worse than no tab."""
-    return {name: meta for name, meta in COLLECTIONS.items()
+    return {name: {**meta, **collection_words(name)}
+            for name, meta in COLLECTIONS.items()
             if meta["role"] != "admin" or is_at_least(g.member["role"], "admin")}
 
 
@@ -467,14 +482,14 @@ def commit_picture(data: bytes, filename: str, author=None) -> str:
     """
     extension = filename.rsplit(".", 1)[-1].lower()
     if extension not in IMAGE_EXTENSIONS:
-        raise gitea.GiteaError(
-            f"Formato de imagen no admitido. Usa: {', '.join(sorted(IMAGE_EXTENSIONS))}."
-        )
+        raise gitea.GiteaError(strings.t(
+            "contenido.error_formato_imagen",
+            formatos=", ".join(sorted(IMAGE_EXTENSIONS))))
     maximum = current_app.config["UPLOAD_MAX_BYTES"]
     if len(data) > maximum:
-        raise gitea.GiteaError(
-            f"La imagen pesa {len(data) // 1024}KB y el máximo es {maximum // 1024}KB."
-        )
+        raise gitea.GiteaError(strings.t("contenido.error_imagen_pesa",
+                                         peso=len(data) // 1024,
+                                         maximo=maximum // 1024))
 
     stem = slugify(filename.rsplit(".", 1)[0])[:60]
     # A random suffix rather than a counter: two people uploading "foto.jpg"
@@ -779,7 +794,7 @@ def pin(collection: str, name: str):
         text, sha = gitea.read_file(path, gitea.content_token())
         fm, body = split_frontmatter(text)
         if fm.get("translated_from"):
-            abort(400, "Ese archivo lo genera la traducción automática.")
+            abort(400, strings.t("contenido.error_fijar_traduccion"))
         if bool(fm.get("pinned")) != wanted:
             if wanted:
                 fm["pinned"] = datetime.now().isoformat(timespec="seconds")

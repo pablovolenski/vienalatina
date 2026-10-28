@@ -27,6 +27,8 @@ from urllib.parse import quote
 import requests
 from flask import current_app
 
+from . import strings
+
 TIMEOUT = 10
 
 
@@ -84,9 +86,7 @@ def generate_password() -> str:
 def admin_create_user(login: str, email: str, full_name: str, password: str) -> None:
     token = current_app.config.get("ADMIN_TOKEN")
     if not token:
-        raise GiteaError(
-            "Falta GITEA_ADMIN_TOKEN: el servidor no puede crear cuentas nuevas."
-        )
+        raise GiteaError(strings.t("servidor.sin_token_admin_cuentas"))
     response = requests.post(
         _api("/admin/users"),
         headers={"Authorization": f"token {token}"},
@@ -103,10 +103,11 @@ def admin_create_user(login: str, email: str, full_name: str, password: str) -> 
     if response.status_code in (201, 200):
         return
     if response.status_code == 422:
-        raise GiteaError("Ese usuario o ese correo ya están en uso.")
+        raise GiteaError(strings.t("servidor.cuenta_duplicada"))
     if response.status_code in (401, 403):
-        raise GiteaError("El token de administración no es válido.")
-    raise GiteaError(f"No se pudo crear la cuenta ({response.status_code}).")
+        raise GiteaError(strings.t("servidor.token_admin_invalido"))
+    raise GiteaError(strings.t("servidor.cuenta_no_creada",
+                               codigo=response.status_code))
 
 
 def admin_set_password(login: str, password: str) -> None:
@@ -124,9 +125,7 @@ def admin_set_password(login: str, password: str) -> None:
     """
     token = current_app.config.get("ADMIN_TOKEN")
     if not token:
-        raise GiteaError(
-            "Falta GITEA_ADMIN_TOKEN: el servidor no puede cambiar contraseñas."
-        )
+        raise GiteaError(strings.t("servidor.sin_token_admin_contrasenas"))
     response = requests.patch(
         _api(f"/admin/users/{quote(login, safe='')}"),
         headers={"Authorization": f"token {token}"},
@@ -144,19 +143,17 @@ def admin_set_password(login: str, password: str) -> None:
         # Gitea enforces its own minimum length and complexity, and its message
         # is in the admin's language rather than the member's, so it is not
         # passed through.
-        raise GiteaError("No se aceptó esa contraseña. Prueba con una más larga.")
+        raise GiteaError(strings.t("servidor.contrasena_rechazada"))
     if response.status_code in (401, 403):
-        raise GiteaError("El token de administración no es válido.")
+        raise GiteaError(strings.t("servidor.token_admin_invalido"))
     if response.status_code == 404:
         # Reachable: a member can be added here without ticking "crear también
         # su cuenta", and then invited. Everything works right up to this call,
         # which is asked to change the password of an account that was never
         # made. A bare "(404)" sends the admin looking at the wrong thing.
-        raise GiteaError(
-            f"No existe la cuenta «{login}», así que no se le puede "
-            "poner contraseña. Pide a un administrador que la cree."
-        )
-    raise GiteaError(f"No se pudo cambiar la contraseña ({response.status_code}).")
+        raise GiteaError(strings.t("servidor.cuenta_inexistente", usuario=login))
+    raise GiteaError(strings.t("servidor.contrasena_no_cambiada",
+                               codigo=response.status_code))
 
 
 # --- content (the member's own token) ------------------------------------
@@ -182,9 +179,7 @@ def content_token() -> str:
     token = (current_app.config.get("CONTENT_TOKEN")
              or current_app.config.get("ADMIN_TOKEN") or "")
     if not token:
-        raise GiteaError(
-            "Falta CONTENT_TOKEN: el servidor no puede guardar en el repositorio."
-        )
+        raise GiteaError(strings.t("servidor.sin_token_contenido"))
     return token
 
 
@@ -233,16 +228,9 @@ def _content_request(method: str, url: str, token: str, **kwargs):
         # still have been taken out by a refused connection. Translated here, at
         # the one place that touches the wire.
         current_app.logger.warning("gitea unreachable: %s", exc)
-        raise GiteaError(
-            "No se pudo contactar con el servidor de git. Vuelve a intentarlo "
-            "en un momento."
-        ) from exc
+        raise GiteaError(strings.t("servidor.git_inalcanzable")) from exc
     if response.status_code in (401, 403):
-        raise GiteaError(
-            "El servidor de git rechazó el token del editor. Comprueba que "
-            "CONTENT_TOKEN existe y tiene permiso de escritura sobre el "
-            "repositorio (repository: Read and Write), no sólo de administración."
-        )
+        raise GiteaError(strings.t("servidor.token_contenido_invalido"))
     return response
 
 
@@ -253,7 +241,8 @@ def list_directory(path: str, token: str) -> list[dict]:
     if response.status_code == 404:
         return []          # an empty content folder is normal, not an error
     if response.status_code != 200:
-        raise GiteaError(f"No se pudo leer la lista de archivos ({response.status_code}).")
+        raise GiteaError(strings.t("servidor.lista_ilegible",
+                                   codigo=response.status_code))
     payload = response.json()
     return [item for item in payload if item.get("type") == "file"]
 
@@ -263,9 +252,10 @@ def read_file(path: str, token: str) -> tuple[str, str]:
     response = _content_request("GET", _contents_url(path), token,
                                 params={"ref": _branch()})
     if response.status_code == 404:
-        raise GiteaError("Ese archivo ya no existe.")
+        raise GiteaError(strings.t("servidor.archivo_inexistente"))
     if response.status_code != 200:
-        raise GiteaError(f"No se pudo leer el archivo ({response.status_code}).")
+        raise GiteaError(strings.t("servidor.archivo_ilegible",
+                                   codigo=response.status_code))
     payload = response.json()
     text = base64.b64decode(payload.get("content", "")).decode("utf-8")
     return text, payload.get("sha", "")
@@ -288,11 +278,9 @@ def write_file(path: str, data: bytes, message: str, token: str,
     if response.status_code in (200, 201):
         return response.json().get("content", {}).get("sha", "")
     if response.status_code in (409, 422):
-        raise StaleFile(
-            "Alguien más guardó este archivo mientras lo editabas. "
-            "Vuelve a abrirlo para no perder su trabajo."
-        )
-    raise GiteaError(f"No se pudo guardar el archivo ({response.status_code}).")
+        raise StaleFile(strings.t("servidor.archivo_cambiado"))
+    raise GiteaError(strings.t("servidor.archivo_no_guardado",
+                               codigo=response.status_code))
 
 
 def delete_file(path: str, sha: str, message: str, token: str, member=None) -> None:
@@ -303,5 +291,6 @@ def delete_file(path: str, sha: str, message: str, token: str, member=None) -> N
     if response.status_code in (200, 204):
         return
     if response.status_code in (409, 422):
-        raise StaleFile("El archivo cambió desde que lo abriste. Recarga la lista.")
-    raise GiteaError(f"No se pudo borrar el archivo ({response.status_code}).")
+        raise StaleFile(strings.t("servidor.archivo_cambiado_lista"))
+    raise GiteaError(strings.t("servidor.archivo_no_borrado",
+                               codigo=response.status_code))

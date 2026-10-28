@@ -172,3 +172,41 @@ contenido.error_imagen:
 contenido.error_cuerpo_vacio:
   es: "El cuerpo no puede estar vacío."
   _note: "Al guardar algo sin texto."
+
+contenido.articulos:
+  es: "Artículos"
+  _note: "El nombre del tipo de contenido con fecha: lo que se publica y se traduce."
+
+contenido.articulo:
+  es: "Artículo"
+  _note: "Uno solo. Sale dentro de «Editar artículo»."
+
+contenido.articulo_nuevo:
+  es: "Nuevo artículo"
+  _note: >-
+    El botón de escribir uno. Se escribe entero y no «Nuevo » más la palabra:
+    en español el artículo tiene género y saldría «Nuevo página».
+
+contenido.paginas:
+  es: "Páginas"
+  _note: "El nombre del otro tipo: las páginas fijas del sitio."
+
+contenido.pagina:
+  es: "Página"
+  _note: "Una sola. Sale dentro de «Editar página»."
+
+contenido.pagina_nueva:
+  es: "Nueva página"
+  _note: "El botón de escribir una."
+
+contenido.error_formato_imagen:
+  es: "Formato de imagen no admitido. Usa: {formatos}."
+  _note: "Al subir una imagen destacada en un formato que no se acepta."
+
+contenido.error_imagen_pesa:
+  es: "La imagen pesa {peso}KB y el máximo es {maximo}KB."
+  _note: "Al subir una imagen destacada demasiado grande."
+
+contenido.error_fijar_traduccion:
+  es: "Ese archivo lo genera la traducción automática."
+  _note: "Al intentar fijar arriba una traducción en lugar del original."

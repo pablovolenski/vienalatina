@@ -34,7 +34,7 @@ from pathlib import Path
 
 from flask import Blueprint, current_app, render_template
 
-from . import gitea, mail, uploads
+from . import gitea, mail, strings, uploads
 from .db import get_db
 from .security import superadmin_required
 
@@ -61,15 +61,35 @@ BACKUP_DIR = "/backups"
 # Checked against os.environ because the container cannot read /srv/board/.env —
 # compose substitutes it in and the file itself never arrives.
 EXPECTED = (
-    ("BOARD_SECRET_KEY", "las sesiones (sin esto la app no arranca)", None),
-    ("CONTENT_TOKEN", "publicar en el sitio: el editor y la marca", None),
-    ("MAIL_HOST", "invitaciones y recuperar contraseña", None),
-    ("MAIL_USER", "autenticarse en el servidor de correo", None),
-    ("MAIL_PASSWORD", "autenticarse en el servidor de correo", None),
-    ("BOARD_OWNER", "sembrar al superadministrador en el primer arranque", None),
-    ("GITEA_URL", "hablar con el servidor de git", "GITEA_URL"),
-    ("CONTENT_REPO", "saber en qué repositorio se publica", "CONTENT_REPO"),
+    ("BOARD_SECRET_KEY", None),
+    ("CONTENT_TOKEN", None),
+    ("MAIL_HOST", None),
+    ("MAIL_USER", None),
+    ("MAIL_PASSWORD", None),
+    ("BOARD_OWNER", None),
+    ("GITEA_URL", "GITEA_URL"),
+    ("CONTENT_REPO", "CONTENT_REPO"),
 )
+
+
+def _why() -> dict[str, str]:
+    """What each setting is for, read per request rather than at import.
+
+    Spelled out here rather than kept in the table above: a key sitting in a
+    tuple is a key the orphan guard cannot see, and it said so. Two settings
+    share a sentence because they are two halves of one credential.
+    """
+    mail_credentials = strings.t("gestion.ajuste_mail_credenciales")
+    return {
+        "BOARD_SECRET_KEY": strings.t("gestion.ajuste_secret_key"),
+        "CONTENT_TOKEN": strings.t("gestion.ajuste_content_token"),
+        "MAIL_HOST": strings.t("gestion.ajuste_mail_host"),
+        "MAIL_USER": mail_credentials,
+        "MAIL_PASSWORD": mail_credentials,
+        "BOARD_OWNER": strings.t("gestion.ajuste_owner"),
+        "GITEA_URL": strings.t("gestion.ajuste_gitea_url"),
+        "CONTENT_REPO": strings.t("gestion.ajuste_content_repo"),
+    }
 
 
 def _ok(label, detail=""):
@@ -96,54 +116,59 @@ def _content_token() -> dict:
     try:
         token = gitea.content_token()
     except gitea.GiteaError as exc:
-        return _bad("No hay token para publicar", str(exc))
+        return _bad(strings.t("gestion.estado_sin_token"), str(exc))
 
     which = "CONTENT_TOKEN" if os.environ.get("CONTENT_TOKEN") else "GITEA_ADMIN_TOKEN"
     try:
         gitea.list_directory("content/post", token)
     except gitea.GiteaError as exc:
-        return _bad(f"El token ({which}) no puede leer el repositorio", str(exc))
+        return _bad(strings.t("gestion.estado_token_sin_lectura", ajuste=which),
+                    str(exc))
     except OSError as exc:
-        return _warn("No se pudo contactar con el servidor de git", str(exc))
+        return _warn(strings.t("gestion.estado_git_mudo"), str(exc))
 
     if which == "GITEA_ADMIN_TOKEN":
-        return _warn(
-            "Publicando con el token de administración",
-            "Funciona, pero ese token puede modificar cualquier cuenta del "
-            "servidor de git. Crea uno con permiso de repositorio y ponlo en "
-            "CONTENT_TOKEN.")
-    return _ok("El token de publicación funciona", f"{which}, con acceso de lectura")
+        return _warn(strings.t("gestion.estado_token_admin"),
+                     strings.t("gestion.estado_token_admin_detalle"))
+    return _ok(strings.t("gestion.estado_token_bien"),
+               strings.t("gestion.estado_token_bien_detalle", ajuste=which))
 
 
 def _mail() -> dict:
     if not mail.configured():
-        return _warn("Sin correo saliente",
-                     "Nadie puede ser invitado ni recuperar su contraseña.")
+        return _warn(strings.t("gestion.estado_sin_correo"),
+                     strings.t("gestion.estado_sin_correo_detalle"))
     host = current_app.config["MAIL_HOST"]
     port = int(current_app.config["MAIL_PORT"] or 587)
     try:
         with smtplib.SMTP(host, port, timeout=5) as server:
             server.ehlo()
     except (OSError, smtplib.SMTPException) as exc:
-        return _bad(f"{host}:{port} no responde", str(exc))
-    return _ok(f"{host}:{port} responde", "La conexión se abre; no se envía nada.")
+        return _bad(strings.t("gestion.estado_correo_mudo",
+                              servidor=f"{host}:{port}"), str(exc))
+    return _ok(strings.t("gestion.estado_correo_bien", servidor=f"{host}:{port}"),
+               strings.t("gestion.estado_correo_bien_detalle"))
 
 
 def _backups() -> dict:
     folder = Path(BACKUP_DIR)
     if not folder.is_dir():
-        return _warn("No hay carpeta de copias", f"{BACKUP_DIR} no existe.")
+        return _warn(strings.t("gestion.estado_sin_carpeta_copias"),
+                     strings.t("gestion.estado_carpeta_inexistente",
+                               carpeta=BACKUP_DIR))
     files = sorted(folder.glob("board-*.db.gz"), key=lambda f: f.stat().st_mtime)
     if not files:
-        return _bad("Ninguna copia de seguridad", f"{BACKUP_DIR} está vacía.")
+        return _bad(strings.t("gestion.estado_sin_copias"),
+                    strings.t("gestion.estado_carpeta_vacia", carpeta=BACKUP_DIR))
     newest = files[-1]
     age = datetime.now(timezone.utc) - datetime.fromtimestamp(
         newest.stat().st_mtime, timezone.utc)
     size = newest.stat().st_size // 1024
-    detail = f"{newest.name}, {size} KB, {len(files)} en total"
+    detail = strings.t("gestion.estado_copia_detalle", archivo=newest.name,
+                       tamano=size, total=len(files))
     if age.days >= 2:
-        return _warn(f"La copia más reciente tiene {age.days} días", detail)
-    return _ok("Copia reciente", detail)
+        return _warn(strings.t("gestion.estado_copia_vieja", dias=age.days), detail)
+    return _ok(strings.t("gestion.estado_copia_reciente"), detail)
 
 
 def _disk() -> dict:
@@ -154,39 +179,43 @@ def _disk() -> dict:
     # yet" is not a disk problem.
     usage = shutil.disk_usage(uploads.directory())
     free_mb = usage.free // (1024 * 1024)
-    detail = f"{free_mb} MB libres de {usage.total // (1024 * 1024)} MB"
+    detail = strings.t("gestion.estado_disco_detalle", libres=free_mb,
+                       total=usage.total // (1024 * 1024))
     if free_mb < 200:
-        return _bad("Queda muy poco disco", detail)
+        return _bad(strings.t("gestion.estado_disco_critico"), detail)
     if free_mb < 1000:
-        return _warn("Queda poco disco", detail)
-    return _ok("Disco suficiente", detail)
+        return _warn(strings.t("gestion.estado_disco_justo"), detail)
+    return _ok(strings.t("gestion.estado_disco_bien"), detail)
 
 
 def _settings() -> dict:
     """Which expected settings the container does not have, and whether it
     matters — which are two different questions."""
     missing, defaulted = [], []
-    for name, why, key in EXPECTED:
+    why = _why()
+    for name, key in EXPECTED:
         if os.environ.get(name):
             continue
         if key:
-            defaulted.append(f"{name} — usando «{current_app.config.get(key)}» "
-                             "(valor por defecto)")
+            defaulted.append(strings.t("gestion.estado_ajuste_defecto", ajuste=name,
+                                       valor=current_app.config.get(key)))
         else:
-            missing.append(f"{name} — {why}")
+            missing.append(strings.t("gestion.estado_ajuste_falta", ajuste=name,
+                                     para_que=why[name]))
 
     detail = "; ".join(missing + defaulted)
     if missing:
-        return _warn(
-            f"{len(missing)} ajuste{'s' if len(missing) > 1 else ''} sin poner",
-            detail)
+        return _warn(strings.t("gestion.estado_falta_ajuste", n=len(missing))
+                     if len(missing) == 1
+                     else strings.t("gestion.estado_faltan_ajustes", n=len(missing)),
+                     detail)
     if defaulted:
         # Green: nothing is broken. The values are still named, because "it
         # works and here is the value it is working with" is the answer, and
         # silence would leave somebody wondering which repository it publishes
         # to.
-        return _ok("Todos los ajustes necesarios están puestos", detail)
-    return _ok("Todos los ajustes esperados están puestos")
+        return _ok(strings.t("gestion.estado_ajustes_necesarios"), detail)
+    return _ok(strings.t("gestion.estado_ajustes_todos"))
 
 
 def _counts() -> dict:
@@ -211,11 +240,11 @@ def _counts() -> dict:
 @superadmin_required
 def index():
     checks = [
-        ("Publicar en el sitio", _content_token()),
-        ("Correo saliente", _mail()),
-        ("Copias de seguridad", _backups()),
-        ("Disco", _disk()),
-        ("Ajustes del contenedor", _settings()),
+        (strings.t("gestion.estado_publicar"), _content_token()),
+        (strings.t("gestion.estado_correo"), _mail()),
+        (strings.t("gestion.estado_copias"), _backups()),
+        (strings.t("gestion.estado_disco"), _disk()),
+        (strings.t("gestion.estado_ajustes"), _settings()),
     ]
     return render_template("status.html", checks=checks, counts=_counts(),
                            worst=min((c[1]["state"] for c in checks),

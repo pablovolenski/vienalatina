@@ -247,22 +247,23 @@ def create_app(overrides: dict | None = None) -> Flask:
     @app.errorhandler(400)
     def _bad_request(error):
         return render_template("error.html", code=400,
-                               message=getattr(error, "description", "Solicitud inválida.")), 400
+                               message=getattr(error, "description",
+                                                strings.t("comun.error_400"))), 400
 
     @app.errorhandler(403)
     def _forbidden(_error):
         return render_template("error.html", code=403,
-                               message="No tienes permiso para hacer esto."), 403
+                               message=strings.t("comun.error_403")), 403
 
     @app.errorhandler(404)
     def _not_found(_error):
         return render_template("error.html", code=404,
-                               message="No encontramos esa página."), 404
+                               message=strings.t("comun.error_404")), 404
 
     @app.errorhandler(413)
     def _too_large(_error):
         return render_template("error.html", code=413,
-                               message="El mensaje es demasiado largo."), 413
+                               message=strings.t("comun.error_413")), 413
 
     @app.errorhandler(500)
     def _crashed(error):
@@ -283,7 +284,7 @@ def create_app(overrides: dict | None = None) -> Flask:
                          getattr(error, "original_exception", error), exc_info=True)
         return render_template(
             "error.html", code=500,
-            message="Algo falló de nuestro lado. Ya ha quedado anotado."), 500
+            message=strings.t("comun.error_500")), 500
 
     init_db(app)
     return app

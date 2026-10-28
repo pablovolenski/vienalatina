@@ -313,7 +313,7 @@ def test_a_setting_with_a_fallback_is_not_reported_as_missing(app, monkeypatch):
     The ones with no fallback are set here so that the only thing left absent is
     the defaulted one — which is the state the real server is in."""
     from apps.board import status
-    for name, _why, key in status.EXPECTED:
+    for name, key in status.EXPECTED:
         if key is None:
             monkeypatch.setenv(name, "puesto")
     monkeypatch.delenv("CONTENT_REPO", raising=False)
@@ -336,12 +336,25 @@ def test_a_setting_with_no_fallback_still_warns(app, monkeypatch):
     assert "MAIL_HOST" in check["detail"]
 
 
+def test_every_expected_setting_says_what_it_is_for(app):
+    """`_settings()` looks each absent setting up in `_why()`, and that lookup
+    only happens when the setting is missing — which is the one moment nobody
+    wants a KeyError. A row added to EXPECTED and not to `_why()` fails here
+    instead of on the page of somebody whose server is already misconfigured.
+    """
+    from apps.board import status
+    with app.test_request_context():
+        why = status._why()
+    for name, _key in status.EXPECTED:
+        assert why.get(name), name
+
+
 def test_every_expected_setting_names_a_real_config_key(app):
-    """The third column is read back out of `current_app.config`, so a typo
+    """The fallback column is read back out of `current_app.config`, so a typo
     would render «usando None» on the page rather than failing anywhere."""
     from apps.board import status
     with app.app_context():
-        for name, _why, key in status.EXPECTED:
+        for name, key in status.EXPECTED:
             if key:
                 assert key in app.config, (name, key)
                 assert app.config[key], (name, key)

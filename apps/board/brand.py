@@ -54,7 +54,7 @@ import secrets
 from flask import (Blueprint, Response, abort, current_app, flash, g, redirect,
                    render_template, request, send_from_directory, url_for)
 
-from . import activity, gitea, strings, uploads
+from . import activity, gitea, strings, uploads  # noqa: F401 (strings: words)
 from .db import get_db
 from .security import superadmin_required
 
@@ -82,14 +82,29 @@ FACTORY = {
 # for in words an admin can act on. Six rather than thirteen because the other
 # seven are shades of these, and a form of thirteen colour pickers is a form
 # nobody finishes.
-SIMPLE = (
-    ("brand", "Color principal", "Botones, enlaces y la barra de arriba."),
-    ("bg", "Fondo", "El color de la página detrás de todo."),
-    ("surface", "Tarjetas", "El fondo de las tarjetas y los formularios."),
-    ("text", "Texto", "El color de las letras."),
-    ("muted", "Texto secundario", "Fechas, autores y notas al pie."),
-    ("border", "Líneas", "Bordes y separadores."),
-)
+SIMPLE = ("brand", "bg", "surface", "text", "muted", "border")
+
+
+def simple_swatches() -> list[tuple[str, str, str]]:
+    """(token, its name, where it shows), in the order they are drawn.
+
+    The words are looked up per request and spelled out one by one: this table
+    used to carry them, and a word sitting in a tuple is both frozen at import
+    and invisible to the test that hunts orphaned keys.
+    """
+    words = {
+        "brand": (strings.t("marca.color_principal"),
+                  strings.t("marca.color_principal_donde")),
+        "bg": (strings.t("marca.color_fondo"), strings.t("marca.color_fondo_donde")),
+        "surface": (strings.t("marca.color_tarjetas"),
+                    strings.t("marca.color_tarjetas_donde")),
+        "text": (strings.t("marca.color_texto"), strings.t("marca.color_texto_donde")),
+        "muted": (strings.t("marca.color_secundario"),
+                  strings.t("marca.color_secundario_donde")),
+        "border": (strings.t("marca.color_lineas"),
+                   strings.t("marca.color_lineas_donde")),
+    }
+    return [(name, *words[name]) for name in SIMPLE]
 
 # Shades worked out from `brand` when they are not given explicitly. The factory
 # palette has exactly this relationship, so an admin who picks one colour gets a
@@ -118,18 +133,22 @@ HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 # stack — so a font that fails to load leaves a readable site rather than a
 # browser default.
 TYPEFACES = {
-    "sans": ("Sans (la de ahora)",
-             '"Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", '
-             'Roboto, "Helvetica Neue", Arial, sans-serif'),
-    "serif": ("Serif",
-              'Georgia, Cambria, "Times New Roman", Times, serif'),
-    "redonda": ("Redondeada",
-                '"Trebuchet MS", "Segoe UI", Verdana, sans-serif'),
-    "sistema": ("La del sistema",
-                'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'),
+    "sans": '"Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", '
+            'Roboto, "Helvetica Neue", Arial, sans-serif',
+    "serif": 'Georgia, Cambria, "Times New Roman", Times, serif',
+    "redonda": '"Trebuchet MS", "Segoe UI", Verdana, sans-serif',
+    "sistema": 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
 }
+
+
+def typeface_names() -> dict[str, str]:
+    """What each typeface is called on the form, per request."""
+    return {"sans": strings.t("marca.letra_sans"),
+            "serif": strings.t("marca.letra_serif"),
+            "redonda": strings.t("marca.letra_redonda"),
+            "sistema": strings.t("marca.letra_sistema")}
 DEFAULT_TYPEFACE = "sans"
-FONT_STACK_FALLBACK = TYPEFACES["sans"][1]
+FONT_STACK_FALLBACK = TYPEFACES["sans"]
 
 # A .woff2 and nothing else. It is the web format — every browser in use takes
 # it, it is the smallest, and it has a four-byte signature this can check
@@ -141,13 +160,20 @@ FONT_MAX_BYTES = 400_000
 # How round everything is. One setting driving four tokens, because a site whose
 # cards are round and whose buttons are square looks like two sites.
 ROUNDNESS = {
-    "suave": ("Suave (la de ahora)", {"radius-xl": "18px", "radius-lg": "12px",
-                                      "radius-md": "8px", "radius-sm": "5px"}),
-    "recta": ("Recta", {"radius-xl": "0", "radius-lg": "0",
-                        "radius-md": "0", "radius-sm": "0"}),
-    "redonda": ("Redonda", {"radius-xl": "28px", "radius-lg": "20px",
-                            "radius-md": "14px", "radius-sm": "10px"}),
+    "suave": {"radius-xl": "18px", "radius-lg": "12px",
+              "radius-md": "8px", "radius-sm": "5px"},
+    "recta": {"radius-xl": "0", "radius-lg": "0",
+              "radius-md": "0", "radius-sm": "0"},
+    "redonda": {"radius-xl": "28px", "radius-lg": "20px",
+                "radius-md": "14px", "radius-sm": "10px"},
 }
+
+
+def roundness_names() -> dict[str, str]:
+    """What each choice of corner is called on the form, per request."""
+    return {"suave": strings.t("marca.esquinas_suave"),
+            "recta": strings.t("marca.esquinas_recta"),
+            "redonda": strings.t("marca.esquinas_redonda")}
 DEFAULT_ROUNDNESS = "suave"
 
 # The free CSS box takes anything but these. `<` and `>` cannot appear in valid
@@ -212,10 +238,17 @@ def contrast(a: str, b: str) -> float:
 # 3:1 is the rule for large text and for the edge of a control, which is what a
 # button in the brand colour is.
 PAIRS = (
-    ("text", "bg", 4.5, "el texto sobre el fondo"),
-    ("text", "surface", 4.5, "el texto sobre las tarjetas"),
-    ("muted", "surface", 4.5, "el texto secundario sobre las tarjetas"),
+    ("text", "bg", 4.5, "marca.contraste_fondo"),
+    ("text", "surface", 4.5, "marca.contraste_tarjetas"),
+    ("muted", "surface", 4.5, "marca.contraste_secundario"),
 )
+
+
+def _pair_names() -> dict[str, str]:
+    """The three pairs in words, spelled out so the orphan guard can see them."""
+    return {"marca.contraste_fondo": strings.t("marca.contraste_fondo"),
+            "marca.contraste_tarjetas": strings.t("marca.contraste_tarjetas"),
+            "marca.contraste_secundario": strings.t("marca.contraste_secundario")}
 
 
 def warnings(tokens: dict) -> list[str]:
@@ -226,19 +259,16 @@ def warnings(tokens: dict) -> list[str]:
     shipping an unreadable site without once being told.
     """
     notes = []
-    for first, second, needed, description in PAIRS:
+    names = _pair_names()
+    for first, second, needed, key in PAIRS:
         ratio = contrast(tokens[first], tokens[second])
         if ratio < needed:
-            notes.append(
-                f"Poco contraste en {description}: {ratio:.1f}:1, y hacen falta "
-                f"{needed}:1. Se guarda igual, pero costará leerlo."
-            )
+            notes.append(strings.t("marca.aviso_contraste", donde=names[key],
+                                   tiene=f"{ratio:.1f}", necesita=needed))
     white = contrast("#ffffff", tokens["brand"])
     if white < 3.0:
-        notes.append(
-            f"El texto blanco sobre el color principal queda en {white:.1f}:1 "
-            "(hacen falta 3:1). Los botones costarán de leer."
-        )
+        notes.append(strings.t("marca.aviso_contraste_boton",
+                               tiene=f"{white:.1f}"))
     return notes
 
 
@@ -360,7 +390,7 @@ def font_stack(state: dict) -> str | None:
     if state["typeface"] == "propia" and state["font_name"]:
         return f'"VLPropia", {FONT_STACK_FALLBACK}'
     if state["typeface"] in TYPEFACES and state["typeface"] != DEFAULT_TYPEFACE:
-        return TYPEFACES[state["typeface"]][1]
+        return TYPEFACES[state["typeface"]]
     return None
 
 
@@ -368,7 +398,7 @@ def _radius_tokens(state: dict) -> dict:
     """The four radius values, or nothing when the roundness is the built-in."""
     if state["roundness"] == DEFAULT_ROUNDNESS:
         return {}
-    return ROUNDNESS[state["roundness"]][1]
+    return ROUNDNESS[state["roundness"]]
 
 
 def font_face(state: dict, url: str) -> str:
@@ -533,9 +563,10 @@ def edit():
     if request.method == "GET":
         state = current()
         return render_template("brand_form.html", state=state,
-                               factory=FACTORY, simple=SIMPLE,
+                               factory=FACTORY, simple=simple_swatches(),
                                derived=sorted(DERIVED), advanced=_advanced(),
-                               typefaces=TYPEFACES, roundness=ROUNDNESS,
+                               typefaces=typeface_names(),
+                               roundness=roundness_names(),
                                notes=warnings(state["tokens"]))
 
     errors: list[str] = []
@@ -574,8 +605,7 @@ def edit():
 
 def _advanced() -> tuple:
     """Every token the easy form does not offer, for the fold-out."""
-    simple = {name for name, _, _ in SIMPLE}
-    return tuple(name for name in FACTORY if name not in simple)
+    return tuple(name for name in FACTORY if name not in SIMPLE)
 
 
 def _store(stored: dict, css: str, logo, favicon, font, typeface: str,

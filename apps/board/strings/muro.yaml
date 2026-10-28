@@ -96,3 +96,13 @@ muro.aviso_comentario_eliminado:
 muro.aviso_tema_cerrado:
   es: "Este tema está cerrado."
   _note: "Al intentar responder a un tema que la administración ha cerrado."
+
+muro.error_campo_desconocido:
+  es: "Campo desconocido."
+  _note: >-
+    Casi nadie lo verá: sale cuando un formulario llega con algo que no se
+    esperaba, normalmente porque la página estuvo abierta durante un cambio.
+
+muro.error_sin_identificador:
+  es: "Falta el identificador."
+  _note: "Lo mismo cuando falta el número de lo que se iba a marcar."

@@ -31,7 +31,10 @@ def check_csrf() -> None:
     # compare_digest rather than == so a wrong token cannot be guessed a
     # character at a time by measuring how long the comparison takes.
     if not expected or not hmac.compare_digest(sent, expected):
-        abort(400, "Formulario caducado. Vuelve a cargar la página e inténtalo de nuevo.")
+        # Imported here rather than at the top: this module is imported by
+        # almost everything, and `strings` would make that a circle.
+        from . import strings
+        abort(400, strings.t("comun.error_formulario_caducado"))
 
 
 def login_required(view):

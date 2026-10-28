@@ -1,0 +1,98 @@
+# Lo que dice el servidor cuando algo de fuera no responde: el servidor de git
+# donde se publica, y los ajustes que le faltan.
+#
+# Casi todo esto sale en la franja roja de arriba después de pulsar algo. Son
+# los avisos que menos se leen y más falta hacen, porque cada uno dice qué hay
+# que arreglar en el servidor: el nombre de un ajuste, un permiso, una espera.
+#
+# Lo que va entre llaves llega puesto: «{codigo}» es el número que devolvió el
+# servidor de git, y sirve para buscar qué pasó.
+
+servidor.sin_token_admin_cuentas:
+  es: "Falta GITEA_ADMIN_TOKEN: el servidor no puede crear cuentas nuevas."
+  _note: "Al dar de alta a alguien sin ese ajuste puesto."
+
+servidor.sin_token_admin_contrasenas:
+  es: "Falta GITEA_ADMIN_TOKEN: el servidor no puede cambiar contraseñas."
+  _note: "Al elegir o recuperar contraseña sin ese ajuste puesto."
+
+servidor.sin_token_contenido:
+  es: "Falta CONTENT_TOKEN: el servidor no puede guardar en el repositorio."
+  _note: "Al publicar o guardar algo sin ese ajuste puesto."
+
+servidor.cuenta_duplicada:
+  es: "Ese usuario o ese correo ya están en uso."
+  _note: "Cuando el servidor de git ya tiene una cuenta con ese nombre o ese correo."
+
+servidor.token_admin_invalido:
+  es: "El token de administración no es válido."
+  _note: "Cuando el servidor de git rechaza ese token."
+
+servidor.cuenta_no_creada:
+  es: "No se pudo crear la cuenta ({codigo})."
+  _note: "Cualquier otro fallo al crear la cuenta. El número es el que devolvió git."
+
+servidor.contrasena_rechazada:
+  es: "No se aceptó esa contraseña. Prueba con una más larga."
+  _note: >-
+    Cuando el servidor de git la encuentra corta o sencilla. Se dice así en
+    lugar de repetir lo que contesta él, que viene en otro idioma.
+
+servidor.cuenta_inexistente:
+  es: >-
+    No existe la cuenta «{usuario}», así que no se le puede poner contraseña.
+    Pide a un administrador que la cree.
+  _note: >-
+    Pasa de verdad: a alguien se le puede dar de alta aquí sin crearle cuenta
+    en el servidor de git, y todo funciona hasta este momento.
+
+servidor.contrasena_no_cambiada:
+  es: "No se pudo cambiar la contraseña ({codigo})."
+  _note: "Cualquier otro fallo al cambiarla."
+
+servidor.git_inalcanzable:
+  es: "No se pudo contactar con el servidor de git. Vuelve a intentarlo en un momento."
+  _note: >-
+    Cuando no responde. Lo guardado aquí no se pierde: queda pendiente de
+    publicar.
+
+servidor.token_contenido_invalido:
+  es: >-
+    El servidor de git rechazó el token del editor. Comprueba que CONTENT_TOKEN
+    existe y tiene permiso de escritura sobre el repositorio (repository: Read
+    and Write), no sólo de administración.
+  _note: >-
+    El permiso exacto está en el aviso a propósito: es el fallo que más tiempo
+    se tarda en encontrar si no lo dice.
+
+servidor.lista_ilegible:
+  es: "No se pudo leer la lista de archivos ({codigo})."
+  _note: "Al abrir una lista de lo publicado."
+
+servidor.archivo_inexistente:
+  es: "Ese archivo ya no existe."
+  _note: "Al abrir algo que ya se borró."
+
+servidor.archivo_ilegible:
+  es: "No se pudo leer el archivo ({codigo})."
+  _note: "Cualquier otro fallo al abrirlo."
+
+servidor.archivo_cambiado:
+  es: >-
+    Alguien más guardó este archivo mientras lo editabas. Vuelve a abrirlo para
+    no perder su trabajo.
+  _note: >-
+    Cuando dos personas editan lo mismo a la vez. Se avisa en lugar de guardar:
+    guardar encima borraría lo que escribió el otro sin que nadie se entere.
+
+servidor.archivo_no_guardado:
+  es: "No se pudo guardar el archivo ({codigo})."
+  _note: "Cualquier otro fallo al guardar."
+
+servidor.archivo_cambiado_lista:
+  es: "El archivo cambió desde que lo abriste. Recarga la lista."
+  _note: "Lo mismo al borrar algo que ha cambiado mientras tanto."
+
+servidor.archivo_no_borrado:
+  es: "No se pudo borrar el archivo ({codigo})."
+  _note: "Cualquier otro fallo al borrarlo."

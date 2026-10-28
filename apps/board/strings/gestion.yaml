@@ -365,3 +365,179 @@ gestion.accion_textos_restaurados:
 gestion.accion_imagen_borrada:
   es: "borró la imagen {objeto}"
   _note: "Desde la biblioteca de medios."
+
+# --- lo que responde el estado del sistema ---------------------------------
+#
+# Cada comprobación tiene un título, un veredicto de una línea y a veces un
+# detalle. Lo que va entre llaves llega puesto: un número, un nombre de
+# archivo, una dirección.
+
+gestion.estado_publicar:
+  es: "Publicar en el sitio"
+  _note: "La comprobación de si el servidor puede publicar en el repositorio."
+
+gestion.estado_correo:
+  es: "Correo saliente"
+  _note: "La de si el servidor puede enviar correo."
+
+gestion.estado_copias:
+  es: "Copias de seguridad"
+  _note: "La de las copias de la base de datos."
+
+gestion.estado_disco:
+  es: "Disco"
+  _note: "La del espacio que queda."
+
+gestion.estado_ajustes:
+  es: "Ajustes del contenedor"
+  _note: "La de los ajustes que el servidor espera tener puestos."
+
+gestion.estado_sin_token:
+  es: "No hay token para publicar"
+  _note: "Cuando no hay ninguno configurado."
+
+gestion.estado_token_sin_lectura:
+  es: "El token ({ajuste}) no puede leer el repositorio"
+  _note: "Cuando hay token pero el servidor de git no le deja leer."
+
+gestion.estado_git_mudo:
+  es: "No se pudo contactar con el servidor de git"
+  _note: "Cuando no responde en ese momento."
+
+gestion.estado_token_admin:
+  es: "Publicando con el token de administración"
+  _note: "Funciona, pero conviene cambiarlo. El detalle de abajo dice por qué."
+
+gestion.estado_token_admin_detalle:
+  es: >-
+    Funciona, pero ese token puede modificar cualquier cuenta del servidor de
+    git. Crea uno con permiso de repositorio y ponlo en CONTENT_TOKEN.
+  _note: "El porqué de ese aviso."
+
+gestion.estado_token_bien:
+  es: "El token de publicación funciona"
+  _note: "Cuando puede leer el repositorio."
+
+gestion.estado_token_bien_detalle:
+  es: "{ajuste}, con acceso de lectura"
+  _note: "Cuál de los dos ajustes se está usando."
+
+gestion.estado_sin_correo:
+  es: "Sin correo saliente"
+  _note: "Cuando no hay servidor de correo configurado."
+
+gestion.estado_sin_correo_detalle:
+  es: "Nadie puede ser invitado ni recuperar su contraseña."
+  _note: "Lo que eso significa en la práctica."
+
+gestion.estado_correo_mudo:
+  es: "{servidor} no responde"
+  _note: "Cuando el servidor de correo no contesta."
+
+gestion.estado_correo_bien:
+  es: "{servidor} responde"
+  _note: "Cuando sí contesta."
+
+gestion.estado_correo_bien_detalle:
+  es: "La conexión se abre; no se envía nada."
+  _note: "Se comprueba sin mandar ningún correo de prueba."
+
+gestion.estado_sin_carpeta_copias:
+  es: "No hay carpeta de copias"
+  _note: "Cuando la carpeta de las copias de seguridad no existe."
+
+gestion.estado_sin_copias:
+  es: "Ninguna copia de seguridad"
+  _note: "Cuando la carpeta existe pero está vacía."
+
+gestion.estado_carpeta_inexistente:
+  es: "{carpeta} no existe."
+  _note: "El detalle del primero."
+
+gestion.estado_carpeta_vacia:
+  es: "{carpeta} está vacía."
+  _note: "El detalle del segundo."
+
+gestion.estado_copia_vieja:
+  es: "La copia más reciente tiene {dias} días"
+  _note: "Cuando la última copia es de hace dos días o más."
+
+gestion.estado_copia_reciente:
+  es: "Copia reciente"
+  _note: "Cuando es de hoy o de ayer."
+
+gestion.estado_copia_detalle:
+  es: "{archivo}, {tamano} KB, {total} en total"
+  _note: "Cuál es la última, cuánto ocupa y cuántas hay."
+
+gestion.estado_disco_critico:
+  es: "Queda muy poco disco"
+  _note: >-
+    Menos de 200 MB. Es el fallo que lo acaba todo a la vez y en silencio: ni
+    se guarda, ni se suben fotos, ni se puede escribir el aviso de que pasa.
+
+gestion.estado_disco_justo:
+  es: "Queda poco disco"
+  _note: "Menos de 1 GB. Todavía funciona."
+
+gestion.estado_disco_bien:
+  es: "Disco suficiente"
+  _note: "Cuando sobra sitio."
+
+gestion.estado_disco_detalle:
+  es: "{libres} MB libres de {total} MB"
+  _note: "El detalle de las tres anteriores."
+
+gestion.estado_ajuste_falta:
+  es: "{ajuste} — {para_que}"
+  _note: "Cada ajuste que falta, con para qué sirve."
+
+gestion.estado_ajuste_defecto:
+  es: "{ajuste} — usando «{valor}» (valor por defecto)"
+  _note: >-
+    Cada ajuste que no está puesto pero tiene un valor de reserva. No es un
+    problema: se dice cuál es para que nadie se quede con la duda.
+
+gestion.estado_falta_ajuste:
+  es: "{n} ajuste sin poner"
+  _note: "Cuando falta exactamente uno de los necesarios."
+
+gestion.estado_faltan_ajustes:
+  es: "{n} ajustes sin poner"
+  _note: "Cuando faltan varios."
+
+gestion.estado_ajustes_necesarios:
+  es: "Todos los ajustes necesarios están puestos"
+  _note: "Cuando no falta ninguno imprescindible, aunque alguno use su valor por defecto."
+
+gestion.estado_ajustes_todos:
+  es: "Todos los ajustes esperados están puestos"
+  _note: "Cuando están todos, sin valores por defecto."
+
+gestion.ajuste_secret_key:
+  es: "las sesiones (sin esto la app no arranca)"
+  _note: "Para qué sirve BOARD_SECRET_KEY."
+
+gestion.ajuste_content_token:
+  es: "publicar en el sitio: el editor y la marca"
+  _note: "Para qué sirve CONTENT_TOKEN."
+
+gestion.ajuste_mail_host:
+  es: "invitaciones y recuperar contraseña"
+  _note: "Para qué sirve MAIL_HOST."
+
+gestion.ajuste_mail_credenciales:
+  es: "autenticarse en el servidor de correo"
+  _note: "Para qué sirven MAIL_USER y MAIL_PASSWORD."
+
+gestion.ajuste_owner:
+  es: "sembrar al superadministrador en el primer arranque"
+  _note: "Para qué sirve BOARD_OWNER."
+
+gestion.ajuste_gitea_url:
+  es: "hablar con el servidor de git"
+  _note: "Para qué sirve GITEA_URL."
+
+gestion.ajuste_content_repo:
+  es: "saber en qué repositorio se publica"
+  _note: "Para qué sirve CONTENT_REPO."

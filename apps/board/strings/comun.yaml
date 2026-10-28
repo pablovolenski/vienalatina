@@ -229,3 +229,34 @@ comun.error_fecha:
   _note: >-
     Una fecha que no se entiende, en el editor del sitio y en el calendario
     interno: los dos campos se llaman «Fecha» y dicen lo mismo.
+
+# --- las páginas de error --------------------------------------------------
+
+comun.error_400:
+  es: "Solicitud inválida."
+  _note: "Cuando la petición no se entiende y nada más explica por qué."
+
+comun.error_403:
+  es: "No tienes permiso para hacer esto."
+  _note: "Al intentar abrir algo que no te corresponde."
+
+comun.error_404:
+  es: "No encontramos esa página."
+  _note: "Cuando la dirección no existe."
+
+comun.error_413:
+  es: "El mensaje es demasiado largo."
+  _note: "Cuando lo enviado pesa más de lo que admite el servidor."
+
+comun.error_500:
+  es: "Algo falló de nuestro lado. Ya ha quedado anotado."
+  _note: >-
+    Cuando el programa falla por algo inesperado. La segunda frase importa:
+    dice que no hace falta avisar, porque ya quedó en el registro del servidor.
+
+comun.error_formulario_caducado:
+  es: "Formulario caducado. Vuelve a cargar la página e inténtalo de nuevo."
+  _note: >-
+    Cuando un formulario estuvo abierto demasiado tiempo, o se envió desde otro
+    sitio. Es la comprobación que impide que una página ajena envíe formularios
+    en tu nombre.
