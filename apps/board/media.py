@@ -21,7 +21,7 @@ from __future__ import annotations
 from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    url_for)
 
-from . import activity, content, gitea
+from . import activity, content, gitea, strings
 from .db import get_db
 from .security import admin_required
 
@@ -56,7 +56,7 @@ def index():
     try:
         files = gitea.list_directory(FOLDER, gitea.content_token())
     except (gitea.GiteaError, OSError) as exc:
-        flash(f"No se pudo leer la carpeta de imágenes: {exc}", "error")
+        flash(strings.t("gestion.aviso_medios_ilegible", error=exc), "error")
         files = []
 
     items = []
@@ -88,7 +88,7 @@ def delete(name: str):
     if "/" in name or name.startswith("."):
         abort(404)
     if _users().get(name):
-        flash("Esa imagen está en uso. Quítala del artículo primero.", "error")
+        flash(strings.t("gestion.aviso_imagen_en_uso"), "error")
         return redirect(url_for("media.index"))
 
     sha = (request.form.get("sha") or "").strip()
@@ -96,9 +96,9 @@ def delete(name: str):
         gitea.delete_file(f"{FOLDER}/{name}", sha, f"medios: retirar {name}",
                           gitea.content_token())
     except (gitea.GiteaError, OSError) as exc:
-        flash(f"No se pudo borrar: {exc}", "error")
+        flash(strings.t("gestion.aviso_borrado_fallido", error=exc), "error")
         return redirect(url_for("media.index"))
 
     activity.log("media.deleted", name)
-    flash(f"{name} borrada. El sitio se reconstruye en un par de minutos.", "ok")
+    flash(strings.t("gestion.aviso_imagen_borrada", archivo=name), "ok")
     return redirect(url_for("media.index"))

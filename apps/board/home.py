@@ -99,7 +99,7 @@ def index():
 
     return render_template("home.html", threads=threads, conversations=conversations,
                            mine=mine, queue=queue, people=people, excerpt=excerpt,
-                           state_labels=submissions.STATE_LABELS)
+                           state_labels=submissions.state_labels())
 
 
 @bp.route("/sesion.json")

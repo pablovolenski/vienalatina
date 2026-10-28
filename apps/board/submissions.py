@@ -30,7 +30,7 @@ from datetime import date as date_type
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, send_from_directory, url_for)
 
-from . import activity, content, gitea, titles, uploads
+from . import activity, content, gitea, strings, titles, uploads
 from .db import get_db
 from .render import excerpt, to_html
 from .security import is_at_least, login_required, moderator_required
@@ -45,11 +45,13 @@ BODY_MAX = content.BODY_MAX
 # person can put on the moderators before talking to them.
 PENDING_MAX = 3
 
-STATE_LABELS = {
-    "pending": "En revisión",
-    "approved": "Publicado",
-    "rejected": "Devuelto",
-}
+# A function rather than the dict it used to be: `t()` reads what somebody
+# typed in Gestión off the request, so a dict built at import time would freeze
+# the shipped words into the process. See test_strings.py.
+def state_labels() -> dict[str, str]:
+    return {"pending": strings.t("publicaciones.estado_revision"),
+            "approved": strings.t("publicaciones.estado_publicado"),
+            "rejected": strings.t("publicaciones.estado_devuelto")}
 
 
 def may_moderate(member=None) -> bool:
@@ -114,7 +116,7 @@ def _read_proposal() -> tuple[dict, list[str]]:
             (titles.UNTITLED + "%",)).fetchall()
         fields["title"] = titles.next_untitled(row["title"] for row in rows)
     if not fields["body"]:
-        errors.append("El texto no puede estar vacío.")
+        errors.append(strings.t("publicaciones.error_texto_vacio"))
     return fields, errors
 
 
@@ -148,7 +150,7 @@ def index():
             (g.member["id"],),
         ).fetchall()
     return render_template("submissions.html", mine=mine, queue=queue,
-                           labels=STATE_LABELS, excerpt=excerpt,
+                           labels=state_labels(), excerpt=excerpt,
                            can_moderate=may_moderate())
 
 
@@ -170,10 +172,7 @@ def propose():
         (g.member["id"],),
     ).fetchone()["n"]
     if waiting >= PENDING_MAX:
-        errors.append(
-            f"Ya tienes {waiting} propuestas en revisión. Espera a que las lean "
-            "antes de enviar otra."
-        )
+        errors.append(strings.t("publicaciones.error_cola_llena", n=waiting))
     staged = []
     if not errors:
         try:
@@ -194,7 +193,7 @@ def propose():
          fields["event_date"], fields["event_time"], fields["event_location"],
          1 if fields["ai_generated"] else 0),
     )
-    flash("Enviado. Un moderador lo leerá antes de publicarlo.", "ok")
+    flash(strings.t("publicaciones.aviso_enviado"), "ok")
     return redirect(url_for("submissions.index"))
 
 
@@ -206,7 +205,7 @@ def show(submission_id: int):
     row = _load(submission_id)
     if row["author_id"] != g.member["id"] and not may_moderate():
         abort(403)
-    return render_template("submission.html", item=row, labels=STATE_LABELS,
+    return render_template("submission.html", item=row, labels=state_labels(),
                            body_html=to_html(row["body_md"]),
                            can_moderate=may_moderate(),
                            mine=row["author_id"] == g.member["id"])
@@ -221,7 +220,7 @@ def edit(submission_id: int):
     row = _load(submission_id)
     _mine_or_403(row)
     if row["state"] == "approved":
-        flash("Ya está publicado. Pide a un moderador que lo edite en el sitio.", "error")
+        flash(strings.t("publicaciones.aviso_ya_publicado_editar"), "error")
         return redirect(url_for("submissions.index"))
 
     if request.method == "GET":
@@ -267,7 +266,7 @@ def edit(submission_id: int):
     # Back to pending on every edit, including one made after a rejection: a
     # rejected post that has been rewritten is waiting again, and leaving it
     # marked "devuelto" would hide it from the queue forever.
-    flash("Actualizado. Vuelve a estar en revisión.", "ok")
+    flash(strings.t("publicaciones.aviso_actualizado"), "ok")
     return redirect(url_for("submissions.index"))
 
 
@@ -281,7 +280,7 @@ def withdraw(submission_id: int):
     get_db().execute("DELETE FROM submissions WHERE id = ?", (submission_id,))
     if row["photo_name"]:
         uploads.remove(row["photo_name"])
-    flash("Propuesta retirada.", "ok")
+    flash(strings.t("publicaciones.aviso_retirada"), "ok")
     return redirect(url_for("submissions.index"))
 
 
@@ -313,7 +312,7 @@ def approve(submission_id: int):
     """Commit it, under the author's name, and record where it landed."""
     row = _load(submission_id)
     if row["state"] == "approved":
-        flash("Esa propuesta ya estaba publicada.", "error")
+        flash(strings.t("publicaciones.aviso_ya_publicada"), "error")
         return redirect(url_for("submissions.index"))
 
     author = {"display_name": row["author"], "email": row["author_email"],
@@ -354,8 +353,7 @@ def approve(submission_id: int):
         except FileNotFoundError:
             current_app.logger.warning("submission %s: %s is not on disk",
                                        submission_id, row["photo_name"])
-            flash("No se encontró la imagen en el disco. Pide al autor que la "
-                  "vuelva a subir.", "error")
+            flash(strings.t("publicaciones.aviso_imagen_perdida"), "error")
             return redirect(url_for("submissions.show", submission_id=submission_id))
 
     try:
@@ -379,7 +377,7 @@ def approve(submission_id: int):
     if row["photo_name"]:
         uploads.remove(row["photo_name"])
     activity.log("submission.approved", row["title"], f"de {row['author']}")
-    flash(f"Publicado «{row['title']}». La traducción tarda un par de minutos.", "ok")
+    flash(strings.t("publicaciones.aviso_publicado", titulo=row["title"]), "ok")
     return redirect(url_for("submissions.index"))
 
 
@@ -394,7 +392,7 @@ def reject(submission_id: int):
     row = _load(submission_id)
     note = request.form.get("note", "").strip()[:1_000]
     if not note:
-        flash("Escribe el motivo: el autor lo va a leer.", "error")
+        flash(strings.t("publicaciones.aviso_motivo_vacio"), "error")
         return redirect(url_for("submissions.show", submission_id=submission_id))
     if row["state"] == "approved":
         abort(403)
@@ -407,7 +405,7 @@ def reject(submission_id: int):
         (note, g.member["id"], submission_id),
     )
     activity.log("submission.rejected", row["title"], f"de {row['author']}")
-    flash("Devuelto al autor con tu motivo.", "ok")
+    flash(strings.t("publicaciones.aviso_devuelto"), "ok")
     return redirect(url_for("submissions.index"))
 
 

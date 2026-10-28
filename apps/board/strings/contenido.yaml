@@ -135,3 +135,43 @@ contenido.traduccion_manual:
 contenido.fijar_arriba:
   es: "Fijar arriba"
   _note: "El interruptor que pone la publicación arriba del todo en el sitio público."
+
+# --- los avisos ------------------------------------------------------------
+
+contenido.aviso_publicado:
+  es: "Publicado. La traducción tarda un par de minutos."
+  _note: "Al publicar algo nuevo en el sitio público."
+
+contenido.aviso_guardado:
+  es: "Guardado."
+  _note: "Al corregir algo que ya estaba publicado."
+
+contenido.aviso_eliminado:
+  es: "Eliminado. Las traducciones se borran en la siguiente publicación."
+  _note: "Al retirar algo del sitio público."
+
+contenido.aviso_fijado:
+  es: "Fijado arriba."
+  _note: "Al poner una publicación arriba del todo."
+
+contenido.aviso_no_fijado:
+  es: "Ya no está fijado."
+  _note: "Al quitarla de arriba."
+
+contenido.aviso_traduccion_automatica:
+  es: "Ese archivo lo genera la traducción automática; no se edita aquí."
+  _note: >-
+    Al abrir una traducción en lugar del original. Se corrigen marcando
+    «traducción manual» en el archivo en español.
+
+contenido.error_fecha:
+  es: "La fecha debe tener el formato AAAA-MM-DD."
+  _note: "Cuando la fecha de publicación no se entiende."
+
+contenido.error_imagen:
+  es: "La imagen no es válida."
+  _note: "Cuando la dirección de la imagen destacada no tiene la forma esperada."
+
+contenido.error_cuerpo_vacio:
+  es: "El cuerpo no puede estar vacío."
+  _note: "Al guardar algo sin texto."

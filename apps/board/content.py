@@ -31,7 +31,7 @@ import yaml
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
 
-from . import gitea, titles
+from . import gitea, strings, titles
 from .db import get_db
 from .render import to_html
 from .security import is_at_least, moderator_required
@@ -379,7 +379,7 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         try:
             when = datetime.strptime(raw_date, "%Y-%m-%d").date()
         except ValueError:
-            errors.append("La fecha debe tener el formato AAAA-MM-DD.")
+            errors.append(strings.t("contenido.error_fecha"))
     # What the file already said, carried through the form untouched so that
     # `stamp()` can keep the publication time when only the text changed. A
     # date field is a day and nothing else; this is the rest of it.
@@ -421,13 +421,13 @@ def _read_form(collection: str) -> tuple[dict, str, list[str]]:
         author_url = ""
     image = request.form.get("image", "").strip()
     if image and not re.match(r"^/uploads/[A-Za-z0-9._-]+$", image):
-        errors.append("La imagen no es válida.")
+        errors.append(strings.t("contenido.error_imagen"))
         image = ""
 
     # A title is not required. An untitled post is named when it is saved, by
     # untitled_for() — see titles.py for why the form does not insist.
     if not body:
-        errors.append("El cuerpo no puede estar vacío.")
+        errors.append(strings.t("contenido.error_cuerpo_vacio"))
 
     fields = {
         "title": title, "date": when,
@@ -512,12 +512,12 @@ def read_event_fields(form, errors: list[str]) -> dict:
         event_date = datetime.strptime(raw, "%Y-%m-%d").date().isoformat()
     except ValueError:
         event_date = ""
-        errors.append("La fecha del evento debe tener el formato AAAA-MM-DD.")
+        errors.append(strings.t("comun.error_evento_fecha"))
 
     event_time = form.get("event_time", "").strip()
     if event_time and not EVENT_TIME.match(event_time):
         event_time = ""
-        errors.append("La hora debe ser HH:MM, de 00:00 a 23:59.")
+        errors.append(strings.t("comun.error_evento_hora"))
 
     return {
         "event_date": event_date,
@@ -647,7 +647,7 @@ def new(collection: str):
     except gitea.GiteaError as exc:
         return _back_to_form(collection, meta, fields, body, [str(exc)], None)
 
-    flash("Publicado. La traducción tarda un par de minutos.", "ok")
+    flash(strings.t("contenido.aviso_publicado"), "ok")
     return redirect(url_for("content.index", collection=collection))
 
 
@@ -667,8 +667,7 @@ def edit(collection: str, name: str):
 
         fm, body = split_frontmatter(text)
         if fm.get("translated_from"):
-            flash("Ese archivo lo genera la traducción automática; no se edita aquí.",
-                  "error")
+            flash(strings.t("contenido.aviso_traduccion_automatica"), "error")
             return redirect(url_for("content.index", collection=collection))
 
         published = as_datetime(fm.get("date"))
@@ -734,7 +733,7 @@ def edit(collection: str, name: str):
     except gitea.GiteaError as exc:
         return _back_to_form(collection, meta, fields, body, [str(exc)], item)
 
-    flash("Guardado.", "ok")
+    flash(strings.t("contenido.aviso_guardado"), "ok")
     return redirect(url_for("content.index", collection=collection))
 
 
@@ -754,7 +753,7 @@ def delete(collection: str, name: str):
     get_db().execute("DELETE FROM content_cache WHERE path = ?", (path,))
     # The German and Portuguese siblings go too, but not from here: the next
     # pipeline run reaps them (translate.py's orphaned_siblings).
-    flash("Eliminado. Las traducciones se borran en la siguiente publicación.", "ok")
+    flash(strings.t("contenido.aviso_eliminado"), "ok")
     return redirect(url_for("content.index", collection=collection))
 
 
@@ -795,7 +794,8 @@ def pin(collection: str, name: str):
         flash(str(exc), "error")
         return redirect(url_for("content.index", collection=collection))
 
-    flash("Fijado arriba." if wanted else "Ya no está fijado.", "ok")
+    flash(strings.t("contenido.aviso_fijado") if wanted
+          else strings.t("contenido.aviso_no_fijado"), "ok")
     return redirect(url_for("content.index", collection=collection))
 
 

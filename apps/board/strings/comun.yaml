@@ -193,3 +193,13 @@ comun.subida_no_imagen:
   _note: >-
     Al adjuntar algo que no es una foto. Se mira lo que el archivo es por
     dentro, no cómo se llama.
+
+comun.error_evento_fecha:
+  es: "La fecha del evento debe tener el formato AAAA-MM-DD."
+  _note: >-
+    Los dos formularios que publican —el del moderador y el del miembro— leen
+    los campos del evento con la misma función, así que comparten este aviso.
+
+comun.error_evento_hora:
+  es: "La hora debe ser HH:MM, de 00:00 a 23:59."
+  _note: "Lo mismo para la hora del evento."

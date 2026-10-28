@@ -158,3 +158,65 @@ publicaciones.imagen_ya:
 publicaciones.enviar_revision:
   es: "Enviar a revisión"
   _note: "El botón que manda la propuesta a la cola."
+
+# --- los avisos ------------------------------------------------------------
+
+publicaciones.estado_revision:
+  es: "En revisión"
+  _note: "La etiqueta de una propuesta que espera a un moderador."
+
+publicaciones.estado_publicado:
+  es: "Publicado"
+  _note: "La de una propuesta que ya salió al sitio."
+
+publicaciones.estado_devuelto:
+  es: "Devuelto"
+  _note: "La de una propuesta que un moderador devolvió con un motivo."
+
+publicaciones.aviso_enviado:
+  es: "Enviado. Un moderador lo leerá antes de publicarlo."
+  _note: "Al enviar una propuesta a la cola."
+
+publicaciones.aviso_actualizado:
+  es: "Actualizado. Vuelve a estar en revisión."
+  _note: "Al corregir una propuesta que ya estaba en la cola."
+
+publicaciones.aviso_retirada:
+  es: "Propuesta retirada."
+  _note: "Al retirar una propuesta propia."
+
+publicaciones.aviso_ya_publicado_editar:
+  es: "Ya está publicado. Pide a un moderador que lo edite en el sitio."
+  _note: "Al intentar corregir una propuesta que ya salió."
+
+publicaciones.aviso_ya_publicada:
+  es: "Esa propuesta ya estaba publicada."
+  _note: "Al intentar aprobar dos veces la misma propuesta."
+
+publicaciones.aviso_imagen_perdida:
+  es: "No se encontró la imagen en el disco. Pide al autor que la vuelva a subir."
+  _note: "Al aprobar una propuesta cuya foto ya no está en el servidor."
+
+publicaciones.aviso_publicado:
+  es: "Publicado «{titulo}». La traducción tarda un par de minutos."
+  _note: "Al aprobar y publicar una propuesta."
+
+publicaciones.aviso_motivo_vacio:
+  es: "Escribe el motivo: el autor lo va a leer."
+  _note: "Al devolver una propuesta sin decir por qué."
+
+publicaciones.aviso_devuelto:
+  es: "Devuelto al autor con tu motivo."
+  _note: "Cuando la devolución sale bien."
+
+publicaciones.error_texto_vacio:
+  es: "El texto no puede estar vacío."
+  _note: "Al enviar una propuesta sin cuerpo."
+
+publicaciones.error_cola_llena:
+  es: >-
+    Ya tienes {n} propuestas en revisión. Espera a que las lean antes de enviar
+    otra.
+  _note: >-
+    Al proponer más de la cuenta. No es un castigo: limita el trabajo sin leer
+    que una sola persona puede dejarle a los moderadores.

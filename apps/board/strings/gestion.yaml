@@ -271,3 +271,19 @@ gestion.borrar:
 gestion.borrar_confirmar:
   es: "Se borrará {archivo} del repositorio. ¿Seguro?"
   _note: "La pregunta antes de borrarla."
+
+gestion.aviso_medios_ilegible:
+  es: "No se pudo leer la carpeta de imágenes: {error}"
+  _note: "Cuando la biblioteca no pudo consultar el servidor de git."
+
+gestion.aviso_imagen_en_uso:
+  es: "Esa imagen está en uso. Quítala del artículo primero."
+  _note: "Al intentar borrar una imagen que algún artículo todavía usa."
+
+gestion.aviso_borrado_fallido:
+  es: "No se pudo borrar: {error}"
+  _note: "Cuando el borrado de una imagen falla."
+
+gestion.aviso_imagen_borrada:
+  es: "{archivo} borrada. El sitio se reconstruye en un par de minutos."
+  _note: "Cuando sale bien."
