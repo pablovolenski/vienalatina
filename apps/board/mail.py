@@ -18,6 +18,8 @@ from email.message import EmailMessage
 
 from flask import current_app
 
+from . import strings
+
 
 class MailNotConfigured(RuntimeError):
     """No SMTP host is set, so this server cannot send anything."""
@@ -72,43 +74,12 @@ def send(to: str, subject: str, body: str) -> None:
 
 
 def send_invite(to: str, name: str, url: str) -> None:
-    send(
-        to,
-        "Tu acceso a Viena Latina",
-        f"""Hola {name},
-
-Te damos de alta en el área de la comunidad de Viena Latina.
-
-Elige tu contraseña aquí:
-
-{url}
-
-El enlace sirve una sola vez y caduca en 7 días. Si caduca, pide a un
-administrador que te envíe uno nuevo.
-
-Si no esperabas este correo, puedes ignorarlo.
-
-— Viena Latina
-""",
-    )
+    send(to,
+         strings.t("correo.invitacion_asunto"),
+         strings.t("correo.invitacion_cuerpo", nombre=name, enlace=url))
 
 
 def send_reset(to: str, name: str, url: str) -> None:
-    send(
-        to,
-        "Restablecer tu contraseña — Viena Latina",
-        f"""Hola {name},
-
-Alguien pidió restablecer la contraseña de tu cuenta.
-
-Si fuiste tú, elige una nueva aquí:
-
-{url}
-
-El enlace sirve una sola vez y caduca en 1 hora.
-
-Si no fuiste tú, ignora este correo: tu contraseña no ha cambiado.
-
-— Viena Latina
-""",
-    )
+    send(to,
+         strings.t("correo.recuperar_asunto"),
+         strings.t("correo.recuperar_cuerpo", nombre=name, enlace=url))

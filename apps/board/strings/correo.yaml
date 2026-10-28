@@ -1,0 +1,56 @@
+# Las dos cartas que salen del servidor.
+#
+# Son lo único de aquí que se lee fuera del sitio, y lo primero que lee alguien
+# a quien acaban de dar de alta: cuando llega esta carta todavía no ha visto
+# ninguna pantalla. Por eso llevan el nombre de la asociación escrito dentro —
+# quien las reciba tiene que reconocer de quién son antes de pulsar el enlace.
+#
+# «{nombre}» es la persona y «{enlace}» la dirección que abre. Si al cambiar el
+# texto se pierde «{enlace}», la carta sale sin él: míralo antes de guardar.
+
+correo.invitacion_asunto:
+  es: "Tu acceso a Viena Latina"
+  _note: "El asunto de la carta de alta."
+
+correo.invitacion_cuerpo:
+  es: |
+    Hola {nombre},
+
+    Te damos de alta en el área de la comunidad de Viena Latina.
+
+    Elige tu contraseña aquí:
+
+    {enlace}
+
+    El enlace sirve una sola vez y caduca en 7 días. Si caduca, pide a un
+    administrador que te envíe uno nuevo.
+
+    Si no esperabas este correo, puedes ignorarlo.
+
+    — Viena Latina
+  _note: >-
+    La carta entera. Sale al dar de alta a alguien y al reenviarle la
+    invitación.
+
+correo.recuperar_asunto:
+  es: "Restablecer tu contraseña — Viena Latina"
+  _note: "El asunto de la carta de contraseña olvidada."
+
+correo.recuperar_cuerpo:
+  es: |
+    Hola {nombre},
+
+    Alguien pidió restablecer la contraseña de tu cuenta.
+
+    Si fuiste tú, elige una nueva aquí:
+
+    {enlace}
+
+    El enlace sirve una sola vez y caduca en 1 hora.
+
+    Si no fuiste tú, ignora este correo: tu contraseña no ha cambiado.
+
+    — Viena Latina
+  _note: >-
+    La carta entera. La última frase importa: quien no haya pedido nada tiene
+    que saber que no le ha pasado nada.
