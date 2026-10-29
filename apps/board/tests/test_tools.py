@@ -7,6 +7,7 @@ open this, and does it tell the truth about the running system.
 from __future__ import annotations
 
 import json
+import sqlite3
 
 import pytest
 
@@ -63,6 +64,63 @@ def test_the_identity_round_trips_all_three_languages(client, db, post, boss, re
                   "A comunidade em Viena.", "https://instagram.com/vienalatina",
                   "hola@vienalatina.com", "Asociación Viena Latina"):
         assert value in body, value
+
+
+def test_one_field_renames_the_whole_members_area(app, client, db, post, boss, repo):
+    """The point of this screen, and the thing that was not true until now: the
+    name lived in nine templates, so an association that renamed itself here
+    still read «Viena Latina» in its own header.
+
+    The wordmark, the browser tab, the footer and the sign-in page, from one
+    field.
+    """
+    post("/comunidad/gestion/identidad", {
+        "name-es": "Asociación Ejemplo", "email": "hola@ejemplo.com",
+    })
+
+    page = client.get("/comunidad/gestion").get_data(as_text=True)
+    assert "Asociación Ejemplo" in page
+    assert "Viena Latina" not in page
+
+    # The sign-in page is drawn for somebody with no session at all, and says
+    # the name in a sentence rather than as a wordmark. A second client, so
+    # this one keeps the session the rest of the test needed.
+    entrar = app.test_client().get("/comunidad/login").get_data(as_text=True)
+    assert "sólo para miembros de Asociación Ejemplo" in entrar
+
+
+def test_the_letters_say_who_they_are_from(app, db, post, boss, repo, monkeypatch):
+    """The invitation reaches somebody who has never seen a screen of this
+    site, so the one thing it has to get right is whose it is."""
+    post("/comunidad/gestion/identidad", {
+        "name-es": "Asociación Ejemplo", "email": "hola@ejemplo.com",
+    })
+
+    sent = {}
+    from apps.board import mail
+    monkeypatch.setattr(mail, "send",
+                        lambda to, subject, body: sent.update(
+                            to=to, subject=subject, body=body))
+    with app.test_request_context():
+        mail.send_invite("maria@ejemplo.com", "María", "https://x/i/abc")
+
+    assert sent["subject"] == "Tu acceso a Asociación Ejemplo"
+    assert "comunidad de Asociación Ejemplo" in sent["body"]
+    assert sent["body"].rstrip().endswith("— Asociación Ejemplo")
+
+
+def test_the_name_survives_a_database_that_will_not_answer(app, monkeypatch):
+    """`base.html` asks for the name on every page including the 500, where the
+    thing that broke may well be the database. A header with the shipped name
+    is still a header; a second traceback inside the error handler is not."""
+    from apps.board import identity
+
+    def refuse():
+        raise sqlite3.OperationalError("no such table: site")
+
+    monkeypatch.setattr(identity, "_row", refuse)
+    with app.test_request_context():
+        assert identity.name() == "Viena Latina"
 
 
 def test_an_untouched_language_is_not_written_at_all(client, db, post, boss, repo):

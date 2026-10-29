@@ -2,21 +2,23 @@
 #
 # Son lo único de aquí que se lee fuera del sitio, y lo primero que lee alguien
 # a quien acaban de dar de alta: cuando llega esta carta todavía no ha visto
-# ninguna pantalla. Por eso llevan el nombre de la asociación escrito dentro —
-# quien las reciba tiene que reconocer de quién son antes de pulsar el enlace.
+# ninguna pantalla. Por eso dicen de quién son — quien la reciba tiene que
+# reconocerlo antes de pulsar el enlace.
 #
-# «{nombre}» es la persona y «{enlace}» la dirección que abre. Si al cambiar el
-# texto se pierde «{enlace}», la carta sale sin él: míralo antes de guardar.
+# Lo que va entre llaves llega puesto: «{nombre}» es la persona, «{enlace}» la
+# dirección que abre y «{sitio}» el nombre de la asociación, que se cambia en
+# Gestión → Identidad y no aquí. Si al reescribir la carta se pierde
+# «{enlace}», sale sin él: míralo antes de guardar.
 
 correo.invitacion_asunto:
-  es: "Tu acceso a Viena Latina"
+  es: "Tu acceso a {sitio}"
   _note: "El asunto de la carta de alta."
 
 correo.invitacion_cuerpo:
   es: |
     Hola {nombre},
 
-    Te damos de alta en el área de la comunidad de Viena Latina.
+    Te damos de alta en el área de la comunidad de {sitio}.
 
     Elige tu contraseña aquí:
 
@@ -27,13 +29,13 @@ correo.invitacion_cuerpo:
 
     Si no esperabas este correo, puedes ignorarlo.
 
-    — Viena Latina
+    — {sitio}
   _note: >-
     La carta entera. Sale al dar de alta a alguien y al reenviarle la
     invitación.
 
 correo.recuperar_asunto:
-  es: "Restablecer tu contraseña — Viena Latina"
+  es: "Restablecer tu contraseña — {sitio}"
   _note: "El asunto de la carta de contraseña olvidada."
 
 correo.recuperar_cuerpo:
@@ -50,7 +52,7 @@ correo.recuperar_cuerpo:
 
     Si no fuiste tú, ignora este correo: tu contraseña no ha cambiado.
 
-    — Viena Latina
+    — {sitio}
   _note: >-
     La carta entera. La última frase importa: quien no haya pedido nada tiene
     que saber que no le ha pasado nada.

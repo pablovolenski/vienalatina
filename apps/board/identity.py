@@ -129,6 +129,35 @@ def current() -> dict:
     }
 
 
+# What the site calls itself when nothing has been stored, by language. Read
+# off LANGUAGES so there is one place the factory name lives.
+DEFAULT_NAMES = {code: name for code, _label, name, _tagline in LANGUAGES}
+
+
+def name(lang: str = strings.DEFAULT_LANG) -> str:
+    """What this site calls itself. Once per request, and never raising.
+
+    `base.html` draws it on every page — the error pages included — and on a
+    500 the thing that broke may well be the database. A header carrying the
+    shipped name is still a header; a second traceback inside the error
+    handler is not. The same arrangement `brand.state()` and
+    `strings.overrides()` have, for the same reason.
+
+    The members area is in Spanish and the templates call this with no
+    argument. The parameter is here because a member's public page is a public
+    page, and will want its visitor's language the day that page gains one.
+    """
+    if "site_names" not in g:
+        try:
+            g.site_names = {code: values["name"]
+                            for code, values in current()["languages"].items()}
+        except Exception:                       # pragma: no cover - defensive
+            current_app.logger.warning("identity unreadable, using the shipped name",
+                                       exc_info=True)
+            g.site_names = dict(DEFAULT_NAMES)
+    return g.site_names.get(lang) or DEFAULT_NAMES.get(lang, "")
+
+
 def _read(form, errors: list[str]) -> dict:
     """The whole form, checked. Nothing here is written as it arrived."""
     names = {}

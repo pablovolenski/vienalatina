@@ -6,7 +6,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex, nofollow">
-	<title>{% block title %}{{ t('chrome.titulo') }}{% endblock %} — Viena Latina</title>
+	<title>{% block title %}{{ t('chrome.titulo') }}{% endblock %} — {{ site_name }}</title>
 	<link rel="stylesheet" href="{{ url_for('static', filename='board.css') }}">
 	{% block brand_css %}
 	{# After board.css, so the admin's colours win, and cache-busted by when
@@ -37,10 +37,10 @@
 	<div class="site-bar__inner">
 		<a class="site-bar__brand" href="/">
 			{% if brand.logo_name %}
-			<img class="site-bar__logo" alt="Viena Latina"
+			<img class="site-bar__logo" alt="{{ site_name }}"
 			     src="{{ url_for('brand.picture', stored_name=brand.logo_name) }}?v={{ brand.stamp }}">
 			{% else %}
-			<span class="site-bar__brand-text">Viena Latina</span>
+			<span class="site-bar__brand-text">{{ site_name }}</span>
 			{% endif %}
 		</a>
 		{% if g.member %}
@@ -109,7 +109,7 @@
 
 	<footer class="site-foot">
 		<a href="/">{{ t('chrome.publico') }}</a>
-		<div class="site-foot__legal">Viena Latina © {{ current_year }} · {{ t('chrome.privada') }}</div>
+		<div class="site-foot__legal">{{ site_name }} © {{ current_year }} · {{ t('chrome.privada') }}</div>
 	</footer>
 </div>
 

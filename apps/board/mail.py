@@ -18,7 +18,7 @@ from email.message import EmailMessage
 
 from flask import current_app
 
-from . import strings
+from . import identity, strings
 
 
 class MailNotConfigured(RuntimeError):
@@ -74,12 +74,16 @@ def send(to: str, subject: str, body: str) -> None:
 
 
 def send_invite(to: str, name: str, url: str) -> None:
+    site = identity.name()
     send(to,
-         strings.t("correo.invitacion_asunto"),
-         strings.t("correo.invitacion_cuerpo", nombre=name, enlace=url))
+         strings.t("correo.invitacion_asunto", sitio=site),
+         strings.t("correo.invitacion_cuerpo", nombre=name, enlace=url,
+                   sitio=site))
 
 
 def send_reset(to: str, name: str, url: str) -> None:
+    site = identity.name()
     send(to,
-         strings.t("correo.recuperar_asunto"),
-         strings.t("correo.recuperar_cuerpo", nombre=name, enlace=url))
+         strings.t("correo.recuperar_asunto", sitio=site),
+         strings.t("correo.recuperar_cuerpo", nombre=name, enlace=url,
+                   sitio=site))

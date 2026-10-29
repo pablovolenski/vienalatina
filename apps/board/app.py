@@ -192,6 +192,14 @@ def create_app(overrides: dict | None = None) -> Flask:
         return {"brand": brand.state()}
 
     @app.context_processor
+    def _site_name():
+        # Eager like `brand` and for the same reason: base.html draws the
+        # wordmark, the tab title and the footer on every page. One row,
+        # memoised on `g`, falling back to the shipped name rather than
+        # raising — see identity.name().
+        return {"site_name": identity.name()}
+
+    @app.context_processor
     def _ui_state():
         # Only the Gestión card and the Textos screen draw it, so lazy like
         # `identity` rather than eager like `brand`: a callable costs nothing on

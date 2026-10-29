@@ -10,13 +10,13 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>{{ member.display_name }} — Viena Latina</title>
+	<title>{{ member.display_name }} — {{ site_name }}</title>
 	<meta name="description" content="{{ (member.bio or '')[:150] }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
 </head>
 <body>
 <div class="wrap">
-	<a class="home" href="/">← Viena Latina</a>
+	<a class="home" href="/">← {{ site_name }}</a>
 
 	<div class="head">
 		{% if photo %}<img class="photo" src="{{ photo }}" alt="{{ member.display_name }}">{% endif %}
@@ -36,7 +36,7 @@
 	</ul>
 	{% endif %}
 
-	<footer>Miembro de <a href="/">Viena Latina</a>.</footer>
+	<footer>{{ t('cuenta.pagina_pie') }} <a href="/">{{ site_name }}</a>.</footer>
 </div>
 </body>
 </html>

@@ -6,7 +6,7 @@
 	<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 	<input type="hidden" name="next" value="{{ next }}">
 	<h1>{{ t('cuenta.entrar_titulo') }}</h1>
-	<p class="muted">{{ t('cuenta.entrar_nota') }}</p>
+	<p class="muted">{{ t('cuenta.entrar_nota', sitio=site_name) }}</p>
 
 	<label for="identifier">{{ t('cuenta.identificador') }}</label>
 	<input id="identifier" name="identifier" required autocomplete="username"

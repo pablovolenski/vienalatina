@@ -13,8 +13,10 @@ cuenta.entrar_titulo:
   _note: "El título grande de la pantalla de acceso. Es lo primero que se lee del sitio privado."
 
 cuenta.entrar_nota:
-  es: "Este espacio es sólo para miembros de Viena Latina."
-  _note: "Debajo de ese título."
+  es: "Este espacio es sólo para miembros de {sitio}."
+  _note: >-
+    Debajo de ese título. «{sitio}» es el nombre de la asociación, que llega
+    puesto desde Gestión → Identidad.
 
 cuenta.identificador:
   es: "Usuario o correo"
@@ -202,11 +204,15 @@ cuenta.editar_perfil:
   es: "Editar mi perfil"
   _note: "En tu propia ficha, cuando todavía no has publicado tu página."
 
-# La página pública de un miembro (`profile.html`) no tiene claves aquí a
-# propósito: lo único que dice por su cuenta es el nombre del sitio, tres
-# veces, y el nombre del sitio es cosa de Identidad y no de Textos. Ponerlo
-# aquí sería escribirlo dos veces en dos pantallas distintas, que es
-# exactamente lo que Identidad existe para evitar.
+# La página pública de un miembro (`profile.html`) dice muy poco por su
+# cuenta: casi todo lo que se lee ahí es el nombre del sitio, que viene de
+# Identidad y no de aquí. Lo que queda es esta frase del pie.
+
+cuenta.pagina_pie:
+  es: "Miembro de"
+  _note: >-
+    El pie de la página pública de un miembro. Le sigue el nombre del sitio,
+    que se cambia en Gestión → Identidad.
 
 cuenta.aviso_perfil_guardado:
   es: "Perfil guardado."
